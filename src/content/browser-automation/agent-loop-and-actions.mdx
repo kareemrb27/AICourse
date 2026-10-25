@@ -1,0 +1,92 @@
+Now put a model in the loop. This lesson covers the cycle every browser agent runs, how to design its actions, and how to combine AI with scripts.
+
+## The loop
+
+```text
+observe  → get the page representation (snapshot, maybe screenshot)
+think    → decide the next action toward the goal
+act      → call one browser tool
+verify   → did the page change as expected?
+repeat   → until done, blocked or out of budget
+```
+
+Each pass costs tokens and time, so every design choice below aims to shorten the loop or make each pass more reliable.
+
+## A small, sharp action set
+
+A handful of well-described tools beats dozens of overlapping ones:
+
+| Action | Notes |
+| --- | --- |
+| `navigate(url)` | Check the URL against an allow-list first (lesson 6) |
+| `snapshot()` | Return the current page representation |
+| `click(ref)` | Target by element reference, not coordinates, when possible |
+| `type(ref, text)` | Optionally submit |
+| `select(ref, option)` | For dropdowns |
+| `wait_for(text or condition)` | Prefer conditions over fixed delays |
+| `extract(schema)` | Return structured data and not raw page text |
+| `finish(result)` or `ask_user(question)` | Explicit ways to stop |
+
+Keep each tool's output short, and make errors actionable: "element e7 is disabled; a required field is empty" is far better than "click failed".
+
+## Prompting the agent
+
+- State the **goal and success criteria**: what a finished task looks like.
+- State the **boundaries**: allowed sites, forbidden actions, when to ask.
+- Ask it to **verify** after each consequential action (for example, check the confirmation text) before moving on.
+- Require **one action per step** so you can log, review and stop cleanly.
+
+## Common failure modes and fixes
+
+- **Loops.** The agent clicks the same button repeatedly. Track recent actions and stop or change strategy after N repeats.
+- **Hallucinated elements.** It refers to a ref that does not exist. Validate refs and return the current valid options.
+- **Stale references.** The page changed after the snapshot. Take a fresh snapshot after any action that can alter the page.
+- **Premature success.** It declares victory without checking. Require evidence in the final answer.
+- **Wandering.** Without a step cap it explores forever. Set a maximum number of steps and a cost cap.
+
+## Hybrid: use the model to find, scripts to repeat
+
+For recurring tasks, a pattern that works well:
+
+1. The first time, the agent finds the right elements and completes the task.
+2. Record the actions and the resolved locators as a **deterministic script**.
+3. Replay the script on later runs with no model call.
+4. If the script fails (the page changed), fall back to the agent, then update the script.
+
+You get the flexibility of an agent and the speed, cost and predictability of a script for the common case. Several open-source projects combine code with natural-language actions in this spirit.
+
+## Choose your tooling
+
+- **Playwright MCP** gives any MCP-capable agent a set of browser tools driven by accessibility snapshots.
+- **Stagehand** is an SDK that mixes Playwright code with AI-powered actions and extraction.
+- **browser-use** is an open-source Python library for building browser agents.
+
+Evaluate them on your tasks. Features and APIs move quickly, so rely on current docs.
+
+## Resources
+
+<Resource kind="repo" title="microsoft/playwright-mcp" href="https://github.com/microsoft/playwright-mcp" source="GitHub">
+  Browser tools for agents over MCP.
+</Resource>
+
+<Resource kind="repo" title="browserbase/stagehand" href="https://github.com/browserbase/stagehand" source="GitHub">
+  An SDK mixing deterministic code and AI actions.
+</Resource>
+
+<Resource kind="repo" title="browser-use/browser-use" href="https://github.com/browser-use/browser-use" source="GitHub">
+  An open-source Python library for browser agents.
+</Resource>
+
+<Resource kind="article" title="Writing effective tools for AI agents" href="https://www.anthropic.com/engineering/writing-tools-for-agents" source="Anthropic Engineering">
+  How to design tool names, parameters and outputs the model uses well.
+</Resource>
+
+<Resource kind="docs" title="Model Context Protocol" href="https://modelcontextprotocol.io/" source="modelcontextprotocol.io">
+  How agents connect to tool servers.
+</Resource>
+
+## Check yourself
+
+1. Build the loop with the action set above on a practice site, with a 20-step cap.
+2. Give it five tasks. Log every action and classify each failure using the list above.
+3. Record one successful run as a script. Replay it ten times and compare cost and time to the agent.

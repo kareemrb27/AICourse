@@ -1,0 +1,61 @@
+Build a browser agent that completes a real multi-step task on websites you are allowed to automate, and show that it is reliable and safe.
+
+## The brief
+
+Choose one task type and build an agent for it. Good options:
+
+- **Research assistant**: given a question, visit a defined set of public sources, gather facts and return a cited summary.
+- **Back-office helper**: on a sandbox or demo app you host, create records, reconcile entries and download reports.
+- **QA agent**: given a feature description, exercise your own web app, report bugs with reproduction steps and screenshots.
+- **Data collector**: extract structured data from a site that permits it, into a validated schema.
+
+Use sites you own, sandboxes, or sites whose terms and `robots.txt` permit your use. Document that you checked.
+
+## Requirements
+
+1. **Justification.** Why a browser, and why this level of control (script, hybrid or agentic). Confirm no suitable API exists.
+2. **Page representation.** Accessibility snapshots by default, with screenshots where needed. Measure tokens per step.
+3. **Action set.** A small, documented tool set with actionable errors, step cap and cost cap.
+4. **Reliability.** Condition-based waits, per-task isolated contexts, trace recording and a run-to-run success rate over at least 20 runs.
+5. **Hybrid mode.** Record a successful run as a script and replay it. Fall back to the agent when it breaks. Compare cost and time.
+6. **Safety.** Domain allow-list, secrets injected outside the model, an approval gate for risky actions, and results of an injection test page.
+7. **Respectful behavior.** Rate limiting, honest identification and robots.txt handling.
+8. **Write-up.** Architecture diagram, success and failure analysis with traces, cost per task, and a "known limits" section.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Pick task and confirm permission | scope note |
+| Script it by hand with Playwright | working baseline script |
+| Add the agent loop with snapshots | agent v1 |
+| Add waits, isolation and tracing | repeatable runs |
+| Measure 20 runs, fix top failures | reliability table |
+| Add safety controls and attack test | security report |
+| Record and replay the hybrid path | cost comparison |
+| Write up and publish | public repo |
+
+## Stretch goals
+
+- Run tasks in parallel contexts with per-site concurrency limits.
+- Add a vision fallback for pages whose structure is poorly labeled.
+- Benchmark your agent on a public suite such as WebArena and compare with your own task results.
+- Expose your tool set as an MCP server for other agents to use.
+
+## Share it
+
+Publish the repo with the evaluation data and traces (with sensitive data removed). Honest numbers, such as "17 of 20 runs succeeded; failures were pop-ups and an expired session", demonstrate engineering judgment better than a perfect demo video.
+
+## Where to go next
+
+<Resource kind="repo" title="web-arena-x/webarena" href="https://github.com/web-arena-x/webarena" source="GitHub">
+  Run a realistic web benchmark locally against your own agent.
+</Resource>
+
+<Resource kind="docs" title="Playwright documentation" href="https://playwright.dev/docs/intro" source="Playwright">
+  Go deeper into testing, tracing and CI.
+</Resource>
+
+<Resource kind="docs" title="Model Context Protocol" href="https://modelcontextprotocol.io/" source="modelcontextprotocol.io">
+  Package your browser tools as a reusable server.
+</Resource>

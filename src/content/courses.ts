@@ -306,6 +306,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "browser-automation",
+    title: "Implement Browser Automation for AI Agents",
+    track: "Enabling agent autonomy",
+    level: "Intermediate",
+    summary:
+      "Give agents the ability to use the web. Learn how browsers are automated, how to show a page to a model, how to design the agent loop, and how to make runs reliable, safe and respectful.",
+    prerequisites: [
+      "Comfortable with Python or TypeScript",
+      "Basic HTML and how web pages work",
+      "You have built a tool-calling agent, or read the Production Agents course",
+    ],
+    outcomes: [
+      "Decide when a browser agent is justified, and at which level of control",
+      "Automate a browser with Playwright using locators, contexts and auto-waiting",
+      "Choose between accessibility snapshots, screenshots and hybrid page views",
+      "Design the observe, think and act loop with a small, reliable action set",
+      "Defend against page-borne prompt injection and automate respectfully",
+    ],
+    lessons: [
+      {
+        slug: "why-browsers",
+        title: "Why give agents a browser?",
+        summary: "When to use one, when not to, and three levels of control.",
+        minutes: 45,
+        load: () => import("./browser-automation/why-browsers.mdx"),
+      },
+      {
+        slug: "browser-fundamentals",
+        title: "Browser automation fundamentals",
+        summary: "Protocols, Playwright, contexts, locators and auto-waiting.",
+        minutes: 120,
+        load: () => import("./browser-automation/browser-fundamentals.mdx"),
+      },
+      {
+        slug: "how-agents-see-pages",
+        title: "How agents see pages",
+        summary: "HTML, accessibility trees, screenshots and hybrids.",
+        minutes: 90,
+        load: () => import("./browser-automation/how-agents-see-pages.mdx"),
+      },
+      {
+        slug: "agent-loop-and-actions",
+        title: "The agent loop and action design",
+        summary: "Tools, failure modes, and mixing scripts with AI.",
+        minutes: 150,
+        load: () => import("./browser-automation/agent-loop-and-actions.mdx"),
+      },
+      {
+        slug: "reliability",
+        title: "Making runs reliable",
+        summary: "Waits, obstacles, isolation, traces and scaling out.",
+        minutes: 120,
+        load: () => import("./browser-automation/reliability.mdx"),
+      },
+      {
+        slug: "safety-and-ethics",
+        title: "Safety, ethics and respectful automation",
+        summary: "Prompt injection, isolation, approvals, robots.txt and terms.",
+        minutes: 90,
+        load: () => import("./browser-automation/safety-and-ethics.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Ship a reliable, safe browser agent for a real task.",
+        minutes: 300,
+        load: () => import("./browser-automation/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

@@ -1,0 +1,86 @@
+A model cannot "look at" a browser. You decide what representation of the page it receives, and that decision drives accuracy, cost and speed.
+
+## Four ways to show a page
+
+### 1. Raw HTML
+Complete and exact, but huge. A modern page is mostly scripts, styles and wrappers, so it burns tokens on noise and still hides what is visible.
+
+### 2. The accessibility tree
+Browsers maintain a simplified tree of the page for assistive technology: each node has a **role** (button, link, heading, textbox), an **accessible name** and a **state** (checked, disabled, expanded). It strips layout noise and keeps what users can act on. It is compact, text-only, and works with models that cannot read images.
+
+Playwright MCP, a server that lets agents control a browser, takes this approach. It returns an accessibility snapshot after page actions, with a reference for each interactive element. The model then says "click ref e10" instead of guessing coordinates.
+
+```text
+- heading "Sign in" [level=1]
+- textbox "Email" [ref=e4]
+- textbox "Password" [ref=e5]
+- checkbox "Remember me" [ref=e6] [checked=false]
+- button "Sign in" [ref=e7]
+- link "Forgot password?" [ref=e8]
+```
+
+(The exact format varies between tools.)
+
+### 3. Screenshots
+A vision-capable model reads pixels. This is the only option when content is a canvas, an image-only interface or a remote desktop, and it sees layout, color and visual state that the tree omits. It costs more tokens, is slower, and requires the model to **ground** what it sees into precise click coordinates, which is a known weak point.
+
+### 4. Hybrid: tree plus screenshot
+Use the tree by default and request a screenshot when the page is visually ambiguous or when verifying a visual outcome. This is a good default for most agents.
+
+## Computer use vs. browser tools
+
+General **computer use** tools give a model a screenshot and mouse and keyboard actions for any desktop application. They are flexible but pixel-driven. **Browser-specific** tools exploit the structure of the page and are usually faster and more reliable inside a browser. Choose computer use when the task leaves the browser.
+
+## Make pages easier for agents (and everyone)
+
+Accessibility benefits users first and agents as a side effect. If you control the site:
+
+- Use real buttons, links and form labels, not clickable `div` elements.
+- Give controls accessible names, and use ARIA roles only where native elements fall short.
+- Keep a sensible heading structure and focus order.
+
+A page that is hard for a screen reader is hard for an accessibility-tree agent.
+
+## Controlling size
+
+- Snapshot only the part of the page that matters, where your tool allows it.
+- Truncate long lists and tables, and let the agent request more.
+- Drop old snapshots from history, keeping the action log.
+- Token savings claims vary widely between sources, so measure on your own pages.
+
+<Callout title="Trade-off to remember">
+  The accessibility tree tells the agent what exists. It cannot tell whether
+  the page looks right. Pair it with screenshots for visual checks.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Playwright MCP: Snapshots" href="https://playwright.dev/mcp/snapshots" source="Playwright">
+  How accessibility snapshots and element references work in the MCP server.
+</Resource>
+
+<Resource kind="repo" title="microsoft/playwright-mcp" href="https://github.com/microsoft/playwright-mcp" source="GitHub">
+  The server's source, setup and available tools.
+</Resource>
+
+<Resource kind="docs" title="Accessibility tree" href="https://developer.mozilla.org/en-US/docs/Glossary/Accessibility_tree" source="MDN">
+  What the tree is and how browsers build it.
+</Resource>
+
+<Resource kind="docs" title="WAI-ARIA roles" href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles" source="MDN">
+  The role vocabulary you will see in snapshots.
+</Resource>
+
+<Resource kind="docs" title="Computer use tool" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool" source="Claude Platform Docs">
+  Screenshot-and-action control of a full desktop.
+</Resource>
+
+<Resource kind="paper" title="Navigating the Digital World as Humans Do: Universal Visual Grounding for GUI Agents" href="https://arxiv.org/abs/2410.05243" source="arXiv">
+  Research on grounding what a model sees into precise on-screen targets.
+</Resource>
+
+## Check yourself
+
+1. Capture the accessibility snapshot of three pages you use. Count tokens for each versus the raw HTML.
+2. Find one page where the tree is missing something important, and one where a screenshot adds nothing.
+3. Ask a model to complete the same task with tree only, screenshot only and hybrid. Compare success and cost.

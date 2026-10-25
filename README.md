@@ -12,6 +12,7 @@ This is an independent project and is not affiliated with any conference or cour
 | Engineer Persistent Memory for AI Agents | Advanced | 7 lessons, first draft |
 | Deploy Reliable AI Agents in Production | Advanced | 7 lessons, first draft |
 | Engineer Repository Context for Coding Agents | Advanced | 7 lessons, first draft |
+| Implement Browser Automation for AI Agents | Intermediate | 7 lessons, first draft |
 
 ## Run locally
 

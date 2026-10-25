@@ -1,0 +1,63 @@
+A browser is the one interface almost every system has. This lesson explains when to give an agent a browser, when not to, and why it is harder than it looks.
+
+## Why agents need browsers
+
+- **No API exists.** Many internal tools, legacy portals and government sites offer only a web interface.
+- **The API is incomplete.** The UI exposes features, settings or data the API does not.
+- **The task is the web itself.** Research, price comparison, form filling and testing happen across many sites.
+- **You are testing the UI.** QA agents need to use the product like a user.
+
+## When not to use one
+
+Prefer, in this order:
+
+1. **A real API.** Faster, cheaper, stable and explicit about permissions.
+2. **Structured data sources**: feeds, exports, sitemaps, open datasets.
+3. **A scripted browser flow** for a fixed, repeated task. No model required at runtime.
+4. **An agentic browser** only when pages vary, the path cannot be scripted in advance, or the number of sites is too large to script.
+
+An agent that drives a browser is slower, costs tokens at every step, and fails in ways that scripts and APIs do not.
+
+## How hard is it?
+
+The WebArena benchmark places agents in realistic, self-hosted sites (shopping, forums, code hosting, content management) and checks the outcome programmatically. In the published ICLR version, the best GPT-4-based agent completed 14.41% of tasks while humans completed 78.24%. Models have improved since, and newer benchmarks keep appearing, but the lesson stands: long web tasks compound small errors, and success on a demo does not predict success across thousands of pages.
+
+## The three levels of control
+
+| Level | Who decides each action | Example |
+| --- | --- | --- |
+| Script | Your code | Log in, download the report every morning |
+| Hybrid | Code for the known parts, model for the ambiguous ones | Script the login, let the model find the right invoice |
+| Agentic | The model, step by step | "Find the cheapest refundable flight next Friday" |
+
+Move down the table only as far as the task demands. Many production systems are hybrid: deterministic wherever possible, model-driven where necessary.
+
+<Callout title="Questions to ask first">
+  Is there an API? How often does the page change? What is the cost of a wrong
+  click? Am I allowed to automate this site? If the last two answers worry
+  you, slow down and read lesson 6.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="WebArena: A Realistic Web Environment for Building Autonomous Agents" href="https://arxiv.org/abs/2307.13854" source="arXiv">
+  Read the introduction and the task and evaluation design.
+</Resource>
+
+<Resource kind="paper" title="Mind2Web: Towards a Generalist Agent for the Web" href="https://arxiv.org/abs/2306.06070" source="arXiv">
+  A dataset of tasks across many real websites, and what makes generalization hard.
+</Resource>
+
+<Resource kind="paper" title="WebVoyager: Building an End-to-End Web Agent with Large Multimodal Models" href="https://arxiv.org/abs/2401.13919" source="arXiv">
+  A vision-based web agent and its evaluation on live sites.
+</Resource>
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/engineering/building-effective-agents" source="Anthropic Engineering">
+  The case for starting with the simplest solution that works.
+</Resource>
+
+## Check yourself
+
+1. List five tasks in your work that happen in a browser. For each, check if an API or export exists.
+2. Place each remaining task on the script, hybrid or agentic level, and justify it.
+3. For the riskiest task, write down what the worst wrong click would do.

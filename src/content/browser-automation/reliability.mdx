@@ -1,0 +1,75 @@
+The web is dynamic, slow and inconsistent. Most browser-agent failures are not model failures but timing, state and page-structure failures. This lesson is the engineering that makes runs repeatable.
+
+## Wait for conditions, not time
+
+Fixed sleeps are either too short (flaky) or too long (slow). Wait for something observable instead: an element to appear, a response to arrive, a URL to change, text to show up. Playwright's auto-waiting handles most actions, and explicit conditions cover the rest. Give the agent a `wait_for` tool that takes a condition, and cap the wait.
+
+## Handle the usual obstacles
+
+- **Dynamic content and infinite scroll.** Scroll, then re-snapshot, and stop when no new items appear.
+- **Popups, banners and consent dialogs.** Detect and dismiss them as part of setup, or give the agent clear guidance. Choose the privacy-preserving option on cookie banners.
+- **Iframes and shadow DOM.** Content inside frames is a separate document. Make sure your snapshot tool includes it.
+- **New tabs and windows.** Track which page the agent is acting on.
+- **File uploads and downloads.** Handle them through the library's dedicated APIs, into a temporary folder you control.
+- **Authentication and sessions.** Reuse saved storage state, and keep credentials in a secrets manager, never in the prompt. Expect sessions to expire and detect the login page.
+- **CAPTCHAs and bot checks.** These exist to stop automation. Do not try to defeat them. Stop and hand control to a human, or use a sanctioned API or partnership.
+
+## Make runs reproducible
+
+- **One context per task** so cookies and storage never leak between runs.
+- **Pin versions** of the browser and libraries. A browser update can change behavior.
+- **Fix the environment**: viewport size, locale, timezone, user agent set honestly for your own scripts.
+- **Idempotent actions.** If a step submits an order, a retry must not submit twice. Check for the result first, and use the idempotency practices from the Production Agents course.
+- **Retry the right things**: transient network errors and flaky loads, not logical failures.
+
+## Record everything
+
+When a run fails you need to see what the agent saw. Capture:
+
+- a **trace** (Playwright's trace viewer shows screenshots, DOM snapshots, network and actions on a timeline)
+- the **action log** with the model's stated reason for each step
+- final **screenshots** and the extracted result
+- timing and token usage per step
+
+Treat traces as sensitive: they can contain personal data and session tokens. Control access and retention.
+
+## Scale out carefully
+
+- Run many isolated contexts in parallel, with a **concurrency limit** per site.
+- Add **rate limiting and backoff** so you do not overload the sites you visit.
+- Use queues and per-task timeouts so a stuck browser cannot block the fleet.
+- Close contexts and browsers reliably, and watch for leaked processes.
+
+<Callout title="Reliability metric">
+  As in the Production Agents course, measure success across repeated runs of
+  the same task, not one lucky run. A task that works 7 of 10 times is not
+  ready to automate unattended.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Best Practices" href="https://playwright.dev/docs/best-practices" source="Playwright">
+  Locator strategy, isolation and avoiding flaky tests.
+</Resource>
+
+<Resource kind="docs" title="Trace viewer" href="https://playwright.dev/docs/trace-viewer" source="Playwright">
+  Recording and replaying a run step by step.
+</Resource>
+
+<Resource kind="docs" title="Network" href="https://playwright.dev/docs/network" source="Playwright">
+  Waiting on, observing and mocking requests.
+</Resource>
+
+<Resource kind="docs" title="Authentication" href="https://playwright.dev/docs/auth" source="Playwright">
+  Saving and reusing signed-in state.
+</Resource>
+
+<Resource kind="docs" title="Auto-waiting" href="https://playwright.dev/docs/actionability" source="Playwright">
+  The checks that make actions reliable by default.
+</Resource>
+
+## Check yourself
+
+1. Run one task 20 times. Record the success rate and cluster the failures by cause.
+2. Fix the top cause and re-run. Repeat once.
+3. Open a failed run in the trace viewer and write what you learned that logs alone did not show.

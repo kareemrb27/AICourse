@@ -1,0 +1,90 @@
+Before an agent can drive a browser, you need to drive one yourself. This lesson covers the building blocks that every browser-automation tool shares, using Playwright as the working example.
+
+## How automation talks to a browser
+
+Automation libraries control a real browser through a protocol:
+
+- The **Chrome DevTools Protocol (CDP)** is the low-level protocol Chromium exposes. Puppeteer is built around it, and Playwright uses it for Chromium.
+- **WebDriver** is the W3C standard that Selenium uses. **WebDriver BiDi** is its newer bidirectional version, adding events and richer control.
+- **Playwright** wraps several browsers (Chromium, Firefox, WebKit) in one API with auto-waiting built in.
+
+You rarely call protocols directly, but knowing they exist explains what is possible: reading the page, clicking, intercepting network traffic, taking screenshots, and capturing traces.
+
+## Playwright in 12 lines
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()          # headless by default
+    page = browser.new_page()
+    page.goto("https://example.com")
+    page.get_by_role("link", name="More information").click()
+    print(page.title())
+    browser.close()
+```
+
+Install with `pip install playwright` and `playwright install`; the intro docs cover the TypeScript, Java and .NET equivalents.
+
+## Concepts you will use constantly
+
+### Contexts: isolation
+A **browser context** is like a fresh incognito profile: its own cookies, storage and sessions. Create one per task so runs cannot contaminate each other, and you can run many in parallel from one browser process.
+
+### Locators and roles
+A **locator** describes how to find an element and re-resolves each time you use it. Prefer user-facing locators (role, label, text) over brittle CSS paths or XPath. Locating by role and accessible name mirrors how an agent will perceive the page in the next lesson.
+
+### Auto-waiting
+Playwright waits for an element to be attached, visible, stable, enabled and able to receive events before acting. Relying on this, instead of fixed sleeps, removes a large class of flakiness.
+
+### Authentication state
+Log in once, save the **storage state** (cookies and local storage), and load it into later contexts. This avoids repeating login on every run, and keeps credentials out of your agent's prompt.
+
+### Network and tracing
+You can observe or mock requests, wait for specific responses, and record a **trace** with screenshots, DOM snapshots and network calls to replay a failed run step by step.
+
+<Callout title="Learn it by hand first">
+  Write a script that logs into a practice site, searches, and extracts a
+  result before you let a model do it. You will recognize the agent's mistakes
+  because you have made them.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Playwright: Installation" href="https://playwright.dev/docs/intro" source="Playwright">
+  Setup and a first script in your language of choice.
+</Resource>
+
+<Resource kind="docs" title="Locators" href="https://playwright.dev/docs/locators" source="Playwright">
+  Role, label and text locators, filtering and chaining.
+</Resource>
+
+<Resource kind="docs" title="Auto-waiting" href="https://playwright.dev/docs/actionability" source="Playwright">
+  Exactly which checks run before each action.
+</Resource>
+
+<Resource kind="docs" title="Isolation (browser contexts)" href="https://playwright.dev/docs/browser-contexts" source="Playwright">
+  Why contexts are the unit of isolation.
+</Resource>
+
+<Resource kind="docs" title="Authentication" href="https://playwright.dev/docs/auth" source="Playwright">
+  Reusing signed-in state across runs.
+</Resource>
+
+<Resource kind="docs" title="Chrome DevTools Protocol" href="https://chromedevtools.github.io/devtools-protocol/" source="Chrome DevTools">
+  The low-level protocol behind many tools.
+</Resource>
+
+<Resource kind="docs" title="WebDriver BiDi" href="https://www.w3.org/TR/webdriver-bidi/" source="W3C">
+  The standard bidirectional browser automation protocol.
+</Resource>
+
+<Resource kind="docs" title="Puppeteer" href="https://pptr.dev/" source="Puppeteer">
+  The other widely used library, built for Chrome.
+</Resource>
+
+## Check yourself
+
+1. Script a login, search and data extraction on a practice site such as one you host locally.
+2. Replace every fixed sleep with a locator or an auto-wait. Run it 20 times and count failures.
+3. Save authentication state, then run the script again with no login code.
