@@ -164,6 +164,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "production-agents",
+    title: "Deploy Reliable AI Agents in Production",
+    track: "Operating in production",
+    level: "Advanced",
+    summary:
+      "A demo that works once is not a product. Learn to measure agent reliability, trace and debug runs, survive failures, defend against prompt injection, control cost and ship changes safely.",
+    prerequisites: [
+      "You have built an agent that calls tools",
+      "Comfortable with Python or TypeScript and basic web services",
+      "Helpful: the Persistent Memory course, for context and cost techniques",
+    ],
+    outcomes: [
+      "Measure reliability with evals and repeated-trial metrics, not single runs",
+      "Trace agent runs end to end and alert on the right signals",
+      "Handle timeouts, retries, idempotency, crashes and runaway loops",
+      "Reduce prompt-injection risk with least privilege and structural limits",
+      "Control cost and latency, and roll changes out and back safely",
+    ],
+    lessons: [
+      {
+        slug: "what-reliable-means",
+        title: "What reliable means for agents",
+        summary: "Why agents are hard to run, and how to measure consistency.",
+        minutes: 45,
+        load: () => import("./production-agents/what-reliable-means.mdx"),
+      },
+      {
+        slug: "evals",
+        title: "Evals: knowing it works",
+        summary: "Building test sets, graders and validated LLM judges.",
+        minutes: 150,
+        load: () => import("./production-agents/evals.mdx"),
+      },
+      {
+        slug: "observability",
+        title: "Tracing and observability",
+        summary: "See what the agent saw, decided and did.",
+        minutes: 120,
+        load: () => import("./production-agents/observability.mdx"),
+      },
+      {
+        slug: "failure-handling",
+        title: "Failure handling and durability",
+        summary: "Timeouts, retries, idempotency, caps and human approval.",
+        minutes: 150,
+        load: () => import("./production-agents/failure-handling.mdx"),
+      },
+      {
+        slug: "security",
+        title: "Security: injection and excessive agency",
+        summary: "The lethal trifecta, least privilege and safe tool design.",
+        minutes: 120,
+        load: () => import("./production-agents/security.mdx"),
+      },
+      {
+        slug: "cost-and-release",
+        title: "Cost, latency and safe releases",
+        summary: "Unit economics, caching, rollouts and runbooks.",
+        minutes: 120,
+        load: () => import("./production-agents/cost-and-release.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Harden an action-taking agent and prove it is ready to ship.",
+        minutes: 300,
+        load: () => import("./production-agents/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

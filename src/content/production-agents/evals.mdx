@@ -1,0 +1,60 @@
+If you only adopt one practice from this course, make it evals. Without them every change is a guess, and you will not notice regressions until users do.
+
+## What an eval is
+
+An eval is a set of inputs, a way to run your agent on them, and a way to score the outputs. That is all. It can start as a spreadsheet and 30 rows.
+
+## Build the set from reality
+
+1. **Start with real traffic or realistic tasks**, not invented happy paths. Read 50 actual conversations or traces before writing a single test.
+2. **Cover failure modes you have seen**: wrong tool, wrong argument, ignored policy, infinite loop, refusal when it should help.
+3. **Add every production bug as a new case.** The set grows from incidents.
+4. **Keep a held-out slice** you do not tune against.
+
+## Three kinds of scoring
+
+- **Code checks.** Did it call the right tool with valid arguments? Is the output valid JSON? Did the final database state match the expected one (tau-bench grades this way)? Cheap, deterministic, preferred.
+- **Reference comparison.** Compare against a known answer or key facts.
+- **LLM-as-judge.** A model grades subjective qualities such as helpfulness or policy adherence. Useful, but you must **validate the judge**: have a human label a sample, measure agreement, and refine the rubric until they match.
+
+## Grade the trajectory, not only the answer
+
+For agents, the path matters. Record the tool calls and check for forbidden actions, unnecessary steps and cost. An answer that is right because the agent got lucky is a future incident.
+
+## Handle non-determinism
+
+Run each case several times. Report the pass rate and, where consistency matters, the all-k-trials rate from lesson 1. Track variance as well as the mean.
+
+<Callout title="Evals in your delivery loop">
+  Run a small, fast eval set on every change to prompts, tools or model
+  versions, and a larger one before release. Treat a drop like a failing unit
+  test.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Your AI Product Needs Evals" href="https://hamel.dev/blog/posts/evals/" source="Hamel Husain">
+  A practical case for evals and how to build them in layers.
+</Resource>
+
+<Resource kind="article" title="Using LLM-as-a-Judge For Evaluation: A Complete Guide" href="https://hamel.dev/blog/posts/llm-judge/" source="Hamel Husain">
+  How to build and validate a judge you can trust.
+</Resource>
+
+<Resource kind="article" title="Task-Specific LLM Evals that Do & Don't Work" href="https://eugeneyan.com/writing/evals/" source="Eugene Yan">
+  Which metrics to use for classification, summarization, extraction and more.
+</Resource>
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Claude Platform Docs">
+  Guidance on writing measurable success criteria and graders.
+</Resource>
+
+<Resource kind="docs" title="Promptfoo" href="https://www.promptfoo.dev/docs/intro/" source="Promptfoo">
+  An open-source tool for running evals and red-team tests from config files.
+</Resource>
+
+## Check yourself
+
+1. Read 30 real or realistic interactions. Write 30 test cases with expected behavior.
+2. Score them with code checks where possible and a judge where not. Hand-label 15 to measure judge agreement.
+3. Run the set five times. Report pass rate, all-five-pass rate and cost per run.

@@ -1,0 +1,56 @@
+Reliable also means affordable and changeable. This lesson covers controlling spend and latency, and shipping changes without breaking users.
+
+## Know your unit economics
+
+Track **cost per completed task**, not cost per token. A cheaper model that needs three retries may cost more than a stronger one that succeeds the first time. Break cost down by step (planning, tool use, final answer) to find the expensive part.
+
+## Levers for cost and latency
+
+- **Prompt caching.** If many calls share a long prefix (system prompt, tool definitions, documents), caching that prefix cuts cost and time. Check your provider's docs for how to structure prompts so the cached part stays identical.
+- **Right-size the model.** Route simple steps (classification, extraction) to a small fast model and reserve the strongest model for hard reasoning.
+- **Shorter context.** Apply the memory techniques from the Persistent Memory course: clear old tool outputs, compact history.
+- **Fewer round trips.** Batch independent tool calls and run them in parallel.
+- **Cache results** of deterministic tool calls.
+- **Stream** output so users see progress while the task finishes.
+- **Set budgets** per task and per user, with the hard stops from lesson 4.
+
+## Ship changes safely
+
+An agent has several things that change behavior: the model version, the system prompt, tool descriptions, retrieval data, and your code. Treat each as a release.
+
+1. **Version everything**: prompts, tool schemas, model IDs and eval sets, stored with the code.
+2. **Gate on evals**: a change does not merge if the eval suite regresses.
+3. **Roll out gradually**: use feature flags to send 1%, then 10%, then everyone to the new version, comparing metrics from lesson 3 at each step.
+4. **Keep a rollback**: switching back should take minutes and require no code change.
+5. **Watch for provider changes**: pin model versions where possible, and re-run evals when you upgrade.
+
+## Run it like a service
+
+- **Runbooks** for known failures: provider outage, runaway cost, bad prompt release.
+- **On-call** ownership with clear escalation.
+- **Post-incident reviews** that end in a new eval case or guardrail, not just a fix.
+- **Status for users** when the agent is degraded.
+
+## Resources
+
+<Resource kind="docs" title="Prompt caching" href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching" source="Claude Platform Docs">
+  How caching works and how to structure prompts to benefit from it.
+</Resource>
+
+<Resource kind="article" title="Feature Toggles (aka Feature Flags)" href="https://martinfowler.com/articles/feature-toggles.html" source="Martin Fowler">
+  The standard guide to releasing changes behind flags and rolling them out gradually.
+</Resource>
+
+<Resource kind="article" title="How we built our multi-agent research system" href="https://www.anthropic.com/engineering/multi-agent-research-system" source="Anthropic Engineering">
+  Discusses token cost, rollout and production trade-offs of a multi-agent design.
+</Resource>
+
+<Resource kind="docs" title="Handling Overload" href="https://sre.google/sre-book/handling-overload/" source="Google SRE Book">
+  Load shedding and client-side throttling, applied to your own agent service.
+</Resource>
+
+## Check yourself
+
+1. Measure cost per completed task for your agent, split by step. Find the top cost driver.
+2. Apply two levers (for example caching and a smaller model for one step). Re-run evals to confirm quality held.
+3. Write a one-page rollout plan with flags, metrics to watch and the rollback trigger for your next prompt change.

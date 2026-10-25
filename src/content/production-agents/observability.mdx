@@ -1,0 +1,71 @@
+When an agent misbehaves in production you need to answer: what did it see, what did it decide, which tool did it call, and what came back. If you cannot, you cannot fix it.
+
+## Trace every run
+
+A **trace** records one agent run as a tree of spans:
+
+```text
+session
+└─ invoke_agent (one turn)
+   ├─ model call     (model, parameters, tokens in/out, latency)
+   ├─ tool call      (name, arguments, result or error, latency)
+   ├─ model call
+   └─ tool call
+```
+
+Capture, at minimum: inputs and outputs of each model call, tool names with arguments and results, token counts, latency, errors, and a stable run ID that also appears in your application logs.
+
+OpenTelemetry has a community effort defining standard attribute and span names for generative AI, including agent invocation spans. The conventions have been evolving and have moved to their own repository, so check the current spec before you depend on attribute names.
+
+## What to alert on
+
+Do not alert on "the model said something odd". Alert on measurable symptoms:
+
+- **Error and timeout rate** per tool and per model provider
+- **Task success rate**, from explicit user feedback or automated checks
+- **Loop and step counts** above a threshold
+- **Cost per task** and total spend per hour
+- **Latency percentiles** (p50, p95, p99), not averages
+- **Refusal or fallback rate** spikes
+
+## Close the loop with evals
+
+Traces are your best source of new eval cases. Sample failures weekly, label them, and add them to your eval set from lesson 2. Production teaches you what the test set missed.
+
+## Privacy
+
+Traces contain user text. Decide retention, redact secrets and personal data before storage, restrict access, and make sure deletion requests reach your trace store.
+
+<Callout title="Start simple">
+  Log structured JSON with a run ID for every model and tool call before you
+  adopt a platform. Once you know the questions you ask, pick a tool that
+  answers them.
+</Callout>
+
+## Resources
+
+<Resource kind="repo" title="OpenTelemetry GenAI semantic conventions" href="https://github.com/open-telemetry/semantic-conventions-genai" source="OpenTelemetry">
+  The community conventions for model, tool and agent spans. Check the status notes in the README.
+</Resource>
+
+<Resource kind="docs" title="Langfuse documentation" href="https://langfuse.com/docs" source="Langfuse">
+  Open-source LLM tracing, evals and prompt management.
+</Resource>
+
+<Resource kind="docs" title="Arize Phoenix" href="https://arize.com/docs/phoenix" source="Arize">
+  Open-source tracing and evaluation with OpenTelemetry-based instrumentation.
+</Resource>
+
+<Resource kind="docs" title="LangSmith documentation" href="https://docs.smith.langchain.com/" source="LangChain">
+  Tracing, datasets and evaluation tooling for agent runs.
+</Resource>
+
+<Resource kind="article" title="How we built our multi-agent research system" href="https://www.anthropic.com/engineering/multi-agent-research-system" source="Anthropic Engineering">
+  Includes candid lessons on debugging non-deterministic agents and production tracing.
+</Resource>
+
+## Check yourself
+
+1. Add run IDs and structured logs to an agent. Reproduce a failure from the logs alone.
+2. Build a dashboard or query for error rate, p95 latency and cost per task.
+3. Pick 10 failed runs, label the root cause of each, and add them to your eval set.

@@ -1,0 +1,79 @@
+Everything an agent depends on will fail eventually: the model API, a tool, the database, your own process. Reliable systems plan for it. The patterns here are classic distributed-systems engineering applied to agents.
+
+## Timeouts everywhere
+
+Every model call and every tool call needs a timeout, plus an overall deadline for the whole task. Without them one stuck request holds resources forever.
+
+## Retries, carefully
+
+Retry only **transient** failures (timeouts, rate limits, 5xx). Use **exponential backoff with jitter** so many clients do not retry in lockstep, and cap total attempts. Retrying a request that is slow because the service is overloaded makes it worse, which is why the SRE literature on cascading failures and client-side throttling is worth reading.
+
+## Idempotency: make retries safe
+
+If a tool call charges a card or sends an email, a retry must not do it twice. Give every side-effecting operation an **idempotency key** so repeating it returns the original result. Design tools so the same call with the same key is a no-op.
+
+## Bound the loop
+
+An agent can loop forever. Enforce hard limits:
+
+- maximum steps per task
+- maximum tokens and dollars per task
+- maximum repeats of the same tool call with the same arguments
+
+When a limit is hit, stop and return a clear partial result or escalate to a human. Do not silently continue.
+
+## Make long tasks durable
+
+A task that runs for minutes or hours must survive a crash or deploy. Two approaches:
+
+- **Checkpointed agent state.** Frameworks such as LangGraph persist state after each step so a run can resume from the last checkpoint.
+- **Durable execution engines.** Systems like Temporal record each step's result so a workflow resumes exactly where it stopped, with retries and timers built in.
+
+## Fallbacks and graceful degradation
+
+- Switch to a backup model or provider when the primary is down.
+- Use a simpler path (cached answer, fixed workflow) when the agent path fails.
+- Tell the user honestly what happened rather than guessing.
+
+## Humans in the loop
+
+For high-impact or low-confidence actions, pause and ask. Interrupt mechanisms let an agent stop before an action, wait for approval, then continue from saved state.
+
+```text
+tool call requested: refund(order=881, amount=240.00)
+policy: amount > 100 → require approval
+→ pause, notify reviewer, wait
+→ approved → execute with idempotency key "refund-881-v1"
+```
+
+## Resources
+
+<Resource kind="article" title="Timeouts, retries, and backoff with jitter" href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" source="AWS Builders' Library">
+  The standard reference on safe retry behavior.
+</Resource>
+
+<Resource kind="article" title="Designing robust and predictable APIs with idempotency" href="https://stripe.com/blog/idempotency" source="Stripe">
+  How idempotency keys make retries safe.
+</Resource>
+
+<Resource kind="article" title="Addressing Cascading Failures" href="https://sre.google/sre-book/addressing-cascading-failures/" source="Google SRE Book">
+  Why naive retries and overload amplify outages.
+</Resource>
+
+<Resource kind="docs" title="Persistence" href="https://docs.langchain.com/oss/python/langgraph/persistence" source="LangChain docs">
+  Checkpointing agent state so runs can resume.
+</Resource>
+
+<Resource kind="docs" title="Interrupts (human in the loop)" href="https://docs.langchain.com/oss/python/langgraph/human-in-the-loop" source="LangChain docs">
+  Pausing for approval and resuming.
+</Resource>
+
+<Resource kind="docs" title="Temporal documentation" href="https://docs.temporal.io/" source="Temporal">
+  Durable execution concepts: workflows, activities and retries.
+</Resource>
+
+## Check yourself
+
+1. Add timeouts, bounded retries with jitter and a step and cost cap to an agent.
+2. Make one side-effecting tool idempotent. Prove that calling it twice with the same key acts once.
+3. Kill the process mid-task and resume it. Write down what state you needed to persist.

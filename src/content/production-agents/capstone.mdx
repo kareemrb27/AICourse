@@ -1,0 +1,52 @@
+Take an agent from prototype to something you would be comfortable putting in front of real users.
+
+## The brief
+
+Choose an agent that takes real actions: a support agent that can look up and modify orders, an internal operations agent, a research assistant that sends reports, or a coding helper that opens pull requests. Use sandboxed or fake data and services. Make it production-ready using everything in this course.
+
+## Requirements
+
+1. **Scope and risk review.** One page: what it can do, its side effects, and which trifecta legs it has (lesson 5).
+2. **Eval suite.** At least 40 cases including failure modes and adversarial inputs, with code checks and a validated judge. Report pass rate and all-k-trials rate.
+3. **Observability.** Structured traces with run IDs; a dashboard for error rate, p95 latency, cost per task and step counts.
+4. **Failure handling.** Timeouts, bounded retries with jitter, idempotent side effects, step and cost caps, and a crash-and-resume test.
+5. **Human approval** for at least one high-impact action.
+6. **Security tests.** At least ten injection attempts and a least-privilege tool review.
+7. **Release process.** Versioned prompts and tools, eval gate, feature-flag rollout plan and a rollback you have actually tried.
+8. **Runbook and write-up.** Architecture diagram, results, incident runbook and an honest "known weaknesses" section.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Build the simplest working agent | baseline behavior |
+| Write the eval suite and score the baseline | eval report |
+| Add tracing and dashboard | observability |
+| Add failure handling and caps | resilience tests |
+| Security review and attacks | security report |
+| Optimize cost, set rollout and rollback | release plan |
+| Runbook and write-up | public repo |
+
+## Stretch goals
+
+- Add durable execution so tasks survive restarts and deploys.
+- Run a game day: break a dependency on purpose and check that alerts, fallbacks and the runbook work.
+- Add persistent memory from the previous course and re-run your evals to see whether it helped.
+
+## Share it
+
+Publish the repo and results. A report that shows the baseline score, what each hardening step changed and what still fails is far more convincing than a polished demo.
+
+## Where to go next
+
+<Resource kind="paper" title="tau-bench" href="https://arxiv.org/abs/2406.12045" source="arXiv">
+  Study a rigorous agent benchmark and its reliability metric.
+</Resource>
+
+<Resource kind="repo" title="sierra-research/tau-bench" href="https://github.com/sierra-research/tau-bench" source="GitHub">
+  Code and data you can run against your own agent.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP Gen AI Security Project">
+  Use it as a final security review checklist.
+</Resource>

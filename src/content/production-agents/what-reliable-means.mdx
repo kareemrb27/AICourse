@@ -1,0 +1,54 @@
+A demo agent works once, on the example you chose. A production agent works on the thousandth request, on inputs you did not anticipate, while a dependency is slow. This lesson defines the gap.
+
+## Why agents are harder to run than normal services
+
+- **Non-determinism.** The same input can produce different tool calls. A test that passes once says little.
+- **Compounding errors.** A multi-step task succeeds only if every step does. At 95% per step, ten steps give about 60% end to end.
+- **Side effects.** Agents act: send emails, change records, spend money. A mistake can be hard to undo.
+- **Open-ended inputs.** Users, documents and web pages feed text straight into the model, including hostile text.
+- **Variable cost and latency.** A loop that "thinks longer" is also a loop that bills longer.
+
+## Measure reliability, not just accuracy
+
+The tau-bench paper makes the key point with a metric called **pass^k**: the probability that the agent solves a task in *all* of k repeated trials. An agent that succeeds 60% of the time on one try may succeed far less often across eight tries. For anything customers depend on, consistency is the number to watch, not the best-case run. The authors report that even strong function-calling agents were inconsistent on their retail tasks.
+
+## Choose the simplest thing that works
+
+Anthropic's guidance distinguishes **workflows** (code orchestrates the LLM along predefined paths) from **agents** (the LLM directs its own steps and tool use). Their advice is to start with the simplest solution and add agentic autonomy only when it earns its cost. In production terms: every degree of autonomy you add increases the surface you must test, monitor and secure.
+
+<Callout title="The production mindset">
+  Ask of every feature: what happens when this fails, how will I know, and how
+  do I limit the damage? If you cannot answer all three, it is not ready to
+  ship.
+</Callout>
+
+## A reliability checklist you will fill in across this course
+
+| Area | Question | Lesson |
+| --- | --- | --- |
+| Quality | How do I know it is correct, repeatedly? | 2 |
+| Visibility | Can I see why it did what it did? | 3 |
+| Failure | What happens on timeouts, errors, crashes? | 4 |
+| Safety | What can it be tricked into doing? | 5 |
+| Cost | What does a task cost, and what is the cap? | 6 |
+| Change | How do I roll out and roll back? | 6 |
+
+## Resources
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/engineering/building-effective-agents" source="Anthropic Engineering">
+  Workflows versus agents, common patterns and when to avoid complexity. Required reading.
+</Resource>
+
+<Resource kind="paper" title="tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains" href="https://arxiv.org/abs/2406.12045" source="arXiv">
+  Read the introduction and the pass^k definition.
+</Resource>
+
+<Resource kind="docs" title="A practical guide to building agents" href="https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf" source="OpenAI (PDF)">
+  A second vendor's view on when to build an agent, and on guardrails and orchestration.
+</Resource>
+
+## Check yourself
+
+1. Pick an agent you have built or would build. List every side effect it can cause and rate each reversible or not.
+2. Estimate end-to-end success if it has 8 steps at 97% each. What does that tell you about where to invest?
+3. Decide: could this be a fixed workflow instead of an agent? Write down what you would lose.
