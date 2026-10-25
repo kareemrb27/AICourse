@@ -1,0 +1,86 @@
+"Meta-harness" is a new term, and people use it for different things. Before building one, separate the meanings, and look at the research it grew from.
+
+## Two senses of the word
+
+1. **An outer system that optimizes a harness.** This is the sense in the March 2026 paper "Meta-Harness: End-to-End Optimization of Model Harnesses". The meta-harness searches over harness code, evaluates candidates, and learns from the results.
+2. **A layer above several harnesses or agents.** Here the meta-harness orchestrates, routes or supervises multiple agents or tools. The word is also used as a product or project name in other places, which adds to the confusion.
+
+This course concentrates on the first sense, because it is the better defined and best evidenced, and covers the second as an architecture pattern: a supervising layer that can choose, configure or improve the harnesses underneath it. When you read anything labeled "meta-harness", check which sense it uses.
+
+## The research lineage
+
+Automatic improvement of LLM systems has several earlier threads.
+
+- **Prompt and program optimization.** *Large Language Models as Optimizers* (OPRO) uses an LLM to propose better prompts from past scores. *TextGrad* passes textual feedback "backwards" through a system. *DSPy* compiles declarative LM programs, tuning prompts and examples against a metric.
+- **Self-reflection.** *Reflexion* lets an agent write verbal feedback about failures and use it on the next attempt. *Voyager* builds a growing library of skills as code.
+- **Searching over agent designs.** *Automated Design of Agentic Systems (ADAS)* proposes a **meta agent** that writes new agent programs in code, guided by an archive of earlier designs. The authors report that discovered agents beat hand-designed ones on coding, science and math tasks and carried over to other domains and models.
+- **Self-modifying agents.** The *Darwin Gödel Machine* keeps an archive of coding agents, uses a foundation model to produce variants of its own code, and validates each change empirically instead of trying to prove it. It reports SWE-bench performance rising from 20.0% to 50.0%, with safety measures such as sandboxing and human oversight.
+- **Evolutionary code search.** *AlphaEvolve* pairs LLM-written code changes with automated evaluators to discover algorithms.
+
+## What is new in Meta-Harness
+
+The paper's argument is that many text optimizers throw away too much information: they compress feedback into a score or short summary before the optimizer sees it. Meta-Harness instead gives a coding-agent proposer **filesystem access to the full history** (source code, scores and execution traces of every earlier candidate) and lets it investigate with tools such as `grep` and `cat`, as an engineer debugging would. Lesson 5 covers the details and the evidence for this claim.
+
+## A mental model
+
+```text
+          ┌────────────────────────────────────────┐
+          │ meta-harness (outer loop)              │
+          │  proposer ── writes ──▶ harness code   │
+          │     ▲                        │         │
+          │  reads history          runs on tasks  │
+          │     │                        ▼         │
+          │  scores + traces ◀── evaluation        │
+          └────────────────────────────────────────┘
+                         │ selects
+                         ▼
+                  best harness(es) ──▶ your agent
+```
+
+The inner harness runs tasks with a **frozen** model. The outer loop changes only the harness. That separation is what makes results interpretable: gains come from better scaffolding, not new weights.
+
+<Callout title="Keep a skeptic's eye">
+  This is young research, mostly preprints with the authors' own benchmarks.
+  Read results as promising evidence about a method, not as guarantees about
+  your task. Lesson 6 shows how to test it on your own.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Meta-Harness: End-to-End Optimization of Model Harnesses" href="https://arxiv.org/abs/2603.28052" source="arXiv">
+  The primary source for the first sense of the term.
+</Resource>
+
+<Resource kind="paper" title="Automated Design of Agentic Systems" href="https://arxiv.org/abs/2408.08435" source="arXiv">
+  Meta Agent Search: a meta agent that programs new agents.
+</Resource>
+
+<Resource kind="paper" title="Darwin Godel Machine: Open-Ended Evolution of Self-Improving Agents" href="https://arxiv.org/abs/2505.22954" source="arXiv">
+  Self-modifying coding agents with empirical validation and safety measures.
+</Resource>
+
+<Resource kind="paper" title="Large Language Models as Optimizers" href="https://arxiv.org/abs/2309.03409" source="arXiv">
+  Using an LLM to propose improved prompts from a history of scores.
+</Resource>
+
+<Resource kind="paper" title="TextGrad: Automatic Differentiation via Text" href="https://arxiv.org/abs/2406.07496" source="arXiv">
+  Backpropagating textual feedback through an LLM system.
+</Resource>
+
+<Resource kind="paper" title="DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines" href="https://arxiv.org/abs/2310.03714" source="arXiv">
+  A programming model and optimizers for LM pipelines.
+</Resource>
+
+<Resource kind="paper" title="Reflexion: Language Agents with Verbal Reinforcement Learning" href="https://arxiv.org/abs/2303.11366" source="arXiv">
+  Learning from written reflections on failures.
+</Resource>
+
+<Resource kind="paper" title="AlphaEvolve: A coding agent for scientific and algorithmic discovery" href="https://arxiv.org/abs/2506.13131" source="arXiv">
+  Evolutionary search with LLM-written code and automated evaluators.
+</Resource>
+
+## Check yourself
+
+1. In your own words, define a meta-harness in both senses. Give one example of each from your work.
+2. For three of the papers above, state what is being optimized (prompts, programs, agent code) and what the feedback signal is.
+3. Name one way the optimizers differ in how much feedback detail they preserve.

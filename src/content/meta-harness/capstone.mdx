@@ -1,0 +1,63 @@
+Build a small meta-harness for a task you care about, and show with held-out data whether searching over harness code beats your hand-built harness.
+
+## The brief
+
+Choose a task with automatic scoring and a frozen model. Good options:
+
+- **Text classification or extraction** on a labeled dataset, searching over how examples and context are selected and formatted.
+- **Retrieval-augmented question answering**, searching over query rewriting, retrieval rules and context packing.
+- **Coding or terminal tasks** scored by tests, searching over setup information, prompts and tool wrappers.
+- **Long-running work** such as the feature-list pattern from lesson 3, searching over progress-file formats and startup routines.
+
+Use open or cheap models so you can afford many runs.
+
+## Requirements
+
+1. **Task and scorer.** A scorer you trust, with a validation of the scorer itself (hand-checked sample).
+2. **Data splits.** Search, validation and test sets, with the test set locked until the end.
+3. **Baseline harness.** A one-file hand-built harness with an explicit interface, scored at least five times for variance.
+4. **Trace archive.** Full per-candidate traces on disk, greppable, with a documented layout.
+5. **Proposer.** A coding agent guided by a written instruction file with the goal, metric, interface, off-limits files and rules, running in a sandbox.
+6. **Search loop.** At least 30 candidates, interface validation before evaluation, and budget caps for candidates, tokens and spend.
+7. **Selection.** Winner or Pareto frontier chosen on search and validation sets only. Test score reported once.
+8. **Ablation of the central idea.** Re-run a shorter search where the proposer sees only scores, and another with scores plus summaries, and compare with full-trace access.
+9. **Audit.** Read the winning code, ablate its changes, re-run for variance and test transfer to another model or fresh tasks.
+10. **Write-up.** Method, results table, cost (tokens and dollars), the best harness explained in plain language, what failed and what you would try next.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Choose task, build and check scorer | scorer and sample check |
+| Split data, write baseline, log traces | baseline score and trace layout |
+| Write proposer instructions, sandbox | working loop on 5 candidates |
+| Scale to 30+ candidates | archive of candidates |
+| Select, test once, audit | final numbers and code review |
+| Run the traces ablation | comparison table |
+| Write up and publish | public repo |
+
+## Stretch goals
+
+- Compare two different proposer agents.
+- Search over harnesses for two models at once and look for harnesses that transfer.
+- Add a cost objective and report the accuracy versus tokens Pareto frontier.
+- Add a human-in-the-loop checkpoint every N iterations.
+- Combine with the Synthetic Data course: use generated data to expand the search set, and be careful about contamination.
+
+## Share it
+
+Publish the loop, instruction file, scorer and results, with test data handled according to its license. A plain account such as "the search beat my baseline by 4 points on test, and 3 of those points came from one additive change; the control-flow rewrites overfit" is the kind of finding other engineers can build on.
+
+## Where to go next
+
+<Resource kind="paper" title="Meta-Harness: End-to-End Optimization of Model Harnesses" href="https://arxiv.org/abs/2603.28052" source="arXiv">
+  Re-read it against your own results.
+</Resource>
+
+<Resource kind="paper" title="Automated Design of Agentic Systems" href="https://arxiv.org/abs/2408.08435" source="arXiv">
+  A different search design to compare with.
+</Resource>
+
+<Resource kind="article" title="Effective harnesses for long-running agents" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" source="Anthropic Engineering">
+  A hand-built harness to use as a baseline or a starting point.
+</Resource>

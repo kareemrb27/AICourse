@@ -448,6 +448,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "meta-harness",
+    title: "Explore Meta-Harness Architectures for AI Agents",
+    track: "Building agentic systems",
+    level: "Expert",
+    summary:
+      "The harness around a model often matters as much as the model. Learn what a harness is, how long-running harnesses are built, what \"meta-harness\" means, and how to search over harness code with your own data.",
+    prerequisites: [
+      "You have built a tool-calling agent",
+      "Comfortable reading research papers and Python code",
+      "Helpful: the Production Agents and Repository Context courses",
+    ],
+    outcomes: [
+      "Describe a harness as a set of design surfaces you can change and measure",
+      "Explain the structure of long-running and orchestrator-worker harnesses",
+      "Distinguish the senses of \"meta-harness\" and place the research in its lineage",
+      "Explain the Meta-Harness method, its evidence and its stated limits",
+      "Build and audit a small harness search with proper data splits and sandboxing",
+    ],
+    lessons: [
+      {
+        slug: "what-is-a-harness",
+        title: "What is a harness?",
+        summary: "Agent = model + harness, and why the harness matters.",
+        minutes: 60,
+        load: () => import("./meta-harness/what-is-a-harness.mdx"),
+      },
+      {
+        slug: "harness-anatomy",
+        title: "The anatomy of a harness",
+        summary: "Seven design surfaces and how to make them optimizable.",
+        minutes: 120,
+        load: () => import("./meta-harness/harness-anatomy.mdx"),
+      },
+      {
+        slug: "long-running-harnesses",
+        title: "Harnesses for long-running work",
+        summary: "Initializer and worker agents, feature lists and orchestrators.",
+        minutes: 90,
+        load: () => import("./meta-harness/long-running-harnesses.mdx"),
+      },
+      {
+        slug: "what-meta-harness-means",
+        title: "What \"meta-harness\" means",
+        summary: "Two senses of the term, and the research lineage behind it.",
+        minutes: 120,
+        load: () => import("./meta-harness/what-meta-harness-means.mdx"),
+      },
+      {
+        slug: "method-deep-dive",
+        title: "Deep dive: the Meta-Harness method",
+        summary: "Search space, proposer, traces versus summaries, and results.",
+        minutes: 150,
+        load: () => import("./meta-harness/method-deep-dive.mdx"),
+      },
+      {
+        slug: "build-your-own-search",
+        title: "Build your own harness search",
+        summary: "Splits, traces, proposer instructions, selection and audits.",
+        minutes: 150,
+        load: () => import("./meta-harness/build-your-own-search.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Search for a better harness and prove it on held-out data.",
+        minutes: 360,
+        load: () => import("./meta-harness/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

@@ -1,0 +1,69 @@
+Many real tasks outlast a single context window. A harness for long-running work must carry progress across sessions that start with no memory of the last one. Studying how teams solved this shows what a harness is really for, and what a search could later improve.
+
+## The problem
+
+Anthropic's engineering team describes agents working in discrete sessions where each new session begins blank. Context windows are limited, so progress on a large project stalls even when the model is capable. They report that compaction alone was not enough, and that a capable model given only a high-level prompt fell short of a production-quality application.
+
+## A two-agent pattern
+
+The design uses the same model in two roles, plus files that act as shared memory:
+
+- **Initializer agent (runs once).** Expands the request into a detailed **feature list**, writes an `init.sh` script that starts the dev server, creates a **progress log**, and makes the first git commit.
+- **Coding agent (runs every later session).** Works on **one feature at a time**, leaves the code in a clean, mergeable state, and records what it did.
+
+Supporting artifacts:
+
+- **Feature list as JSON.** Every feature starts as failing, and agents may change only a status flag. JSON was chosen because the model is less likely to overwrite it than Markdown.
+- **Progress file plus git history.** A fresh agent reads them to see what has been done, and can revert bad changes.
+- **End-to-end testing.** The agent tests like a user, using browser automation, and marks a feature passing only after verifying it.
+- **Startup routine.** Each session checks the working directory, reads notes and history, starts the server and runs a basic test before adding anything new.
+
+## Failure modes this harness removes
+
+| Observed failure | Harness fix |
+| --- | --- |
+| Tries to build everything at once and runs out of context mid-feature | Feature list, one feature per session |
+| A later session sees partial progress and declares victory | All features start as failing |
+| Leaves bugs or undocumented work behind | Commits and notes at the end, a basic check at the start |
+| Marks features done without real testing | Browser-based end-to-end verification |
+| Wastes time figuring out how to run the app | `init.sh` written once |
+
+Notice that none of these fixes change the model. They change **what state exists, how it is structured, and what must be verified**.
+
+## Orchestrators and workers
+
+A second structure appears in Anthropic's multi-agent research system: a lead agent plans and delegates to subagents that explore in parallel with their own context, then synthesizes their results. The post also shares candid production lessons about cost, evaluation and debugging. A harness for multi-agent systems must decide how work is split, how results come back, and how to keep cost under control.
+
+## Open questions worth carrying forward
+
+The long-running harness post itself asks whether specialized agents for testing, QA or cleanup would beat one general agent, and how well the lessons transfer beyond web apps. Questions like these are exactly the kind that a systematic search over harness variants could answer with data instead of opinion.
+
+<Callout title="Takeaway">
+  A harness encodes a theory of how the work should be organized. Hand-built
+  harnesses embody a team's theory. A meta-harness tests many theories
+  against the evidence.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Effective harnesses for long-running agents" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" source="Anthropic Engineering">
+  The full design, with the failure modes and fixes.
+</Resource>
+
+<Resource kind="article" title="How we built our multi-agent research system" href="https://www.anthropic.com/engineering/multi-agent-research-system" source="Anthropic Engineering">
+  Orchestrator and worker design, plus lessons from production.
+</Resource>
+
+<Resource kind="paper" title="Mixture-of-Agents Enhances Large Language Model Capabilities" href="https://arxiv.org/abs/2406.04692" source="arXiv">
+  A research view of combining several model outputs in layers.
+</Resource>
+
+<Resource kind="docs" title="Terminal-Bench" href="https://www.tbench.ai/" source="tbench.ai">
+  A benchmark of hard terminal tasks used to compare agent harnesses.
+</Resource>
+
+## Check yourself
+
+1. Pick a project too big for one session. Write the feature list, the progress file format and the startup routine.
+2. Run two sessions by hand using only those files for continuity. Note what information was missing.
+3. List three harness decisions in the design above that you could turn into variants to test.

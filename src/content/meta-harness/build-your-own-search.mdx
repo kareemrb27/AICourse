@@ -1,0 +1,113 @@
+You do not need the paper's compute to benefit from its ideas. This lesson is a recipe for a small, safe, honest harness search on a task of your own.
+
+## Step 1: Choose a task you can score
+
+The method needs a number it can climb. Good tasks have automatic scoring:
+
+- classification or extraction with labeled data
+- question answering with verifiable answers
+- coding tasks with tests
+- tool-use tasks with a checkable end state
+
+If you cannot score it automatically, build the scorer first (the evals lesson in the Production Agents course applies directly).
+
+## Step 2: Split your data three ways
+
+| Split | Used for | Who sees it |
+| --- | --- | --- |
+| **Search set** | Scoring candidates during the search | The scorer, and traces from it |
+| **Validation set** | Choosing between finalists, catching overfitting | You |
+| **Test set** | One final report | Nobody until the end |
+
+The proposer must never see test results. Keep the test set out of any prompt or example the search could memorize.
+
+## Step 3: Write a baseline harness
+
+A simple one-file program with a clear interface:
+
+```text
+def run(task, model, tools) -> result
+```
+
+Make its design surfaces (prompt template, retrieval step, memory update, tool wrapper) easy to find. Score it. This is the number to beat and the control for every comparison.
+
+## Step 4: Log full traces
+
+For every run, write to disk: the input, every prompt sent, every tool call and result, every model output, state changes and the final score. Store per-candidate folders:
+
+```text
+archive/
+  cand_001/  harness.py  score.json  traces/
+  cand_002/  harness.py  score.json  traces/
+```
+
+This directory is the proposer's working memory. Keep it greppable: plain text and JSON, stable filenames.
+
+## Step 5: Write the proposer's instructions
+
+A short skill or instruction file that states:
+
+- the goal and the metric (and any secondary metric, such as cost)
+- where candidates live and how to read scores and traces
+- which files it may change, and which are off limits (the evaluator, the data)
+- the interface every harness must satisfy
+- rules such as "prefer additive changes", "state your hypothesis before each change" and "do not hard-code answers or task-specific constants"
+
+Run an off-the-shelf coding agent as the proposer, with read access to the archive and write access only to the candidates folder.
+
+## Step 6: Validate before evaluating
+
+Run each new candidate through an **interface check** (it imports, returns the right type, respects the budget) in a sandbox before spending evaluation compute. Reject candidates that touch forbidden files.
+
+## Step 7: Select carefully
+
+- Select on the search set. Compare finalists on the validation set.
+- If you track two goals (accuracy and tokens or cost), keep the **Pareto frontier** rather than one winner.
+- Report the test score once.
+
+## Step 8: Audit for overfitting and cheating
+
+- **Read the winning code.** Look for special cases keyed to specific examples, hard-coded answers, brittle `if` chains and leaks of evaluation data.
+- **Re-run** the winner several times for variance.
+- **Try other models** and a fresh sample of tasks to see whether the gain transfers.
+- **Ablate**: remove each change in the winner to see which one actually helped.
+
+## Safety and cost
+
+- **Sandbox everything** the proposer or candidates execute. These are agents writing and running code. Use containers, no secrets and restricted network access, and follow the practices from the Production Agents course. The Darwin Gödel Machine paper describes running its self-modifying experiments with sandboxing and human oversight.
+- **Cap spend**: maximum candidates, iterations and tokens per run, with a kill switch.
+- **Version everything**: the proposer's instructions, the evaluator and the data splits, so results are reproducible.
+
+<Callout title="Start small">
+  First run: 10 candidates, one task, a 50-example search set. If the loop
+  cannot beat your hand-built baseline at that scale, find out why before
+  scaling up. The cause is usually the scorer or the traces, not the proposer.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Meta-Harness: End-to-End Optimization of Model Harnesses" href="https://arxiv.org/abs/2603.28052" source="arXiv">
+  Use the experiment descriptions as templates for your search design.
+</Resource>
+
+<Resource kind="paper" title="Darwin Godel Machine" href="https://arxiv.org/abs/2505.22954" source="arXiv">
+  Archive-based open-ended search with empirical validation and safety measures.
+</Resource>
+
+<Resource kind="paper" title="DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines" href="https://arxiv.org/abs/2310.03714" source="arXiv">
+  A lighter-weight alternative that optimizes prompts and examples against a metric.
+</Resource>
+
+<Resource kind="article" title="Making Claude Code safer with sandboxing" href="https://www.anthropic.com/engineering/claude-code-sandboxing" source="Anthropic Engineering">
+  Designing isolation for agents that run code.
+</Resource>
+
+<Resource kind="docs" title="Terminal-Bench" href="https://www.tbench.ai/" source="tbench.ai">
+  A ready-made scoring environment if your task is terminal-based.
+</Resource>
+
+## Check yourself
+
+1. Build the baseline, the splits and the trace logger for your task, and score the baseline five times.
+2. Run 10 proposer iterations by hand if needed (you as the proposer, reading the traces). What changes do you make, and why?
+3. Write the overfitting audit checklist you will apply to any winning harness.

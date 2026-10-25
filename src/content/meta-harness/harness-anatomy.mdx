@@ -1,0 +1,78 @@
+To optimize a harness you must be able to describe it as a set of choices. This lesson dissects a harness into the parts a search could change.
+
+## The core loop
+
+```text
+state = initial_state(task)
+while not done(state):
+    context = build_context(state)           # what the model sees
+    response = model(context, tools)
+    if response.tool_calls:
+        results = run_tools(response.tool_calls)   # inside a sandbox
+        state = update_state(state, response, results)
+    else:
+        state = finish(state, response)
+```
+
+Almost every agent, from a 100-line script to a commercial coding agent, is a variation on this. The variations are the harness design.
+
+## Seven design surfaces
+
+| Surface | Questions it answers | Typical options |
+| --- | --- | --- |
+| **Context construction** | What goes in the prompt, in what order? | System prompt, task, retrieved docs, examples, summaries |
+| **Retrieval** | Which outside information is fetched, and when? | None, keyword, embeddings, rules per task type |
+| **Memory and state** | What persists across steps and sessions? | Message history, notes file, key-value store |
+| **Tools** | What can the model do, and how are results shown? | Shell, file edit, search, browser, MCP servers |
+| **Control flow** | Who decides the next step? | Fixed workflow, model-driven loop, planner and workers |
+| **Verification** | How are outputs checked? | Tests, validators, critics, human approval |
+| **Limits and safety** | What can it not do? | Permissions, sandbox, step and cost caps |
+
+Earlier courses on this site go deep on several rows: repository context (context and retrieval), persistent memory (memory), browser automation (tools), production agents (verification and limits).
+
+## Inner and outer harness
+
+Vendors ship an **inner harness**: the loop, built-in tools and context management in an SDK or product. Your team adds an **outer harness** around it: project instructions, extra tools, evals in CI, approval policies, deployment. When you optimize "the harness", be explicit about which layer you can change.
+
+## Making a harness optimizable
+
+A search can only improve what is **expressed as code or configuration** and can be **run repeatedly with a score**. That suggests practical rules:
+
+1. **Isolate the interface.** Define what a harness receives (the task, tools, model) and returns (the final answer or result), so alternatives are interchangeable.
+2. **Keep it small and readable.** The Meta-Harness paper searches over single-file programs typically 100 to 1,000 lines. Small files are easy for an agent to read and diff.
+3. **Log everything.** Prompts, tool calls, model outputs and state updates, per run. Later lessons show why traces are the most valuable raw material.
+4. **Separate policy from plumbing.** Keep the parts you want to vary (prompt construction, retrieval choices, memory updates) apart from stable code (API clients, sandboxes).
+5. **Make runs deterministic enough to compare**, or repeat them.
+
+<Callout title="Design smell">
+  If changing what the model sees requires edits in six files, a search (or a
+  teammate) cannot safely explore that space. Consolidate before you optimize.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Agent SDK overview" href="https://code.claude.com/docs/en/agent-sdk/overview" source="Claude Code Docs">
+  How a vendor packages the inner harness.
+</Resource>
+
+<Resource kind="repo" title="openai/codex" href="https://github.com/openai/codex" source="GitHub">
+  An open-source terminal coding agent. Read how it builds context and runs tools.
+</Resource>
+
+<Resource kind="docs" title="LangGraph overview" href="https://docs.langchain.com/oss/python/langgraph/overview" source="LangChain docs">
+  A framework for expressing control flow and state as a graph.
+</Resource>
+
+<Resource kind="article" title="Making Claude Code safer with sandboxing" href="https://www.anthropic.com/engineering/claude-code-sandboxing" source="Anthropic Engineering">
+  How filesystem and network isolation are designed into a harness.
+</Resource>
+
+<Resource kind="repo" title="SWE-agent/mini-swe-agent" href="https://github.com/SWE-agent/mini-swe-agent" source="GitHub">
+  A minimal reference loop to compare against larger systems.
+</Resource>
+
+## Check yourself
+
+1. Read the source of one open harness (mini-swe-agent or Codex). Mark where each of the seven surfaces appears.
+2. Rewrite a small agent of yours as one file with a clear interface for the task and the result.
+3. Add trace logging for prompts, tool calls and outputs, and read one full run.

@@ -1,0 +1,64 @@
+Two teams can run the same model and get very different results. The difference is usually the **harness**: everything around the model that turns text prediction into work. This course is about designing harnesses, and then about systems that design and improve harnesses for you.
+
+## Agent = model + harness
+
+A language model only reads tokens and writes tokens. The harness is the software that:
+
+- **runs the loop**: call the model, execute the tools it asks for, feed back the results, repeat until done
+- **assembles context**: decides what the model sees on each step (instructions, history, retrieved documents, tool output, memory)
+- **provides tools**: files, shell, search, browsers, APIs
+- **manages state**: what is stored between steps and between sessions
+- **enforces limits**: permissions, sandboxing, budgets, stop conditions
+- **checks work**: tests, validators, approvals
+
+The term is used loosely, and vendors draw its boundaries differently. Some also split it into an inner layer shipped by the model vendor and an outer layer your team adds (CI checks, evals, approval policies).
+
+## Why the harness matters as much as the model
+
+- The Meta-Harness paper opens from exactly this premise: the performance of an LLM system depends on the code that decides what information is stored, retrieved and shown to the model, and not only on the model's weights.
+- Courses earlier in this site showed pieces of it: repository context for coding agents, memory, production reliability, browser tools. Each is a harness decision.
+- Very small harnesses can be surprisingly capable. The `mini-swe-agent` repository, a deliberately tiny agent, reports strong SWE-bench Verified results for its size, which is a reminder that clever structure matters more than size. Check its README for its current numbers and conditions.
+
+<Callout title="A useful test">
+  If you swapped in a stronger model tomorrow, which parts of your system
+  would still be doing real work? Those are your harness. Treat them as the
+  asset you engineer, measure and version.
+</Callout>
+
+## From hand-built to searched
+
+Most harnesses today are written by hand, tuned by intuition and a few test runs. The frontier of this field asks whether a harness can be **optimized automatically**: an outer system proposes harness code, measures it, learns from the results and tries again. That outer system is what this course calls a **meta-harness**. Lesson 4 defines the term carefully, because it is used in more than one way.
+
+## Course map
+
+1. What a harness is (this lesson)
+2. The anatomy of a harness
+3. Harnesses for long-running work
+4. What "meta-harness" means
+5. Deep dive: the Meta-Harness method
+6. Building your own harness search
+7. Capstone
+
+## Resources
+
+<Resource kind="paper" title="Meta-Harness: End-to-End Optimization of Model Harnesses" href="https://arxiv.org/abs/2603.28052" source="arXiv">
+  Read the abstract and introduction now. You will study the method in lesson 5.
+</Resource>
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/engineering/building-effective-agents" source="Anthropic Engineering">
+  The standard introduction to workflows, agents and the building blocks around a model.
+</Resource>
+
+<Resource kind="docs" title="Agent SDK overview" href="https://code.claude.com/docs/en/agent-sdk/overview" source="Claude Code Docs">
+  A concrete example of a packaged harness: loop, tools, context handling and permissions.
+</Resource>
+
+<Resource kind="repo" title="SWE-agent/mini-swe-agent" href="https://github.com/SWE-agent/mini-swe-agent" source="GitHub">
+  A radically small agent. Read the source; it fits in your head.
+</Resource>
+
+## Check yourself
+
+1. Pick an agent you use or built. List its harness parts under the six headings above.
+2. Which single part would you change first to improve results, and why?
+3. Write down how you would know the change helped. This is the seed of lesson 6.

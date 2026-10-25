@@ -1,0 +1,82 @@
+This lesson walks through the Meta-Harness paper (Lee, Nair, Zhang, Lee, Khattab and Finn, March 2026): what it searches over, how each iteration works, what the experiments showed, and what the authors say are the limits. Everything here is reported by the authors, in a preprint. Read the paper alongside this summary.
+
+## The setup
+
+- **Frozen model.** The LLM's weights never change. Only the harness does.
+- **Search space: harness code.** A harness is a stateful program that decides what context the model sees at each step, covering prompt construction, retrieval, memory, state updates and orchestration. Each candidate is typically a single Python file of roughly 100 to 1,000 lines.
+- **Proposer: a coding agent.** The authors used Claude Code with Opus 4.6. A short **skill file** tells it where to write harnesses, how to read earlier ones and which files it may modify. There is no fixed rule for choosing a parent: it may inspect any earlier candidate.
+
+## One iteration
+
+```text
+archive = filesystem/               # per candidate: code, scores, execution traces
+for i in range(iterations):
+    proposals = proposer(skill_file, archive)   # reads with grep, cat, etc.
+    for h in proposals:
+        if not passes_interface_check(h):
+            continue
+        score, trace = run(h, search_set)
+        archive.save(h, score, trace)
+frontier = pareto(archive, [accuracy, context_cost])
+final = evaluate(frontier, held_out_test)       # once, at the end
+```
+
+Details worth noting:
+
+- The proposer queries history **on demand through the filesystem** instead of receiving it as one giant prompt. In the TerminalBench-2 run it read a median of 82 files per iteration, spanning more than 20 earlier candidates.
+- It diagnoses likely causes of failures from traces (prompts, tool calls, outputs, state updates), then writes either local edits or full rewrites.
+- **Selection uses search-set performance only.** The proposer never sees test-set results. When accuracy and context cost both matter, candidates are compared by **Pareto dominance**.
+- A typical run evaluates about 60 harnesses over 20 iterations in a few hours of wall-clock time. The authors estimate up to about 10 million tokens of diagnostic information per evaluation in the largest settings.
+
+## The three experiments
+
+| Setting | Model(s) | Reported result |
+| --- | --- | --- |
+| **Online text classification** (three datasets) | GPT-OSS-120B | Selected harness averaged 48.6% accuracy using 11.4K context tokens, versus 40.9% for a strong context-management baseline at 50.8K tokens. On nine unseen datasets: 73.1% vs 70.2%. It roughly matched the best prior text optimizers with about a tenth of the evaluations. |
+| **Retrieval-augmented olympiad math** (corpus of 500K+ solved problems, decontaminated) | GPT-OSS-20B for search, five held-out models for testing | Discovered a BM25-based harness that routes queries to subject-specific retrieval. On 200 IMO-level problems: 38.8% vs 34.1% with no retrieval (+4.7 points) and 37.5% for plain BM25. |
+| **TerminalBench-2** (89 tasks) | Opus 4.6; Haiku 4.5 | Main discovered change: an environment snapshot injected before the first model turn. Scores of 76.4% (Opus 4.6) and 37.6% (Haiku 4.5). On Opus 4.6 that edged out the strongest baseline they reproduced (74.7%) and ranked second behind a reported 81.8% entry the authors could not reproduce; on Haiku 4.5 it was ahead of the listed baseline (35.5%). |
+
+For TerminalBench-2 the search and final evaluation used the same tasks, so the authors frame it as a *discovery* problem and describe overfitting audits. Treat that result more cautiously than the held-out ones.
+
+## The key ablation: traces beat summaries
+
+In text classification, giving the proposer only **scores**, or scores plus **LLM-written summaries**, did far worse than giving it **full execution traces** (median 50.0, best 56.7 with full access). The authors conclude that raw traces are the key ingredient and that summaries discard diagnostically useful detail. This is the paper's central claim, and the reason the design uses a filesystem rather than a compressed history.
+
+## Limits the authors state
+
+- Only one strong proposer (Claude Code) was tested, so how results vary across proposers is open.
+- The approach became practical only with recent coding-agent capability.
+- **Prompt and control-flow edits were fragile**, while purely **additive** changes (more information, such as the environment snapshot) were safer.
+- Code-space overfitting, like brittle `if` chains, is easier to inspect than weight-space overfitting.
+- Co-evolving the harness and the model weights is future work.
+
+<Callout title="What to take from it">
+  Three portable ideas: give the optimizer raw evidence, not summaries;
+  search over small readable programs; and select on a search set while
+  keeping a test set untouched. You can apply all three without the paper's
+  scale.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Meta-Harness: End-to-End Optimization of Model Harnesses" href="https://arxiv.org/abs/2603.28052" source="arXiv">
+  Read the full paper, especially the method, the ablation and the limitations.
+</Resource>
+
+<Resource kind="paper" title="Meta-Harness (HTML version)" href="https://arxiv.org/html/2603.28052" source="arXiv">
+  The same paper as a web page, easier to search and cite.
+</Resource>
+
+<Resource kind="docs" title="Terminal-Bench" href="https://www.tbench.ai/" source="tbench.ai">
+  The benchmark behind the coding experiment. Browse its tasks to see what the harness faces.
+</Resource>
+
+<Resource kind="paper" title="Automated Design of Agentic Systems" href="https://arxiv.org/abs/2408.08435" source="arXiv">
+  Compare the archive-driven meta agent with Meta-Harness's filesystem approach.
+</Resource>
+
+## Check yourself
+
+1. Summarize the method on one page without looking, then check against the paper.
+2. Explain why "scores only" and "scores plus summaries" lose information, with an example failure whose cause appears only in a trace.
+3. For each of the three experiments, say which numbers are held-out and which are not.
