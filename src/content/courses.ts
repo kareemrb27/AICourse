@@ -590,6 +590,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "ai-code-analysis",
+    title: "Analyze AI-Generated Code for Quality and Security",
+    track: "Making systems secure and reliable",
+    level: "Intermediate",
+    summary:
+      "AI tools write plausible code that can be wrong, insecure or built on packages that do not exist. Learn to review it by risk, recognize common weaknesses, vet dependencies, automate analysis and test it properly.",
+    prerequisites: [
+      "You write code and use pull requests",
+      "Basic familiarity with Python or JavaScript, since examples use Python",
+      "You have used an AI coding assistant",
+    ],
+    outcomes: [
+      "Explain what research shows about the quality and security of AI-generated code",
+      "Review AI-written changes by risk, with a checklist for known failure patterns",
+      "Recognize and fix the weaknesses AI tools reproduce most often",
+      "Vet dependencies, defend against hallucinated packages and generate an SBOM",
+      "Build a layered CI pipeline and tests that genuinely protect you, and measure it",
+    ],
+    lessons: [
+      {
+        slug: "why-review-ai-code",
+        title: "Why AI-generated code needs a different review",
+        summary: "What the research found, and five ways AI code goes wrong.",
+        minutes: 60,
+        load: () => import("./ai-code-analysis/why-review-ai-code.mdx"),
+      },
+      {
+        slug: "review-by-risk",
+        title: "Reviewing by risk",
+        summary: "Intent first, risk map, known patterns and running the code.",
+        minutes: 90,
+        load: () => import("./ai-code-analysis/review-by-risk.mdx"),
+      },
+      {
+        slug: "security-weaknesses",
+        title: "Common security weaknesses",
+        summary: "Injection, traversal, randomness, secrets and access control, with fixes.",
+        minutes: 120,
+        load: () => import("./ai-code-analysis/security-weaknesses.mdx"),
+      },
+      {
+        slug: "dependencies-and-supply-chain",
+        title: "Dependencies and the supply chain",
+        summary: "Hallucinated packages, vulnerabilities, SBOMs, SLSA and licenses.",
+        minutes: 90,
+        load: () => import("./ai-code-analysis/dependencies-and-supply-chain.mdx"),
+      },
+      {
+        slug: "automated-analysis",
+        title: "Automated analysis and governance",
+        summary: "Linters, types, SAST, secret scanning, LLM reviewers and policy.",
+        minutes: 120,
+        load: () => import("./ai-code-analysis/automated-analysis.mdx"),
+      },
+      {
+        slug: "testing-ai-code",
+        title: "Testing AI-generated code",
+        summary: "Property-based tests, mutation testing, fuzzing and safe execution.",
+        minutes: 120,
+        load: () => import("./ai-code-analysis/testing-ai-code.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Build a pipeline that gates AI-assisted changes, and measure it.",
+        minutes: 300,
+        load: () => import("./ai-code-analysis/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

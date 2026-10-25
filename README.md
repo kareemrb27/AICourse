@@ -16,6 +16,7 @@ This is an independent project and is not affiliated with any conference or cour
 | Engineer Synthetic Data for Open LLMs | Expert | 7 lessons, first draft |
 | Explore Meta-Harness Architectures for AI Agents | Expert | 7 lessons, first draft |
 | Architect Agentic Systems for Financial Workflows | Beginner | 7 lessons, first draft |
+| Analyze AI-Generated Code for Quality and Security | Intermediate | 7 lessons, first draft |
 
 ## Run locally
 

@@ -1,0 +1,58 @@
+Build the pipeline that makes AI-assisted development safe for a real project, and prove that it catches real problems.
+
+## The brief
+
+Pick a project you care about (a web API, a CLI tool or a library, at least a few hundred lines). Use an AI coding tool to add several features to it. Then build the review, analysis and testing system that decides whether that code may merge, and measure how well it works.
+
+Work only on your own code or code you have permission to test. Run generated code in a sandbox, and never use real secrets or production data.
+
+## Requirements
+
+1. **Baseline audit.** Use the tool to generate at least five realistic features, including some in risky areas (input handling, authentication, file access, database queries). Record every flaw you find by reading, tools and tests. Classify each using the five categories from lesson 1 and a CWE ID where one applies.
+2. **Review process.** A pull request template and a risk-based review checklist tailored to the failure patterns you actually found.
+3. **Automated analysis in CI.** At least a linter, a type checker, one SAST tool, a secret scanner and a dependency scanner, with documented rules for what blocks a merge.
+4. **Custom rules.** At least three project-specific rules (for example, Semgrep) derived from flaws you found.
+5. **Supply chain controls.** A dependency policy, a check that blocks unreviewed new dependencies, an SBOM and a license check. Include a deliberate test using a nonexistent package name.
+6. **Stronger tests.** Property-based tests for at least two modules, a mutation testing report with surviving mutants addressed, and security regression tests for each vulnerability found.
+7. **Seeded-bug evaluation.** Plant at least 10 realistic vulnerabilities and quality bugs (for example from the CWE Top 25 list) in a branch. Measure which layer caught each, which slipped through, and the false-positive count.
+8. **Iteration.** Improve the pipeline based on what slipped through, and re-measure.
+9. **Policy and write-up.** A one-page AI-assisted development policy for the project, a results table (caught by layer, missed, false positives, time cost) and a candid list of what still depends on human judgment.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Generate features with an AI tool | pull requests to audit |
+| Audit and classify flaws | findings report |
+| Build CI checks and custom rules | working pipeline |
+| Add dependency and supply chain controls | policy and checks |
+| Strengthen tests | property, mutation and security tests |
+| Plant bugs and measure | detection results |
+| Improve and re-measure | before and after table |
+| Write the policy and report | public repo |
+
+## Stretch goals
+
+- Add an LLM-based reviewer as a non-blocking commenter, and measure its precision against your seeded bugs and human review.
+- Compare two AI coding tools or models on the number and type of flaws they introduce.
+- Add a fuzz target for your main input parser.
+- Map your pipeline to NIST's SSDF practices and note the gaps.
+- Add provenance tracking: which commits or files were AI-assisted, and what review each received.
+
+## Share it
+
+Publish the repo with the seeded-bug set, the pipeline and the results. The most useful reports state clearly which flaws only a human caught, since that tells other teams where not to relax.
+
+## Where to go next
+
+<Resource kind="docs" title="CWE Top 25 Most Dangerous Software Weaknesses" href="https://cwe.mitre.org/top25/" source="MITRE">
+  Use it to design your seeded bugs.
+</Resource>
+
+<Resource kind="docs" title="NIST SP 800-218: Secure Software Development Framework" href="https://csrc.nist.gov/pubs/sp/800/218/final" source="NIST">
+  Map your pipeline to a recognized framework.
+</Resource>
+
+<Resource kind="docs" title="OWASP Application Security Verification Standard" href="https://owasp.org/www-project-application-security-verification-standard/" source="OWASP">
+  A detailed requirement list to verify your application against.
+</Resource>

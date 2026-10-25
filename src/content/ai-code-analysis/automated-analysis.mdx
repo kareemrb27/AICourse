@@ -1,0 +1,119 @@
+Human review does not scale to AI-generated volume, and it misses things people are bad at spotting. Automate the checks that can be automated, in layers, so each one catches what the others do not.
+
+## The layered pipeline
+
+| Layer | Catches | Examples |
+| --- | --- | --- |
+| **Formatters and linters** | Style, obvious bugs, unused code, risky constructs | Ruff and ESLint |
+| **Type checkers** | Wrong types, missing attributes, invented members | mypy, TypeScript |
+| **Static application security testing (SAST)** | Injection, unsafe functions, insecure patterns | CodeQL, Semgrep, Bandit |
+| **Secret scanning** | Keys, tokens and passwords in code and history | Gitleaks |
+| **Dependency and license scanning** | Known vulnerabilities and license issues | OSV-Scanner, Dependabot |
+| **Tests** | Behavior, regressions | Unit, integration, property tests (lesson 6) |
+| **Human review** | Design, intent, authorization logic, anything subtle | You |
+
+Many hallucinated function calls and wrong parameter types are caught for free by a type checker, so turn one on, even in an existing untyped codebase, starting with the files tools touch most.
+
+## SAST: how it works and how to use it
+
+Static analysis reads code without running it, following how data flows from sources (user input) to sinks (database queries, shell commands) to find unsafe paths.
+
+- **CodeQL** treats code as a database you query, with a large library of security queries. It integrates with GitHub code scanning.
+- **Semgrep** matches code patterns with rules that are easy to write, so you can encode your own team's rules.
+- **Bandit** is a Python-specific security linter.
+
+A custom Semgrep rule that bans `shell=True`:
+
+```yaml
+rules:
+  - id: no-shell-true
+    languages: [python]
+    severity: ERROR
+    message: Do not pass shell=True to subprocess. Pass an argument list instead.
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+```
+
+Turn every recurring review comment into a rule like this. That way each lesson learned from AI-generated mistakes protects the whole codebase permanently.
+
+## Secret scanning
+
+Run a scanner such as Gitleaks in pre-commit and in CI. If a secret is committed, **assume it is compromised**: revoke and rotate it, then clean up. Deleting the line is not enough because git history keeps it.
+
+## Handling noise
+
+Scanners produce false positives, and developers learn to ignore noisy tools.
+
+- Start with a **small, high-confidence rule set**, and expand gradually.
+- **Triage and suppress** with a written reason and an expiry date, never silently.
+- Block merges only on **high-severity, high-confidence** findings. Report the rest.
+- Measure **time to fix** and **recurring finding types**, and feed these back into training and rules.
+
+## Using an LLM as a reviewer
+
+Language models can review a diff and catch issues static tools miss, or explain a finding and propose a fix. Research on AI-generated code has also shown that a chat assistant, given static analysis warnings, could fix a good share of them. Use models this way with care:
+
+- Treat their output as **suggestions to verify**, not verdicts. They produce false positives and misses.
+- Give them **context**: the threat model, the project rules and the surrounding code.
+- Do **not** make a model's approval your only gate. A model that wrote the code and the model that reviews it may share the same blind spots.
+- Re-run the real tools and tests after any model-suggested fix.
+
+## Governance for AI-assisted development
+
+- A **written policy** on which tools are approved, what data may be sent to them and what must be reviewed.
+- **Pull request templates** that ask: was AI used, which parts, what was verified.
+- **Training** for developers on the failure patterns in these lessons.
+- **Standards alignment.** NIST's Secure Software Development Framework (SSDF) describes secure development practices, and NIST publishes a community profile of it for generative AI. CISA's Secure by Design materials describe how vendors can build security into products. Use them to structure your program and show auditors what you do.
+
+<Callout title="Make the safe path the easy path">
+  Put these checks in a pre-commit hook and a required CI job, with fast
+  feedback. Developers and agents then find out about a problem in seconds,
+  not at release time.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="About code scanning" href="https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning" source="GitHub Docs">
+  How CodeQL-based scanning runs in pull requests.
+</Resource>
+
+<Resource kind="docs" title="CodeQL documentation" href="https://codeql.github.com/docs/" source="GitHub">
+  Query language and library reference.
+</Resource>
+
+<Resource kind="docs" title="Semgrep documentation" href="https://semgrep.dev/docs/" source="Semgrep">
+  Writing custom rules and running scans in CI.
+</Resource>
+
+<Resource kind="repo" title="Gitleaks" href="https://github.com/gitleaks/gitleaks" source="GitHub">
+  A secret scanner for repositories and history.
+</Resource>
+
+<Resource kind="docs" title="Ruff" href="https://docs.astral.sh/ruff/" source="Astral">
+  A fast Python linter and formatter.
+</Resource>
+
+<Resource kind="docs" title="ESLint" href="https://eslint.org/docs/latest/" source="ESLint">
+  The standard JavaScript and TypeScript linter.
+</Resource>
+
+<Resource kind="docs" title="mypy" href="https://mypy.readthedocs.io/" source="mypy">
+  A static type checker for Python.
+</Resource>
+
+<Resource kind="docs" title="NIST SP 800-218: Secure Software Development Framework" href="https://csrc.nist.gov/pubs/sp/800/218/final" source="NIST">
+  A framework of secure development practices.
+</Resource>
+
+<Resource kind="docs" title="NIST SP 800-218A: SSDF Community Profile for Generative AI" href="https://csrc.nist.gov/pubs/sp/800/218/a/final" source="NIST">
+  The profile covering secure development practices for generative AI and foundation models.
+</Resource>
+
+<Resource kind="docs" title="Secure by Design" href="https://www.cisa.gov/resources-tools/resources/secure-by-design" source="CISA">
+  Principles for building security into software products.
+</Resource>
+
+## Check yourself
+
+1. Add a linter, a type checker, one SAST tool and a secret scanner to a project, running in CI.
+2. Introduce three deliberate flaws (SQL injection, `shell=True`, a fake API key). Confirm each layer catches what you expect.
+3. Write two custom Semgrep rules from mistakes you found in lessons 2 and 3.

@@ -1,0 +1,101 @@
+Tests are your strongest evidence that code does what you intend. But AI tools write tests too, and a test written by the same model that wrote the code can share its misunderstanding. This lesson is about tests you can trust.
+
+## Why AI-written tests mislead
+
+- **They mirror the implementation.** The test recomputes the answer with the same logic, so it passes even when the logic is wrong.
+- **They assert the happy path** and skip boundaries, errors and hostile input.
+- **They over-mock.** When everything around the unit is faked, the test proves little about real behavior.
+- **They get weakened to pass.** An agent asked to "make the tests pass" may delete assertions, loosen expectations or skip tests.
+- **Coverage looks great.** Lines executed is not the same as behavior verified.
+
+## Write the specification first
+
+The strongest workflow is tests before code:
+
+1. **You** write (or carefully review) the tests that describe the behavior: examples, edge cases, and failure cases.
+2. The tool writes code to make them pass.
+3. You review the code and add the cases the tests missed.
+
+Protect the tests: require review for any change that edits test files, and flag diffs that remove assertions.
+
+## Property-based testing
+
+Instead of examples, state **properties** that must always hold and let a library generate hundreds of inputs, including awkward ones. It finds edge cases neither you nor the tool thought of.
+
+```python
+from hypothesis import given, strategies as st
+
+@given(st.lists(st.integers()))
+def test_sorting_is_idempotent(xs):
+    assert sorted(sorted(xs)) == sorted(xs)
+
+@given(st.text())
+def test_roundtrip(s):
+    assert decode(encode(s)) == s
+```
+
+Good properties: round trips, idempotence, invariants (length preserved, no duplicates), comparison with a simple slow reference implementation, and "never crashes on any input".
+
+## Mutation testing: test your tests
+
+A mutation tester makes small deliberate changes to your code (flip a comparison, change a constant, delete a line) and checks whether any test fails. A mutation that survives means your tests would not notice that bug.
+
+Tools: **mutmut** for Python and **Stryker** for JavaScript, TypeScript and other languages. Run them on important modules. A high coverage number with many surviving mutants is a sign of shallow tests, which is especially common with generated ones.
+
+## Fuzzing
+
+Fuzzers feed large volumes of malformed, random or guided inputs to your parsers and handlers, looking for crashes and security bugs. OSS-Fuzz runs continuous fuzzing for open-source projects, and the same techniques apply to your input-handling code. Fuzz anything that parses data from outside.
+
+## Test the security properties
+
+Write tests for the weaknesses in lesson 3:
+
+- An unauthorized user cannot read another user's record (test with two accounts).
+- Path inputs with `..` are rejected.
+- Quotes and SQL metacharacters in inputs do not change query behavior.
+- Oversized or malformed requests are refused cleanly.
+- Error responses do not reveal internals.
+
+Every bug you find becomes a **regression test** before you fix it.
+
+## Run untrusted generated code safely
+
+Generated code, and tests written by a model, can do anything when executed.
+
+- Run them in a **container or sandbox** with no secrets, a restricted network and limited resources.
+- Do not run generated scripts against production data or real credentials.
+- Review code that touches the filesystem, network or processes before executing it, as you would for an unknown contributor.
+
+<Callout title="A two-question test of any test">
+  Would this test fail if the function returned the wrong answer? Would it
+  fail if the function did something dangerous with hostile input? If the
+  answer to either is no, the test is not protecting you.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Hypothesis" href="https://hypothesis.readthedocs.io/" source="Hypothesis">
+  Property-based testing for Python, with a good introduction to thinking in properties.
+</Resource>
+
+<Resource kind="docs" title="mutmut" href="https://mutmut.readthedocs.io/" source="mutmut">
+  Mutation testing for Python.
+</Resource>
+
+<Resource kind="docs" title="Stryker Mutator" href="https://stryker-mutator.io/" source="Stryker">
+  Mutation testing for JavaScript, TypeScript, .NET and more.
+</Resource>
+
+<Resource kind="repo" title="OSS-Fuzz" href="https://github.com/google/oss-fuzz" source="GitHub">
+  Continuous fuzzing for open-source software. Read how projects integrate fuzz targets.
+</Resource>
+
+<Resource kind="docs" title="OWASP Application Security Verification Standard" href="https://owasp.org/www-project-application-security-verification-standard/" source="OWASP">
+  A source of security test cases organized by area.
+</Resource>
+
+## Check yourself
+
+1. Have an AI tool write a function and its tests. Run a mutation tester. How many mutants survive?
+2. Write three properties for the function and run a property-based test. Did it find anything?
+3. Write the authorization test with two users for an endpoint of yours. Does it pass?

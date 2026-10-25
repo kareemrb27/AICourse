@@ -1,0 +1,95 @@
+AI assistants do not only write code; they choose libraries. A suggested dependency brings in someone else's code, permissions and vulnerabilities, and sometimes does not exist at all.
+
+## Hallucinated packages
+
+A study of package hallucinations (Spracklen et al., USENIX Security 2025) tested 16 code-generating models over 576,000 samples and found 205,474 unique hallucinated package names. The risk is practical: an attacker can **register a hallucinated name** on a public registry and publish malicious code, then wait for a developer or an agent to install it. This is sometimes called "slopsquatting".
+
+Defenses:
+
+- **Verify before install.** Does the package exist, who maintains it, how old is it, how many users does it have, where is its source repository, and does the name match the project you intended? Beware near-miss names.
+- **Prefer what you already use.** Check your lockfile and standard library first.
+- **Never let an agent add dependencies unreviewed.** Require a human to approve any new package, in a pull request, with a justification.
+- **Install in a sandbox** (a container with no secrets) when trying something new. Install scripts can run code.
+- **Use an allow-list or internal mirror** for packages that are approved in your organization.
+
+## Known vulnerabilities
+
+Even real packages have flaws. Models also suggest **old versions and deprecated APIs**, because older code dominates their training data.
+
+- **Pin versions** and commit lockfiles so builds are reproducible.
+- **Scan dependencies** against vulnerability databases. OSV.dev is an open vulnerability database, and OSV-Scanner checks your lockfiles against it. GitHub's Dependabot raises alerts and update pull requests.
+- **Keep updating**, with tests as a safety net.
+- **Prune** unused dependencies. Every one is attack surface.
+
+## Provenance and licensing
+
+- **SBOMs** (software bills of materials) list what is in your software. CycloneDX and SPDX are the two widely used formats. Generate one in CI.
+- **SLSA** (Supply-chain Levels for Software Artifacts) is a framework of increasing guarantees about how artifacts are built, such as build integrity and provenance.
+- **OpenSSF Scorecard** gives an automated health check of open-source projects (maintenance, code review practices, signed releases, and more), which helps you judge a dependency.
+- **Licenses.** Generated code can resemble open-source code, and suggested dependencies carry licenses with obligations. Run a license scanner, set a policy of allowed licenses, and involve legal counsel for unclear cases. Some tools offer filters that flag suggestions matching public code.
+
+## Secrets and the build pipeline
+
+AI-generated configuration often includes example credentials or broad permissions.
+
+- Scan commits for secrets (lesson 5) and rotate anything that leaks.
+- Review CI workflow files the same way you review code. A tool-written pipeline with broad tokens or unpinned third-party actions is a supply chain risk.
+- Use least-privilege tokens and pin third-party actions to immutable versions.
+
+## A dependency review checklist
+
+| Question | Where to look |
+| --- | --- |
+| Does it exist, and is it the right project? | Registry page and source repository |
+| Is it maintained? | Recent releases and commits, open issues |
+| Is it widely used and reviewed? | Download counts, dependents, Scorecard results |
+| Any known vulnerabilities? | OSV, Dependabot, advisories |
+| What does it pull in? | Dependency tree, install scripts |
+| License compatible? | License file and scanner |
+| Do we need it? | Standard library or existing dependency |
+
+<Callout title="Policy that works">
+  Treat "add a dependency" as a design decision, not a typing shortcut. Make it
+  visible in the diff, require a short justification, and automate the checks
+  above in CI.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating LLMs" href="https://arxiv.org/abs/2406.10279" source="arXiv">
+  The study behind the hallucination risk, including mitigation experiments.
+</Resource>
+
+<Resource kind="docs" title="OSV: Open Source Vulnerabilities" href="https://osv.dev/" source="OSV">
+  An open, distributed vulnerability database for open-source packages.
+</Resource>
+
+<Resource kind="docs" title="OSV-Scanner" href="https://google.github.io/osv-scanner/" source="Google">
+  Scan lockfiles and SBOMs against OSV.
+</Resource>
+
+<Resource kind="docs" title="Dependabot" href="https://docs.github.com/en/code-security/dependabot" source="GitHub Docs">
+  Alerts and automatic update pull requests.
+</Resource>
+
+<Resource kind="docs" title="OpenSSF Scorecard" href="https://scorecard.dev/" source="OpenSSF">
+  Automated security health checks for open-source projects.
+</Resource>
+
+<Resource kind="docs" title="SLSA" href="https://slsa.dev/" source="OpenSSF">
+  A framework for supply chain integrity levels.
+</Resource>
+
+<Resource kind="docs" title="CycloneDX" href="https://cyclonedx.org/" source="CycloneDX">
+  A bill of materials standard.
+</Resource>
+
+<Resource kind="docs" title="SPDX" href="https://spdx.dev/" source="Linux Foundation">
+  Another widely used standard for software bills of materials and license data.
+</Resource>
+
+## Check yourself
+
+1. Ask an AI tool to build a small feature. List every dependency it suggested and run the checklist on each.
+2. Run OSV-Scanner on a project and triage the findings.
+3. Generate an SBOM in CI and fail the build on a disallowed license.

@@ -1,0 +1,117 @@
+A small set of weakness types accounts for most real vulnerabilities, and AI tools reproduce them reliably because insecure examples are everywhere in their training data. Learn to recognize the common ones on sight.
+
+## Two catalogs to know
+
+- **CWE** (Common Weakness Enumeration) names categories of software weakness. MITRE publishes a yearly **CWE Top 25** of the most dangerous ones, a useful target list.
+- **OWASP Top 10** ranks the most critical web application security risks. The OWASP Cheat Sheet Series gives concrete prevention advice for each.
+
+## Weaknesses to recognize, with fixes
+
+### Injection (SQL, command, template)
+Untrusted data is pasted into an interpreter's input.
+
+```python
+# Vulnerable: shell interprets the filename
+subprocess.run(f"convert {filename} out.png", shell=True)
+
+# Safer: no shell, arguments passed as a list
+subprocess.run(["convert", filename, "out.png"], check=True)
+```
+
+For SQL, always use parameterized queries (see lesson 2).
+
+### Path traversal
+User input controls a file path, so `../../etc/passwd` escapes the intended folder.
+
+```python
+from pathlib import Path
+
+BASE = Path("/srv/uploads").resolve()
+
+def safe_path(name: str) -> Path:
+    p = (BASE / name).resolve()
+    if not p.is_relative_to(BASE):
+        raise ValueError("invalid path")
+    return p
+```
+
+### Cross-site scripting (XSS)
+User input is written into a web page without escaping. Use the framework's automatic escaping, avoid raw HTML insertion, and apply a content security policy.
+
+### Weak randomness and cryptography
+Generated code often uses a general-purpose random generator for tokens, or invents its own encryption.
+
+```python
+import random, secrets
+
+token = random.random()          # Not for security: predictable
+token = secrets.token_urlsafe(32) # Cryptographically secure
+```
+
+Never write your own cryptography. Use well-reviewed libraries with safe defaults, and store passwords with a dedicated password-hashing algorithm via a vetted library, not a fast general hash.
+
+### Hard-coded secrets
+API keys and passwords in source or example files. Load secrets from the environment or a secrets manager, and scan for them (lesson 5).
+
+### Broken access control
+The code verifies *who you are* but not *what you may do*. For every endpoint that takes an object ID, check that the caller is allowed to access that object. This is one of the most common serious flaws and one of the hardest for tools to see, because it depends on your rules.
+
+### Unsafe deserialization and parsing
+Loading untrusted data with formats that can execute code, or parsing XML with external entities enabled. Use safe parsers and data-only formats for untrusted input.
+
+### Server-side request forgery (SSRF)
+The server fetches a URL supplied by a user, which can be pointed at internal services. Validate and allow-list destinations.
+
+### Insecure defaults
+Debug mode left on, permissive CORS, disabled certificate verification ("to make the error go away"), overly broad IAM permissions or open storage buckets. Treat any line that disables a safety check as a red flag.
+
+### Error handling and information leaks
+Stack traces and internal details returned to users, or errors swallowed so failures go unnoticed.
+
+## How the model's habits create these
+
+- It imitates the **most common** pattern, which is often the **quick** pattern.
+- It optimizes for code that **runs**, not code that is **safe against hostile input**.
+- It lacks your **threat model** and business rules unless you tell it.
+- It follows the style of **surrounding code**, so one vulnerable function can seed more.
+
+## Prompting for safer code
+
+Helpful, but never sufficient on its own:
+
+- State requirements: "validate input, use parameterized queries, no shell, least privilege".
+- Provide the threat model and relevant project security rules in your instruction file.
+- Ask for a **second pass** where the model reviews its own output against a named checklist, then verify with real tools.
+
+<Callout title="Prompts are not controls">
+  Telling a model to write secure code reduces risk but guarantees nothing.
+  Your protection comes from review, automated analysis and tests.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="CWE Top 25 Most Dangerous Software Weaknesses" href="https://cwe.mitre.org/top25/" source="MITRE">
+  The current yearly ranking, with links to each weakness.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10" href="https://owasp.org/www-project-top-ten/" source="OWASP">
+  The standard awareness list for web application security risks.
+</Resource>
+
+<Resource kind="docs" title="OWASP Cheat Sheet Series" href="https://cheatsheetseries.owasp.org/" source="OWASP">
+  Look up the cheat sheet for each weakness above.
+</Resource>
+
+<Resource kind="docs" title="Bandit" href="https://bandit.readthedocs.io/en/latest/" source="Bandit">
+  A Python security linter. Browse its list of checks to see common unsafe patterns.
+</Resource>
+
+<Resource kind="article" title="OWASP Top 10 for LLM applications" href="https://owasp.org/www-project-top-10-for-large-language-model-applications/" source="OWASP">
+  If your product also embeds an LLM, these risks apply in addition to the above.
+</Resource>
+
+## Check yourself
+
+1. Ask an AI tool to write a file upload endpoint, a login handler and a search endpoint. Review each against the list above.
+2. For every issue, write the unit test that would fail on the vulnerable version.
+3. Add the top three issues you found to your project's instruction file as explicit rules.

@@ -1,0 +1,92 @@
+Reading every line with equal care does not scale. Review AI-generated code by **risk**: spend your attention where mistakes are costly and where models are known to fail.
+
+## Step 1: Review the intent before the code
+
+- What problem was this supposed to solve? Is the request written down (issue, ticket, prompt)?
+- Does the change do **only** that? AI diffs often sprawl: unrelated refactors, renamed files, reformatted code. Ask for a smaller change.
+- Is the approach reasonable, or did the tool pick a convoluted path because it was easy to generate?
+
+Google's published engineering practices on code review are a good model for what a review should cover, from design and functionality to complexity, tests, naming, comments and style.
+
+## Step 2: Map the risk
+
+Mark each changed area:
+
+| Risk | Examples | How closely to review |
+| --- | --- | --- |
+| **High** | Authentication, authorization, payments, cryptography, input parsing, file and network access, database queries, secrets, infrastructure code | Line by line, with a security-minded reviewer |
+| **Medium** | Business logic, data transformations, concurrency, error handling | Read carefully and test edge cases |
+| **Low** | Formatting, logging text, documentation, trivial glue | Skim, rely on automation |
+
+## Step 3: Hunt known failure patterns
+
+A checklist tuned to AI-generated code:
+
+- **Invented APIs and parameters.** Does every called function, method and flag exist in the version you use? Check docs, not memory.
+- **Unchecked trust boundaries.** Is input from users, files, the network or other services validated before use?
+- **Missing authorization.** The code checks that you are logged in but not that you may access *this* record.
+- **Swallowed errors.** Broad `except` blocks that log and continue, returning success when something failed.
+- **Weakened tests.** Deleted assertions, loosened expectations, skipped tests or mocks that hide the real behavior.
+- **Hard-coded values.** Secrets, URLs, credentials or magic numbers.
+- **Copy-paste duplication** of logic that already exists elsewhere in the repo.
+- **Plausible but wrong edge cases**: empty input, null, off-by-one, time zones, Unicode, large inputs, concurrency.
+- **Unnecessary dependencies** added for something the standard library does.
+- **Mismatch with project conventions**, such as error types, logging, naming or layering.
+
+## A worked example
+
+Which of these two would you approve?
+
+```python
+# Version A (typical generated output)
+def get_user(conn, email):
+    return conn.execute(f"SELECT * FROM users WHERE email = '{email}'").fetchone()
+
+# Version B
+def get_user(conn, email):
+    return conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+```
+
+Version A builds the query by pasting user input into SQL, which allows **SQL injection**: an email of `' OR '1'='1` changes the query's meaning. Version B passes the value as a parameter, so the database never treats it as SQL. Both "work" in a happy-path test, which is exactly why you need a review habit and an automated check.
+
+## Step 4: Ask the author (or the tool) to explain
+
+- "Why this approach over the simpler one?"
+- "What happens with an empty list? A negative number? Two concurrent calls?"
+- "Which tests would fail if this line were wrong?"
+
+If the author cannot explain the code, it is not ready to merge. Using an AI tool to *explain* code can help you review, but verify its explanation against the code, because explanations can be as confidently wrong as code.
+
+## Step 5: Run it
+
+Check out the branch. Run the tests, run the feature, and try to break it: bad input, missing permissions, large inputs, failure of a dependency. Reading alone misses behavior.
+
+<Callout title="Keep changes small">
+  The best defense against unreviewable AI output is a policy of small,
+  focused pull requests. If a change is too big to review properly, it is too
+  big to merge.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="What to look for in a code review" href="https://google.github.io/eng-practices/review/reviewer/looking-for.html" source="Google eng-practices">
+  Google's public guidance on what reviewers should check.
+</Resource>
+
+<Resource kind="docs" title="Software Engineering at Google, Chapter 9" href="https://abseil.io/resources/swe-book/html/ch09.html" source="Abseil / Google">
+  The book chapter on code review: why teams do it and how it works at scale.
+</Resource>
+
+<Resource kind="docs" title="OWASP Cheat Sheet Series" href="https://cheatsheetseries.owasp.org/" source="OWASP">
+  Concise, secure-coding guidance on queries, authentication, input handling and much more.
+</Resource>
+
+<Resource kind="docs" title="OWASP Application Security Verification Standard" href="https://owasp.org/www-project-application-security-verification-standard/" source="OWASP">
+  A detailed list of security requirements to review against.
+</Resource>
+
+## Check yourself
+
+1. Take an AI-generated pull request and apply the five steps. Time each step.
+2. Write the failure-pattern checklist as a pull request template for your repo.
+3. Find one bug that reading alone missed but running the code revealed.

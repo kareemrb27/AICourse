@@ -1,0 +1,66 @@
+AI coding tools write a large and growing share of new code. It compiles, it looks tidy and it often works on the first run, which is exactly why it needs a different kind of review. This lesson looks at what research has found, and builds the mindset for the rest of the course.
+
+## What the research says
+
+Treat these as snapshots of specific tools at specific times. The tools have changed, but the failure patterns have not gone away.
+
+- **"Asleep at the Keyboard?" (2021).** Researchers prompted GitHub Copilot with scenarios built around high-risk weaknesses from MITRE's CWE list. They produced 1,689 programs from 89 scenarios and found roughly 40% to be vulnerable, checking with CodeQL. Prompt wording changed the result: the model was more likely to repeat a vulnerable style when the surrounding code was vulnerable.
+- **"Do Users Write More Insecure Code with AI Assistants?" (Stanford, CCS 2023).** In a user study of 47 participants, those with an AI assistant often produced more security vulnerabilities, especially for string encryption and SQL injection, and rated their own code as more secure. The authors link the overconfidence to the tool. Participants who trusted the assistant less and refined their prompts tended to do better.
+- **Security weaknesses in the wild.** An empirical study of Copilot-generated snippets in real GitHub projects found security weaknesses in about 30% of Python and about 24% of JavaScript snippets it analyzed, spanning 43 weakness categories, eight of them on the 2023 CWE Top 25. The same study found a chat assistant could fix up to about 55% of the issues when fed static analysis warnings.
+- **Package hallucination (USENIX Security 2025).** A study of 16 code-generating models and 576,000 samples found that models sometimes recommend packages that do not exist: at least 5.2% on average for commercial models and 21.7% for open-source models in the later versions of the paper. Attackers can register those names with malicious code.
+
+Industry reports add context but need critical reading. For example, GitClear has published analyses of code quality trends such as duplication, and Veracode has published a report on GenAI code security. Both are produced by vendors of related products, so check the method before you rely on a headline number.
+
+## Five ways AI code goes wrong
+
+1. **Incorrect.** Plausible logic that fails on edge cases, or solves a slightly different problem than asked.
+2. **Insecure.** Missing validation, unsafe defaults, injectable queries, weak randomness or hard-coded secrets.
+3. **Fragile.** Silent error handling, resource leaks, race conditions and untested paths.
+4. **Unmaintainable.** Duplicated logic, needless abstraction, inconsistent style, dead code and code nobody understands.
+5. **Risky dependencies.** Nonexistent, abandoned, vulnerable or badly licensed packages.
+
+## Why it slips through
+
+- **Fluency bias.** Well-formatted code looks trustworthy.
+- **Volume.** Tools generate more code than reviewers can read carefully.
+- **Plausible tests.** AI-written tests often mirror the implementation, so they pass even when the logic is wrong.
+- **No one owns it.** The author did not reason through the code, so nobody holds the full picture.
+
+<Callout title="The rule for this course">
+  You own every line you ship, whoever or whatever wrote it. AI output is an
+  untrusted contribution that gets the same review, testing and security
+  checks as code from a stranger, plus extra scrutiny where models are known
+  to be weak.
+</Callout>
+
+## What you will build
+
+Over the next lessons you assemble a pipeline: a review method that targets known failure modes, knowledge of the weaknesses that recur, supply chain checks, automated analysis in CI, and tests that actually test. The capstone puts them together.
+
+## Resources
+
+<Resource kind="paper" title="Asleep at the Keyboard? Assessing the Security of GitHub Copilot's Code Contributions" href="https://arxiv.org/abs/2108.09293" source="arXiv">
+  The first systematic study. Note the method: scenarios, CodeQL and CWE mapping.
+</Resource>
+
+<Resource kind="paper" title="Do Users Write More Insecure Code with AI Assistants?" href="https://arxiv.org/abs/2211.03622" source="arXiv">
+  A controlled user study, including the overconfidence finding.
+</Resource>
+
+<Resource kind="paper" title="Security Weaknesses of Copilot-Generated Code in GitHub Projects: An Empirical Study" href="https://arxiv.org/abs/2310.02059" source="arXiv">
+  What static analysis found in AI-generated code already in use.
+</Resource>
+
+<Resource kind="paper" title="We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating LLMs" href="https://arxiv.org/abs/2406.10279" source="arXiv">
+  Why dependencies need checking, with figures that differ between versions, so cite the one you read.
+</Resource>
+
+<Resource kind="docs" title="DORA: Artificial Intelligence" href="https://dora.dev/research/ai/" source="DORA">
+  Research from the DevOps community on AI-assisted software development and delivery.
+</Resource>
+
+## Check yourself
+
+1. Find three AI-written pull requests or snippets (your own or open source). Classify any problems using the five categories.
+2. For each problem, write the check that would have caught it automatically.
+3. Write down your team's current review policy for AI-assisted code. What does it miss?
