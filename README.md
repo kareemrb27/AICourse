@@ -9,6 +9,7 @@ This is an independent project and is not affiliated with any conference or cour
 | Course | Level | Status |
 | --- | --- | --- |
 | Implement GraphRAG with Knowledge Graphs | Intermediate | 7 lessons, first draft |
+| Engineer Persistent Memory for AI Agents | Advanced | 7 lessons, first draft |
 
 ## Run locally
 

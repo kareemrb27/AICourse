@@ -93,6 +93,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "agent-memory",
+    title: "Engineer Persistent Memory for AI Agents",
+    track: "Managing data",
+    level: "Advanced",
+    summary:
+      "Agents are stateless by default. Learn how to give them short-term and long-term memory that stays accurate, affordable and safe: what to store, how to retrieve it, and how to prove it works.",
+    prerequisites: [
+      "Comfortable with Python and SQL",
+      "You have built a tool-calling agent or chatbot",
+      "Helpful: the GraphRAG course, for the graph-based lessons",
+    ],
+    outcomes: [
+      "Explain the working, episodic, semantic and procedural memory types and when each applies",
+      "Keep long threads inside the context window with trimming, compaction and notes",
+      "Design a long-term store with extraction, consolidation, expiry and deletion",
+      "Compare tiered, scored and temporal-graph memory architectures",
+      "Evaluate memory quality and defend it against leaks and poisoning",
+    ],
+    lessons: [
+      {
+        slug: "why-agents-forget",
+        title: "Why agents forget",
+        summary: "Stateless models, finite context, and what bad memory costs.",
+        minutes: 45,
+        load: () => import("./agent-memory/why-agents-forget.mdx"),
+      },
+      {
+        slug: "memory-taxonomy",
+        title: "A taxonomy of agent memory",
+        summary: "Working, episodic, semantic and procedural memory.",
+        minutes: 60,
+        load: () => import("./agent-memory/memory-taxonomy.mdx"),
+      },
+      {
+        slug: "short-term-memory",
+        title: "Short-term memory and context management",
+        summary: "Checkpoints, trimming, compaction and structured notes.",
+        minutes: 120,
+        load: () => import("./agent-memory/short-term-memory.mdx"),
+      },
+      {
+        slug: "long-term-memory",
+        title: "Long-term memory stores",
+        summary: "Write, read and maintenance paths, with a Postgres schema.",
+        minutes: 150,
+        load: () => import("./agent-memory/long-term-memory.mdx"),
+      },
+      {
+        slug: "memory-architectures",
+        title: "Memory architectures",
+        summary: "MemGPT and Letta, Generative Agents, and Zep with Graphiti.",
+        minutes: 120,
+        load: () => import("./agent-memory/memory-architectures.mdx"),
+      },
+      {
+        slug: "evaluation-and-safety",
+        title: "Evaluation, privacy and safety",
+        summary: "Benchmarks, test design, leaks and memory poisoning.",
+        minutes: 90,
+        load: () => import("./agent-memory/evaluation-and-safety.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Ship an assistant that measurably improves by remembering.",
+        minutes: 240,
+        load: () => import("./agent-memory/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

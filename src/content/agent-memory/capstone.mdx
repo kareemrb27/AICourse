@@ -1,0 +1,53 @@
+Build an assistant that gets measurably better because it remembers, and prove it.
+
+## The brief
+
+Create a personal or team assistant (for example a coding helper, a study buddy, or a customer-support agent) that keeps useful memory across sessions. It must handle changing facts correctly and let users inspect and delete what it knows.
+
+## Requirements
+
+1. **Short-term memory**: persisted threads with a compaction policy, tested on a long task.
+2. **Long-term memory**: at least two kinds (for example semantic profile plus episodic log) with a write path that consolidates instead of appending.
+3. **Retrieval**: scored retrieval (similarity plus recency or importance) with a cap on injected memories.
+4. **Updates and history**: superseded facts are marked, not silently lost.
+5. **User control**: a page or command to list, edit and delete memories.
+6. **Evaluation**: at least 25 test cases across recall, multi-session, temporal, update and abstention, compared against a full-context baseline.
+7. **Safety**: owner isolation test and at least three poisoning attempts documented.
+8. **Write-up**: architecture diagram, results table with accuracy, tokens and latency, and an honest "where it fails" section.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Pick the assistant and list what it should remember | memory spec |
+| Short-term memory and compaction | long-task test passing |
+| Long-term store, extraction, consolidation | schema and write job |
+| Scored retrieval | retrieval tests |
+| User memory page | list, edit, delete |
+| Evaluation and safety tests | results table |
+| Write-up and demo | public repo |
+
+## Stretch goals
+
+- Add a reflection job that turns episodes into semantic facts.
+- Model facts with validity intervals and answer "as of" questions.
+- Store relationships in a graph and answer "who and what is connected" queries, building on the GraphRAG course.
+- Compare your store against LangMem, Mem0 or Letta on the same test set.
+
+## Share it
+
+Publish the repo and the results. Include failures: a clear account of where memory hurt (stale facts, wrong retrievals, extra cost) shows real engineering judgment.
+
+## Where to go next
+
+<Resource kind="docs" title="Letta documentation" href="https://docs.letta.com/" source="Letta">
+  Explore self-editing, tiered memory in a full agent framework.
+</Resource>
+
+<Resource kind="repo" title="getzep/graphiti" href="https://github.com/getzep/graphiti" source="GitHub">
+  Read the source of a temporal graph memory engine.
+</Resource>
+
+<Resource kind="docs" title="LangMem" href="https://langchain-ai.github.io/langmem/" source="LangChain">
+  Try its memory tools against your own test set.
+</Resource>

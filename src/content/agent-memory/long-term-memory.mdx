@@ -1,0 +1,92 @@
+Long-term memory is what lets an agent know a user next week. It is a store with a write path, a read path and a maintenance path. Design all three.
+
+## The write path
+
+Deciding *what* to store is the hard part. Two common approaches:
+
+- **In the hot path.** The agent decides during the conversation to call a "save memory" tool. Memories appear immediately and the agent can explain them, but it adds latency and a chance to save junk.
+- **In the background.** After a conversation (or every few turns), a separate job reads the transcript and extracts memories. No user-facing latency, and it can review the whole exchange, but memories lag behind.
+
+Whichever you choose, extraction should output **atomic, self-contained facts** ("User is vegetarian") rather than raw transcript chunks, plus metadata: owner, type, time and source.
+
+### Consolidate instead of append
+
+Before inserting a new memory, search for similar existing ones and decide: **add**, **update**, **merge** or **ignore**. This is what keeps "I moved to Denver" from coexisting forever with "I live in Austin". Mem0 describes this extract-then-update pattern in its paper.
+
+## The read path
+
+- **Always-on**: a small profile or set of rules injected into every prompt.
+- **On demand**: the agent calls a search tool, or you retrieve before each turn using the latest user message.
+- **Ranking**: similarity alone is not enough. Combine it with recency and importance, as the Generative Agents paper does.
+- **Budget**: cap how many memories you inject, and show their dates so the model can reason about staleness.
+
+## The maintenance path
+
+- **Expire** facts with a natural lifetime.
+- **Supersede** rather than delete when history matters: mark the old fact as no longer valid.
+- **Delete** on user request, and make deletion real (including embeddings and backups).
+- **Review**: sample stored memories regularly and read them.
+
+## A starting schema
+
+You do not need a memory product on day one. Postgres with pgvector gets you far:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE memories (
+  id               bigserial PRIMARY KEY,
+  user_id          text NOT NULL,
+  kind             text NOT NULL CHECK (kind IN ('semantic', 'episodic', 'procedural')),
+  content          text NOT NULL,
+  embedding        vector(1536),          -- dimension must match your embedding model
+  importance       real NOT NULL DEFAULT 0.5,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  last_accessed_at timestamptz,
+  valid_until      timestamptz            -- NULL means still valid
+);
+
+-- Top 5 valid memories for a user, nearest by cosine distance
+SELECT content, created_at
+FROM memories
+WHERE user_id = $1
+  AND (valid_until IS NULL OR valid_until > now())
+ORDER BY embedding <=> $2
+LIMIT 5;
+```
+
+## Libraries and services
+
+Compare these only after you have felt the problems yourself:
+
+- **LangMem**: memory tooling for LangGraph agents.
+- **Mem0**: an open-source memory layer with extraction and update logic built in.
+- **Letta**: an agent framework where memory management is central (lesson 5).
+
+## Resources
+
+<Resource kind="docs" title="LangMem" href="https://langchain-ai.github.io/langmem/" source="LangChain">
+  Concepts and guides for hot-path and background memory.
+</Resource>
+
+<Resource kind="docs" title="Mem0 documentation" href="https://docs.mem0.ai/" source="Mem0">
+  Quickstart and concepts for a memory layer with add, search and update operations.
+</Resource>
+
+<Resource kind="paper" title="Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory" href="https://arxiv.org/abs/2504.19413" source="arXiv">
+  The extract, consolidate and retrieve design. Results are the authors' own benchmarks, so read them critically.
+</Resource>
+
+<Resource kind="repo" title="pgvector" href="https://github.com/pgvector/pgvector" source="GitHub">
+  Vector similarity search inside Postgres. Check the README for index types and operators.
+</Resource>
+
+<Resource kind="paper" title="Generative Agents: Interactive Simulacra of Human Behavior" href="https://arxiv.org/abs/2304.03442" source="arXiv">
+  Read the memory stream and retrieval sections for the recency, importance and relevance idea.
+</Resource>
+
+## Check yourself
+
+1. Create the table above (or your own). Write a background job that extracts facts from 10 sample conversations.
+2. Implement consolidation: when a new fact conflicts with a stored one, supersede it.
+3. Add a user-facing "what do you remember about me?" view and a delete button. Does deletion truly remove everything?

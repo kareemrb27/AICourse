@@ -1,0 +1,59 @@
+Short-term memory is the conversation or task thread the agent is in right now. It is the part you must get right first, because every long-term feature sits on top of it.
+
+## Three jobs
+
+1. **Persist the thread** so a conversation can pause and resume, and survive a crash.
+2. **Fit it into the window** when the history grows.
+3. **Keep the important parts** while shrinking everything else.
+
+## Persisting state: checkpoints
+
+Agent frameworks typically save the thread's state after each step (a *checkpoint*) under a thread ID. Resuming means loading the latest checkpoint. This also gives you time-travel debugging: you can inspect what the agent knew at step 7. LangGraph documents this as thread-scoped short-term memory.
+
+## Staying inside the window
+
+When the message list gets long, you have a menu of techniques. Try them in this order, from cheapest to most lossy:
+
+- **Clear old tool outputs.** Raw tool results (a 5,000-line log) are usually the biggest and least reusable content. Once the agent has acted on them, drop or truncate them.
+- **Trim.** Keep the system prompt and the last N turns. Simple and predictable, but forgets early decisions.
+- **Summarize (compaction).** Replace older turns with a model-written summary that preserves decisions, open questions and unresolved bugs. Anthropic's context-engineering post describes this as compaction.
+- **Structured notes.** Have the agent write key facts to an external file or scratchpad it can re-read, so important state does not live only in the rolling history.
+- **Sub-agents.** Delegate a deep sub-task to a fresh context and return only a short result.
+
+<Callout title="Summaries are lossy">
+  A summary silently drops details. Tell the summarizer exactly what to keep:
+  decisions made, constraints, file or ID references, and anything the user
+  said to remember. Test it by asking questions the summary should answer.
+</Callout>
+
+## A minimal policy
+
+```text
+before each model call:
+  if tokens(history) > 70% of budget:
+      1. truncate tool outputs older than 3 turns
+      2. if still over: summarize everything except the last 6 turns
+      3. keep: system prompt, user goals, decisions, current plan
+```
+
+The thresholds are examples. Pick yours by measuring where quality starts to drop on your own tasks.
+
+## Resources
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" source="Anthropic Engineering">
+  Compaction, structured note-taking and sub-agent architectures for long-horizon work.
+</Resource>
+
+<Resource kind="docs" title="Memory overview: short-term memory" href="https://docs.langchain.com/oss/python/langgraph/memory" source="LangChain docs">
+  Thread-scoped state, checkpointing, and managing long message histories.
+</Resource>
+
+<Resource kind="docs" title="Memory tool" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool" source="Claude Platform Docs">
+  An example of giving the model a file-based store it can read and write across turns.
+</Resource>
+
+## Check yourself
+
+1. Build a chat agent with persisted threads. Kill it mid-conversation and resume.
+2. Feed it a task that generates 20+ turns of tool output. Implement the policy above.
+3. Ask it five questions about early decisions. Count how many it answers correctly before and after compaction.

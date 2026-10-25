@@ -1,0 +1,57 @@
+Before you build anything, you need shared vocabulary. Agent-memory literature borrows its categories from cognitive science; they are useful because each category suggests a different storage and retrieval design.
+
+## The four kinds
+
+| Kind | What it holds | Example | Typical storage |
+| --- | --- | --- | --- |
+| **Working** | The current task state inside the context window | The plan so far, tool results this turn | The prompt itself |
+| **Episodic** | Specific past experiences | "Last Tuesday the deploy failed because of a missing env var" | Timestamped event log, searchable |
+| **Semantic** | Facts and knowledge, detached from when they were learned | "The user prefers TypeScript" | Key-value profile, vector store or graph |
+| **Procedural** | How to do things: rules, skills, instructions | "Always run tests before opening a PR" | System prompt, rule files, learned skills |
+
+The CoALA paper organizes language agents around a working memory plus long-term episodic, semantic and procedural stores. LangChain's docs map the same categories onto the stores you can use in practice.
+
+## Short-term vs long-term
+
+A second, simpler split is by lifetime:
+
+- **Short-term**: lives within one conversation or task thread. Managed by trimming, summarizing and checkpointing.
+- **Long-term**: survives across threads and sessions. Managed by explicit write, read and update operations in a store.
+
+Most production designs combine both, and use the taxonomy above to decide *what kind* of long-term record each fact is.
+
+## Using the taxonomy to design
+
+For any piece of information, ask three questions:
+
+1. **Who owns it?** One user, one team, one agent, or global?
+2. **How long is it true?** A preference lasts months; a build error lasts minutes.
+3. **How will it be asked for?** By exact key ("the user's name"), by similarity ("what did we try last time?"), or by relationship ("who works with whom?").
+
+The answers pick the store: a profile row, a vector index, or a graph.
+
+<Callout title="Common mistake">
+  Putting everything into one vector index. Facts about the user, a log of past
+  episodes and standing rules have different update patterns and deserve
+  different handling, even if they share infrastructure.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Cognitive Architectures for Language Agents (CoALA)" href="https://arxiv.org/abs/2309.02427" source="arXiv">
+  The source of the working, episodic, semantic and procedural framing. Read the memory section.
+</Resource>
+
+<Resource kind="docs" title="Memory concepts" href="https://docs.langchain.com/oss/python/concepts/memory" source="LangChain docs">
+  Maps the human memory categories to agent techniques.
+</Resource>
+
+<Resource kind="article" title="Modeling agent memory" href="https://neo4j.com/blog/developer/modeling-agent-memory" source="Neo4j Developer Blog">
+  How the categories look when stored as a graph.
+</Resource>
+
+## Check yourself
+
+1. Take the ten items from lesson 1 and label each as working, episodic, semantic or procedural.
+2. For each, answer owner, lifetime and access pattern.
+3. Propose a storage choice per item and note where two items can share one store.

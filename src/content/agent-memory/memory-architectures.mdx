@@ -1,0 +1,71 @@
+You now have the pieces. This lesson studies three well-known architectures that combine them, so you can borrow the ideas that fit your problem.
+
+## 1. Tiered memory: MemGPT and Letta
+
+MemGPT borrows from operating systems. The context window is like RAM: fast and small. External stores are like disk: large and slower. The agent itself gets tools to move information between tiers, which the paper calls virtual context management.
+
+Takeaways to borrow:
+
+- Keep a small **always-in-context block** for core facts (who the user is, the agent's persona and rules).
+- Put the long tail in **searchable external storage**.
+- Let the agent **edit its own memory** through explicit tools, so changes are visible and auditable.
+
+The project is now maintained as Letta, with docs and open-source code.
+
+## 2. Memory stream with reflection: Generative Agents
+
+This paper stores every observation as a natural-language record in a **memory stream**. Retrieval scores each record on **recency, importance and relevance**, then injects the top ones. Periodically the agent **reflects**: it asks itself higher-level questions over recent memories and stores the conclusions as new memories.
+
+Takeaways to borrow:
+
+- A scoring function beats raw similarity. Start with `score = relevance + recency + importance` and tune weights on your own questions.
+- **Reflection** turns scattered episodes into durable semantic knowledge ("the user always postpones Friday tasks").
+
+## 3. Temporal knowledge graph: Zep and Graphiti
+
+Zep stores memory in a graph built by the open-source Graphiti engine. Per the paper, it keeps raw episodes, extracted entities and relationships, and community-level summaries, and it tracks **when facts were true** separately from **when the system learned them**.
+
+Takeaways to borrow:
+
+- Facts change. Store **validity intervals** instead of overwriting, so the agent can answer both "where does she live?" and "where did she live in 2023?".
+- Relationship questions ("who did I discuss this with?") suit a graph. This connects directly to the GraphRAG course.
+- The paper's benchmark numbers come from its authors, so treat them as a reason to evaluate on your own data.
+
+<Callout title="Choosing">
+  Start simple: profile block plus a vector table (lesson 4). Add a scoring
+  function when retrieval feels noisy, a graph when relationship or
+  time-travel questions appear, and tiered self-editing memory when the agent
+  runs for days.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="MemGPT: Towards LLMs as Operating Systems" href="https://arxiv.org/abs/2310.08560" source="arXiv">
+  Read in full this time, especially the memory tiers and function calls.
+</Resource>
+
+<Resource kind="docs" title="Letta documentation" href="https://docs.letta.com/" source="Letta">
+  Memory blocks, archival memory and agent setup.
+</Resource>
+
+<Resource kind="repo" title="letta-ai/letta" href="https://github.com/letta-ai/letta" source="GitHub">
+  Open-source code for the stateful agent framework.
+</Resource>
+
+<Resource kind="paper" title="Generative Agents: Interactive Simulacra of Human Behavior" href="https://arxiv.org/abs/2304.03442" source="arXiv">
+  The memory stream, retrieval scoring and reflection sections.
+</Resource>
+
+<Resource kind="paper" title="Zep: A Temporal Knowledge Graph Architecture for Agent Memory" href="https://arxiv.org/abs/2501.13956" source="arXiv">
+  The bi-temporal graph model and its evaluation.
+</Resource>
+
+<Resource kind="repo" title="getzep/graphiti" href="https://github.com/getzep/graphiti" source="GitHub">
+  The open-source temporal graph engine behind Zep.
+</Resource>
+
+## Check yourself
+
+1. Add a scoring function to your lesson 4 retrieval and compare answers with plain similarity on 10 questions.
+2. Implement a reflection job that reads the last week of memories and writes 3 to 5 higher-level facts.
+3. Add `valid_from` and `valid_until` handling so superseded facts stay queryable as history.
