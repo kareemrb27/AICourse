@@ -1,0 +1,53 @@
+Make a real repository dramatically easier for coding agents to work in, and prove the improvement with numbers.
+
+## The brief
+
+Pick a repository you know that has at least a few thousand lines and a test suite: your own project, or an open-source one you are willing to contribute to. Engineer its context, then measure the difference.
+
+## Requirements
+
+1. **Baseline benchmark.** 15 to 30 real tasks derived from the repo's history, with automatic success checks, run at least three times each with the repo as it is. Record pass rate, steps, tokens and time.
+2. **Instruction files.** A concise AGENTS.md (or equivalent) with commands, layout, conventions and gotchas. Nested files if it is a monorepo.
+3. **Navigation.** At least one improvement to discoverability: better naming and READMEs, ignore rules for noise, a repo map or a structural search tool.
+4. **Environment.** One-command setup, build, lint and test, with fast subsets and readable failures.
+5. **Skill or subagent.** At least one skill for a recurring procedure, or a subagent for heavy exploration, with a precise trigger description.
+6. **MCP or docs.** One external knowledge source connected read-only, or versioned docs linked from the instructions.
+7. **Controlled comparison.** Re-run the benchmark after each change, so you know which one helped. Include at least one change that did *not* help.
+8. **Write-up.** Before and after results, what you added, what you removed, transcript-based failure analysis and a maintenance plan.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Choose repo and build the benchmark | task set and baseline |
+| Fix the environment and feedback loop | one-command checks |
+| Write the instruction file | AGENTS.md |
+| Improve navigation | search and structure changes |
+| Add a skill or subagent | reusable procedure |
+| Re-run and compare after each step | results table |
+| Write up and publish | public repo or pull request |
+
+## Stretch goals
+
+- Contribute the instruction file and environment improvements upstream as a pull request.
+- Compare two different agents or models on your benchmark with identical context.
+- Add a CI check that fails when documented commands stop working.
+- Write a short guide for your team on maintaining the context files.
+
+## Share it
+
+Publish your benchmark method and results. A table showing "no context: 9 of 24 tasks; engineered context: 17 of 24 tasks, with half the tokens" is persuasive, and a candid note about what did not help is just as valuable.
+
+## Where to go next
+
+<Resource kind="paper" title="SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering" href="https://arxiv.org/abs/2405.15793" source="arXiv">
+  Study how interface design changes agent performance.
+</Resource>
+
+<Resource kind="docs" title="AGENTS.md" href="https://agents.md/" source="agents.md">
+  Follow the open format and see how others structure theirs.
+</Resource>
+
+<Resource kind="docs" title="Model Context Protocol" href="https://modelcontextprotocol.io/" source="modelcontextprotocol.io">
+  Build or adopt a server that gives agents context from your own systems.
+</Resource>

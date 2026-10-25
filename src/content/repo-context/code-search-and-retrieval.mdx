@@ -1,0 +1,76 @@
+Instruction files give the agent the rules. To make a change it also has to find the right code in a repository that may have millions of lines. This lesson compares the main ways agents do that.
+
+## Four approaches
+
+### 1. Agentic search with plain tools
+The agent runs `grep`/`ripgrep`, lists directories and opens files, reasoning about what to look at next, the way a developer would. It needs no index, is always current, and works well when names are meaningful. It can be slow or wander in huge repos.
+
+### 2. Embedding search (semantic retrieval)
+Chunk the code, embed it, and fetch chunks similar to the task description. It helps when you do not know the right keyword ("where do we handle expired sessions?"). Costs: you must maintain an index, chunk boundaries can cut functions in half, and results can miss exact identifiers. Pair it with keyword search.
+
+### 3. Repository maps
+Build a compact outline of the codebase (files, classes and function signatures) and put the most relevant part in the prompt. Aider's repo map does this using **tree-sitter**, a parser that extracts definitions and references from source files, and ranks which symbols matter most for the current task within a token budget. The agent then knows what exists before opening anything.
+
+### 4. Structural and code-graph search
+Query the code's syntax or relationships instead of its text: "all callers of `charge()`", "classes that implement `Repository`". Tools like ast-grep search by syntax tree, and language servers provide go-to-definition and find-references.
+
+## What research says
+
+- **SWE-agent** argues that agents benefit from an interface designed for them: efficient search and navigation commands, compact editing and linting feedback. Its ablations found search and editing design mattered a great deal.
+- **Agentless** proposes a deliberately simple pipeline of localizing the fault hierarchically (files, then classes and functions, then lines), generating a patch and validating it, without a long agent loop. It is a useful reminder that a clear localization step can compete with open-ended autonomy.
+- **RepoCoder** studies repository-level completion by retrieving relevant code iteratively, using the model's own draft output to improve the next retrieval.
+
+None of these settles the question in general. Benchmarks reflect their own tasks and tools, so test on your repo.
+
+<Callout title="A practical default">
+  Give the agent fast keyword search plus file reading first. Add a repo map for
+  large codebases. Add embeddings or structural search only if you can show
+  the simpler tools miss things you care about.
+</Callout>
+
+## Make your repo easy to search
+
+- Use **descriptive names** for files and functions. They are the agent's primary search handle.
+- Keep **directories organized** by feature or domain, with short README files in big folders.
+- **Exclude noise** such as build output, vendored code and lockfiles from search with ignore files.
+- Keep **tests near code** so the agent finds usage examples.
+
+## Resources
+
+<Resource kind="docs" title="Repository map" href="https://aider.chat/docs/repomap.html" source="Aider">
+  What a repo map is and how it is used in the prompt.
+</Resource>
+
+<Resource kind="article" title="Building a better repository map with tree sitter" href="https://aider.chat/2023/10/22/repomap.html" source="Aider">
+  The design write-up behind the repo map approach.
+</Resource>
+
+<Resource kind="docs" title="Tree-sitter" href="https://tree-sitter.github.io/tree-sitter/" source="Tree-sitter">
+  The incremental parser used to extract code structure in many tools.
+</Resource>
+
+<Resource kind="paper" title="SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering" href="https://arxiv.org/abs/2405.15793" source="arXiv">
+  Why interface design for agents matters.
+</Resource>
+
+<Resource kind="paper" title="Agentless: Demystifying LLM-based Software Engineering Agents" href="https://arxiv.org/abs/2407.01489" source="arXiv">
+  A simple localize, repair and validate pipeline.
+</Resource>
+
+<Resource kind="paper" title="RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation" href="https://arxiv.org/abs/2303.12570" source="arXiv">
+  Iterative retrieval over a repository.
+</Resource>
+
+<Resource kind="repo" title="ripgrep" href="https://github.com/BurntSushi/ripgrep" source="GitHub">
+  The fast search tool many agents use.
+</Resource>
+
+<Resource kind="docs" title="ast-grep" href="https://ast-grep.github.io/" source="ast-grep">
+  Structural search and rewrite by syntax tree.
+</Resource>
+
+## Check yourself
+
+1. Write 15 realistic "find where we do X" questions about your repo, with the correct files.
+2. Answer them with keyword search only. Record hits, misses and time.
+3. Add one more method (repo map, embeddings or structural search) and compare.

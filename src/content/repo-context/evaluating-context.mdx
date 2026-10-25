@@ -1,0 +1,67 @@
+Context changes feel helpful and are rarely measured. This lesson is about replacing intuition with evidence, and keeping your context healthy over time.
+
+## Measure with your own tasks
+
+Public benchmarks such as SWE-bench test agents on real GitHub issues and are useful for comparing models and scaffolds. But they cannot tell you whether *your* instruction file helps in *your* repo. Build a small private benchmark:
+
+1. **Collect 15 to 30 real tasks** from your history: bug fixes, small features, refactors. Use the pre-change commit as the starting point and the actual diff plus tests as ground truth.
+2. **Define success automatically**: tests that must pass, linters clean, no changes outside allowed paths.
+3. **Run each task several times** per configuration, since results vary run to run.
+4. **Record cost**: tokens, time and number of steps, not just pass rate.
+
+## Run controlled comparisons
+
+Change one thing at a time and compare against a baseline:
+
+| Experiment | Question |
+| --- | --- |
+| No instruction file vs. current | Is it helping at all? |
+| Short vs. long file | Does extra detail pay for its tokens? |
+| With vs. without repo map | Does navigation improve? |
+| Skill on vs. off | Does it get used, and does it help? |
+
+Also read **transcripts** of failures. Often the cause is plain: the agent never found the config file, or ignored a rule buried in a long document.
+
+## Watch for context rot
+
+- **Stale rules** that mention renamed modules or old commands send the agent the wrong way.
+- **Contradictions** across nested files or between the instruction file and the code.
+- **Accretion**: files only grow. Schedule a review and delete.
+- **Overfitting** to your benchmark. Keep a held-out set.
+
+## Security and trust
+
+- Instruction files, skills and MCP servers are **executable influence**. Review them like code, and pin or vet third-party ones.
+- Never put secrets in them.
+- Be careful running agents in repos you do not trust, and apply the least-privilege and approval practices from the Production Agents course.
+- Prefer enforcement in CI and hooks for rules that must hold.
+
+## A maintenance routine
+
+1. When the agent errs twice the same way, add or sharpen one rule.
+2. Monthly, run your private benchmark and review the transcripts of failures.
+3. Quarterly, prune the instruction files and re-check that every command still works.
+
+## Resources
+
+<Resource kind="paper" title="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?" href="https://arxiv.org/abs/2310.06770" source="arXiv">
+  How a repository-level benchmark is constructed and graded. Model your private benchmark on this method.
+</Resource>
+
+<Resource kind="docs" title="SWE-bench leaderboards" href="https://www.swebench.com/" source="swebench.com">
+  Current public results and variants.
+</Resource>
+
+<Resource kind="docs" title="Best practices for Claude Code" href="https://code.claude.com/docs/en/best-practices" source="Claude Code Docs">
+  Guidance on iterating on instructions and verifying results.
+</Resource>
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" source="Anthropic Engineering">
+  On keeping context lean as tasks get longer.
+</Resource>
+
+## Check yourself
+
+1. Build your 15-task private benchmark with automatic success checks.
+2. Run it with no instruction file, then with yours, three times each. Report pass rate, steps and tokens.
+3. Remove one section of your file. Did anything get worse? If not, keep it removed.

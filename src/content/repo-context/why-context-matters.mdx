@@ -1,0 +1,62 @@
+A coding agent can only act on what it can see. Two engineers using the same model get very different results mostly because of the context their setup gives it. This lesson explains why, and what "repository context" actually consists of.
+
+## What the agent sees
+
+At each step a coding agent gets a prompt assembled from:
+
+1. **Fixed instructions**: the tool's system prompt plus your project instruction files.
+2. **The task**: your request or an issue description.
+3. **Retrieved code**: files it opened, search results, a map of the repo.
+4. **Tool output**: test failures, compiler errors, command results.
+5. **History**: what it already tried.
+
+Everything else about your project is invisible to it. It does not know your team's conventions, why a module is weird, which command runs the tests, or that the `legacy/` folder is off limits, unless that information reaches the window.
+
+## Typical failures that are really context failures
+
+- Invents a function or API that does not exist, because it never saw the real one.
+- Uses a different style, framework or test layout than the rest of the repo.
+- Edits generated files or deprecated code.
+- Cannot verify its work because it does not know how to run the tests.
+- Gets lost in a large monorepo and changes the wrong package.
+- Repeats the same mistake in every session, because nothing carries over.
+
+<Callout title="The key idea">
+  Before blaming the model, ask what a new contractor would need to be
+  productive on day one, then check whether the agent has it. Repository
+  context engineering is the work of supplying that, cheaply and accurately.
+</Callout>
+
+## More is not better
+
+Long contexts degrade. The "Lost in the Middle" paper found that models use information at the start and end of a long input better than information buried in the middle. In practice this means a bloated instruction file or an indiscriminate dump of files can *hurt*. The goal is the smallest set of high-signal context.
+
+## The three levers
+
+1. **Stand-by context**: instruction files the agent always reads (lesson 2).
+2. **Discovery**: how it finds the right code on demand (lesson 3).
+3. **Environment**: commands, tools and feedback loops that let it check itself (lessons 4 and 5).
+
+## Resources
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" source="Anthropic Engineering">
+  The general principles of choosing high-signal tokens. Foundational for this whole course.
+</Resource>
+
+<Resource kind="docs" title="Best practices for Claude Code" href="https://code.claude.com/docs/en/best-practices" source="Claude Code Docs">
+  Practical guidance on giving a coding agent what it needs, including verification.
+</Resource>
+
+<Resource kind="paper" title="Lost in the Middle: How Language Models Use Long Contexts" href="https://arxiv.org/abs/2307.03172" source="arXiv">
+  Evidence that position and length affect how well models use context.
+</Resource>
+
+<Resource kind="paper" title="SWE-bench: Can Language Models Resolve Real-World GitHub Issues?" href="https://arxiv.org/abs/2310.06770" source="arXiv">
+  The benchmark that shows how hard real repository tasks are. Skim the introduction.
+</Resource>
+
+## Check yourself
+
+1. Take a recent task where an agent struggled in your repo. Write down what it did not know.
+2. Classify each missing item as stand-by context, discovery or environment.
+3. Estimate which single missing item cost the most time.

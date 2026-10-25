@@ -235,6 +235,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "repo-context",
+    title: "Engineer Repository Context for Coding Agents",
+    track: "Customizing the agent and its environment",
+    level: "Advanced",
+    summary:
+      "Coding agents are only as good as what they can see. Learn to write instruction files, make code easy to find, build fast feedback loops, package skills and subagents, and measure whether any of it helps.",
+    prerequisites: [
+      "You use a coding agent (Claude Code, Cursor, Copilot, Aider or similar) on real code",
+      "Comfortable with Git, a test runner and the command line",
+      "Helpful: the Production Agents course, for the trust and security lessons",
+    ],
+    outcomes: [
+      "Explain why context, not just the model, decides coding-agent quality",
+      "Write concise instruction files that prevent repeated mistakes",
+      "Choose between keyword, semantic, repo-map and structural code search",
+      "Build fast, readable feedback loops and connect knowledge with MCP",
+      "Package procedures as skills, isolate exploration in subagents, and benchmark your results",
+    ],
+    lessons: [
+      {
+        slug: "why-context-matters",
+        title: "Why repository context matters",
+        summary: "What the agent sees, and why more context is not better.",
+        minutes: 45,
+        load: () => import("./repo-context/why-context-matters.mdx"),
+      },
+      {
+        slug: "instruction-files",
+        title: "Instruction files: AGENTS.md and friends",
+        summary: "What to write, what to leave out, and how to keep it alive.",
+        minutes: 90,
+        load: () => import("./repo-context/instruction-files.mdx"),
+      },
+      {
+        slug: "code-search-and-retrieval",
+        title: "Code search and retrieval",
+        summary: "Grep, embeddings, repo maps and structural search compared.",
+        minutes: 150,
+        load: () => import("./repo-context/code-search-and-retrieval.mdx"),
+      },
+      {
+        slug: "tools-and-environment",
+        title: "Tools, feedback loops and MCP",
+        summary: "Fast verification, readable failures and external knowledge.",
+        minutes: 120,
+        load: () => import("./repo-context/tools-and-environment.mdx"),
+      },
+      {
+        slug: "skills-and-subagents",
+        title: "Skills and subagents",
+        summary: "Progressive disclosure and context isolation.",
+        minutes: 90,
+        load: () => import("./repo-context/skills-and-subagents.mdx"),
+      },
+      {
+        slug: "evaluating-context",
+        title: "Evaluating and maintaining context",
+        summary: "Private benchmarks, controlled comparisons and context rot.",
+        minutes: 120,
+        load: () => import("./repo-context/evaluating-context.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Engineer a real repo for agents and prove the improvement.",
+        minutes: 300,
+        load: () => import("./repo-context/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

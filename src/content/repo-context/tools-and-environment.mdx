@@ -1,0 +1,72 @@
+An agent that can run your tests and read the failures corrects itself. One that cannot just guesses. The environment around the model often matters more than the prompt.
+
+## Give it a feedback loop
+
+The single most valuable thing you can do is make verification fast and unambiguous:
+
+- **One command per check**: `make test`, `make lint`, `make typecheck`, each with clear exit codes.
+- **Fast tests first**: a quick unit subset the agent can run after each change, and a slower full suite for the end.
+- **Readable failures**: concise assertion messages and stack traces. Walls of noisy logs waste context.
+- **Deterministic setup**: a script that gets a fresh checkout running, so the agent never debugs your local machine.
+- **Safe sandbox**: a dev database or fixtures, never production credentials.
+
+Agents that can see a failing test, change code and rerun converge far more reliably than those that are told "it should work".
+
+## Write tests the agent can use as a spec
+
+A failing test that describes the desired behavior is the sharpest task description you can give. Ask for the test first, review it, then ask for the implementation.
+
+## Connect external knowledge with MCP
+
+The **Model Context Protocol (MCP)** is an open standard for connecting agents to tools and data: issue trackers, databases, documentation, design files, browsers. Instead of pasting context by hand, the agent calls a server when it needs it.
+
+Guidelines:
+
+- Add servers for information the agent genuinely needs repeatedly, not everything available.
+- Grant **least privilege**: read-only where possible.
+- Remember each tool's description consumes context, so more tools means a bigger fixed cost.
+
+## Make documentation agent-readable
+
+- Keep docs as plain Markdown in the repo, close to the code.
+- For dependencies, an `llms.txt` file is a proposed convention for giving models a concise, structured index of a site's docs. Some projects publish one.
+- Link versioned docs from your instruction file so the agent reads the right API version, not its stale memory.
+
+## Design tools for the model, not for humans
+
+If you build custom tools or scripts for the agent, Anthropic's guidance applies:
+
+- Return **high-signal, concise** output. Strip noise and IDs the model does not need.
+- Use **clear names and parameters**, and describe when to use each tool.
+- Make errors **actionable**: say what went wrong and what to try next.
+- Offer filtering and pagination so a tool does not flood the context.
+
+<Callout title="Rule of thumb">
+  If you would be frustrated running the command by hand (slow, noisy,
+  flaky), the agent will be worse off. Fix the developer experience and both
+  of you benefit.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Model Context Protocol" href="https://modelcontextprotocol.io/" source="modelcontextprotocol.io">
+  The specification and introduction to servers and clients.
+</Resource>
+
+<Resource kind="article" title="Writing effective tools for AI agents" href="https://www.anthropic.com/engineering/writing-tools-for-agents" source="Anthropic Engineering">
+  How to design tool names, parameters and outputs that models use well.
+</Resource>
+
+<Resource kind="docs" title="The /llms.txt file" href="https://llmstxt.org/" source="llmstxt.org">
+  The proposal for model-friendly documentation indexes.
+</Resource>
+
+<Resource kind="docs" title="Best practices for Claude Code" href="https://code.claude.com/docs/en/best-practices" source="Claude Code Docs">
+  Covers giving the agent ways to verify its work.
+</Resource>
+
+## Check yourself
+
+1. Time how long a fresh checkout takes to build and pass tests. Write a script that makes it one command.
+2. Make one test failure message actionable. Check the agent fixes it faster.
+3. Pick one MCP server that would save you copy-pasting. Install it read-only and use it for a week.

@@ -1,0 +1,72 @@
+An instruction file is always loaded, so every line has a permanent cost. Two mechanisms let you keep detailed guidance available without paying for it on every task: **skills** and **subagents**.
+
+## Progressive disclosure
+
+Instead of loading everything, load in stages:
+
+1. A short **description** of each capability is always visible, so the agent knows it exists.
+2. When a task matches, the agent loads the **full instructions**.
+3. Only if needed does it open **supporting files** (scripts, templates, references).
+
+This is the idea behind agent skills: a folder with a `SKILL.md` file whose name and description are surfaced up front, and whose body and extra files load on demand. Anthropic's engineering post explains the design, and the Claude Code docs show how to author them.
+
+### What makes a good skill
+
+- **A narrow job**: "write a database migration", "release checklist", "generate a changelog entry".
+- **A description that says when to use it**, because that sentence is what triggers loading.
+- **Steps the agent cannot guess**, including your team's exact commands and conventions.
+- **Bundled helpers**: a script that does the deterministic part, so the model does not reinvent it each time.
+
+Skills turn tribal knowledge into a reusable, reviewable artifact in your repo.
+
+## Subagents: isolate the mess
+
+A **subagent** is a separate agent invocation with its own fresh context and instructions, that returns only a summary to the main agent. Use one when a sub-task would pollute the main context:
+
+- searching a large codebase and reporting only the relevant files
+- reading a long log and returning the cause
+- reviewing a diff with a specialist prompt and returning findings
+
+Because exploration happens in the subagent's own window, the main conversation stays focused. The trade-off is cost and latency: each subagent is another model run, and a vague hand-off loses information, so brief it precisely and ask for a structured result.
+
+## Choosing the right mechanism
+
+| Need | Use |
+| --- | --- |
+| Facts and rules for every task | Instruction file |
+| A procedure needed only sometimes | Skill |
+| Heavy exploration that would flood context | Subagent |
+| Live data from an outside system | MCP server |
+| A guarantee that something always happens | Hook or CI check, not a prompt |
+
+The last row matters: instructions are advice the model may skip. Anything that must always run, such as formatting or secret scanning, belongs in tooling that enforces it.
+
+<Callout title="Budget thinking">
+  Treat context like a budget. Always-on text is rent, skills are on-demand
+  purchases, and subagents let you spend a lot without charging the main
+  thread. Review where your budget goes.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Equipping agents for the real world with Agent Skills" href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills" source="Anthropic Engineering">
+  The reasoning behind progressive disclosure and skills.
+</Resource>
+
+<Resource kind="docs" title="Extend Claude with skills" href="https://code.claude.com/docs/en/skills" source="Claude Code Docs">
+  How to author and organize skills.
+</Resource>
+
+<Resource kind="docs" title="Create custom subagents" href="https://code.claude.com/docs/en/sub-agents" source="Claude Code Docs">
+  Defining specialized subagents with their own context and tools.
+</Resource>
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" source="Anthropic Engineering">
+  Revisit the sections on sub-agent architectures and just-in-time retrieval.
+</Resource>
+
+## Check yourself
+
+1. Find a procedure you explain repeatedly. Turn it into a skill with a precise trigger description.
+2. Move one long section out of your instruction file into a skill. Check the agent still finds and uses it.
+3. Write a subagent brief for "find every place we validate email addresses" that returns a structured list.
