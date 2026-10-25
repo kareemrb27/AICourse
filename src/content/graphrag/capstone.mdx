@@ -1,0 +1,50 @@
+Everything so far was practice. This is the project you can show someone.
+
+## The brief
+
+Build a question-answering app over a corpus **you care about**, where plain vector RAG visibly falls short. Good corpora are ones with entities that recur across many documents: a codebase's docs and issues, a podcast's transcripts, a set of research papers, your own notes, public filings, a game wiki.
+
+## Requirements
+
+1. **Corpus**: at least 50 documents or pages, publicly usable or your own.
+2. **Graph**: built with a schema you designed, with entity resolution and chunk provenance.
+3. **Two or more retrieval patterns**, plus a router or agent that picks between them.
+4. **Baseline**: a vector-only retriever on the same corpus.
+5. **Evaluation**: a test set of at least 30 questions, scored on both systems.
+6. **Write-up**: a README with an architecture diagram, results table, token costs and an honest "where it fails" section.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Choose corpus and write 30 questions | `questions.md` |
+| Design schema from the questions | schema diagram |
+| Build graph, inspect 20 facts | graph plus error notes |
+| Baseline retriever | baseline scores |
+| GraphRAG retrievers and router | improved scores |
+| Evaluation and cost analysis | results table |
+| Write-up and demo | public repo |
+
+## Stretch goals
+
+- Add a global-search mode for theme questions.
+- Show the graph path that led to each answer in the UI.
+- Add incremental updates so new documents merge into the existing graph.
+
+## Share it
+
+Publish your repo and write up what surprised you. A candid "GraphRAG did not help on these question types" result is as valuable as a win, because it shows you can judge when the technique earns its cost.
+
+## Where to go next
+
+<Resource kind="article" title="Research papers on GraphRAG" href="https://graphrag.com/appendices/research/" source="graphrag.com">
+  Continue into the research literature.
+</Resource>
+
+<Resource kind="repo" title="microsoft/graphrag" href="https://github.com/microsoft/graphrag" source="GitHub">
+  Read the source of a production-grade indexing pipeline.
+</Resource>
+
+<Resource kind="docs" title="Neo4j GraphRAG for Python" href="https://neo4j.com/docs/neo4j-graphrag-python/" source="Neo4j">
+  Explore the retrievers and pipeline components you did not use.
+</Resource>

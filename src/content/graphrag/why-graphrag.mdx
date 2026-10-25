@@ -1,0 +1,61 @@
+By the end of this lesson you can name the questions vector RAG answers badly, explain why, and describe what a knowledge graph changes about retrieval.
+
+## Vector RAG in one minute
+
+Standard RAG splits documents into chunks, embeds each chunk, and at question time fetches the chunks whose embeddings sit closest to the question. The model then answers from those chunks. It works well when the answer lives inside one or two passages.
+
+It struggles in three situations:
+
+- **Multi-hop questions.** "Which suppliers of our largest customer were affected by the port strike?" needs facts from several documents that never mention each other. Similarity search finds passages that *sound* like the question, not passages that are *connected* to each other.
+- **Corpus-wide questions.** "What are the main themes across these 10,000 support tickets?" has no single best chunk. Top-k retrieval returns a handful of examples and the model summarizes those as if they were the whole.
+- **Explainability.** You get a list of chunks and a score, but not the path of reasoning that links them.
+
+## What a graph adds
+
+A knowledge graph stores **entities** (people, products, accounts) as nodes and the **relationships** between them as edges. Retrieval can then do things similarity search cannot:
+
+1. Start from the entities a question mentions.
+2. Walk relationships to gather connected facts, even across documents.
+3. Hand the model both the text and the structure that links it.
+
+<Callout title="Honest trade-off">
+  GraphRAG is not strictly better. Building the graph costs LLM calls and
+  engineering time, and for simple lookups a well-tuned vector index is
+  cheaper and just as accurate. Use a graph when your questions are about
+  relationships, aggregation or whole-corpus understanding.
+</Callout>
+
+## Two families you will meet
+
+1. **Graph as retrieval structure.** You have a graph (existing or extracted) and use it to find and connect context. Tools: Neo4j, LlamaIndex property graphs.
+2. **Graph as summarization index.** An LLM extracts a graph, clusters it into communities and pre-writes summaries so corpus-wide questions become cheap. This is the Microsoft Research GraphRAG approach, covered in lesson 5.
+
+## Resources
+
+Start with the concept pages, then read the paper abstract and introduction.
+
+<Resource kind="article" title="Introduction to GraphRAG" href="https://graphrag.com/concepts/intro-to-graphrag/" source="graphrag.com">
+  A clear overview of the core concepts and how they fit together. Read this first.
+</Resource>
+
+<Resource kind="article" title="What is a Knowledge Graph?" href="https://graphrag.com/concepts/intro-to-knowledge-graphs/" source="graphrag.com">
+  Nodes, relationships and why they suit retrieval.
+</Resource>
+
+<Resource kind="article" title="GraphRAG: Unlocking LLM discovery on narrative private data" href="https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/" source="Microsoft Research">
+  The original announcement. Explains the motivation in plain language.
+</Resource>
+
+<Resource kind="paper" title="From Local to Global: A Graph RAG Approach to Query-Focused Summarization" href="https://arxiv.org/abs/2404.16130" source="arXiv">
+  Read the abstract and introduction now; you will return for the method in lesson 5.
+</Resource>
+
+<Resource kind="article" title="Enhancing the accuracy of RAG applications with knowledge graphs" href="https://neo4j.com/developer-blog/enhance-rag-knowledge-graph/" source="Neo4j Developer Blog">
+  A practical example of combining structured and unstructured retrieval.
+</Resource>
+
+## Check yourself
+
+1. Write three questions about a dataset you know where vector RAG would probably fail. Label each as multi-hop or corpus-wide.
+2. For each, sketch the entities and relationships a graph would need to answer it.
+3. When would you *not* use a graph? Give one concrete example.

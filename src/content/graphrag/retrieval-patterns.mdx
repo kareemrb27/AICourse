@@ -1,0 +1,70 @@
+Once the graph exists, retrieval is where GraphRAG pays off. There is no single retriever; you choose a pattern per question type.
+
+## The patterns
+
+### 1. Basic retriever
+Plain vector search over chunks. Always build this first as your **baseline**. Everything else must beat it on your questions to be worth its complexity.
+
+### 2. Vector search, then graph traversal
+Find the best-matching chunks by embedding, then expand outward through the graph to pull in related entities, neighboring chunks and facts.
+
+```cypher
+CALL db.index.vector.queryNodes('chunk_embeddings', 5, $questionEmbedding)
+YIELD node AS chunk, score
+MATCH (chunk)<-[:FROM_CHUNK]-(e:Entity)-[r]-(related:Entity)
+RETURN chunk.text AS text,
+       collect(DISTINCT e.name + ' -' + type(r) + '-> ' + related.name) AS facts,
+       score
+ORDER BY score DESC
+```
+
+The model receives the passage *and* the connected facts. (The index name, labels and relationship names are examples; match them to your schema.)
+
+### 3. Hybrid search
+Combine vector similarity with keyword (full-text) search, which rescues exact names, IDs and acronyms that embeddings blur.
+
+### 4. Text-to-Cypher
+Let the LLM write a Cypher query from the question, run it, and answer from the rows. It is excellent for aggregations and precise relationship questions ("how many orders per region last quarter") and brittle for vague ones.
+
+<Callout title="Guard text-to-Cypher">
+  Give the model your schema, add few-shot examples, run queries with a
+  read-only database user, and cap result size. Never let generated Cypher
+  write to your database.
+</Callout>
+
+### 5. Choosing between them
+
+| Question looks like | Start with |
+| --- | --- |
+| Find the passage about X | Basic or hybrid retriever |
+| What is connected to X, and how | Vector then traversal |
+| Counts, filters, aggregations | Text-to-Cypher |
+| Themes across the whole corpus | Community summaries (lesson 5) |
+
+## Resources
+
+<Resource kind="article" title="Basic Retriever pattern" href="https://graphrag.com/reference/graphrag/basic-retriever/" source="graphrag.com">
+  The first entry in the GraphRAG pattern catalog. Browse the rest of the catalog from here.
+</Resource>
+
+<Resource kind="course" title="Using Neo4j with LangChain" href="https://graphacademy.neo4j.com/courses/genai-agent-langgraph/" source="Neo4j GraphAcademy">
+  Free course covering vector search, GraphRAG retrievers and text-to-Cypher in a working agent. Needs an LLM API key.
+</Resource>
+
+<Resource kind="course" title="Neo4j & Generative AI Fundamentals" href="https://graphacademy.neo4j.com/courses/genai-fundamentals/" source="Neo4j GraphAcademy">
+  A gentler on-ramp to LLMs plus graphs if the course above feels fast.
+</Resource>
+
+<Resource kind="docs" title="Retrievers in Neo4j GraphRAG for Python" href="https://neo4j.com/docs/neo4j-graphrag-python/" source="Neo4j">
+  Look for the vector, vector-cypher, hybrid and text-to-Cypher retriever sections.
+</Resource>
+
+<Resource kind="article" title="Create a Neo4j GraphRAG workflow using LangChain and LangGraph" href="https://neo4j.com/blog/developer/neo4j-graphrag-workflow-langchain-langgraph/" source="Neo4j Developer Blog">
+  A more advanced, multi-stage workflow. Skim now, return after lesson 6.
+</Resource>
+
+## Check yourself
+
+1. Write 15 questions about your corpus and tag each with the pattern you expect to win.
+2. Implement the basic retriever and one other pattern. Run all 15 questions through both.
+3. For each question, record which pattern gave the better answer and why. This table becomes your routing logic.

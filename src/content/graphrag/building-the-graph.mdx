@@ -1,0 +1,60 @@
+Most real knowledge lives in text, not in a database. This lesson is about turning documents into a graph you can trust.
+
+## The pipeline
+
+```text
+documents → chunks → LLM extraction → entity resolution → graph + embeddings
+```
+
+1. **Chunk.** Split documents into passages. Chunk size is your first quality lever: too small loses context, too large blurs the extraction.
+2. **Extract.** Ask an LLM to read each chunk and return entities and relationships, ideally constrained by a schema (the labels and relationship types you allow).
+3. **Resolve.** "IBM", "International Business Machines" and "the Armonk company" should become one node. Without entity resolution you get a fragmented graph that cannot connect anything.
+4. **Store.** Write entities, relationships and the chunks they came from, plus embeddings on chunks (and optionally on entities).
+
+## Where it goes wrong
+
+- **Unconstrained extraction** invents a new relationship type for every sentence. Give the model an allowed list.
+- **Duplicates** from skipping entity resolution. Merge on normalized names or IDs, and review a sample by hand.
+- **Lost provenance.** If a fact has no link back to its chunk, you cannot cite it or debug it.
+- **Cost surprises.** Extraction is one or more LLM calls per chunk. Always run on a tiny sample first and multiply.
+
+<Callout title="Rule of thumb">
+  Look at 20 random extracted facts before you index anything large. If you
+  would not trust them, neither will your users.
+</Callout>
+
+## Three ways to build it
+
+Pick one and get it working end to end before comparing the others.
+
+- **Neo4j GraphRAG for Python**: a pipeline that extracts a graph from text or PDFs into Neo4j, with optional schema guidance.
+- **LlamaIndex `PropertyGraphIndex`**: extraction can range from free-form to strict schema to your own extractors, and it can sit on top of Neo4j.
+- **Microsoft GraphRAG**: an indexing pipeline that also builds the community summaries used in lesson 5.
+
+## Resources
+
+<Resource kind="article" title="Chunking guide" href="https://graphrag.com/guides/chunking/" source="graphrag.com">
+  How chunking choices affect graph quality.
+</Resource>
+
+<Resource kind="docs" title="Neo4j GraphRAG for Python" href="https://neo4j.com/docs/neo4j-graphrag-python/" source="Neo4j">
+  Official docs for the knowledge graph builder pipeline and retrievers. Follow the installation and quickstart for your version.
+</Resource>
+
+<Resource kind="repo" title="neo4j-graphrag on PyPI" href="https://pypi.org/project/neo4j-graphrag/" source="PyPI">
+  Package page with install instructions and links to examples.
+</Resource>
+
+<Resource kind="docs" title="Using a Property Graph Index" href="https://developers.llamaindex.ai/python/framework/module_guides/indexing/lpg_index_guide/" source="LlamaIndex">
+  Constructing a graph with loose or strict extraction.
+</Resource>
+
+<Resource kind="docs" title="Microsoft GraphRAG documentation" href="https://microsoft.github.io/graphrag/" source="Microsoft">
+  The indexing pipeline and configuration reference.
+</Resource>
+
+## Check yourself
+
+1. Pick 5 to 10 documents on a topic you know. Build the graph with one of the three tools.
+2. Open the graph in Neo4j Browser or Bloom and inspect 20 random relationships. Note every error.
+3. Tighten your schema or prompt, rebuild, and compare. Keep a short log of what changed the quality.

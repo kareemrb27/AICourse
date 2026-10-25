@@ -1,0 +1,51 @@
+A graph and a retriever are not a product. You still need something that chooses the right retrieval for each question, and a way to know whether it works.
+
+## Put an agent in front
+
+Instead of hard-coding one retriever, expose each pattern as a **tool** and let an agent pick: a vector tool for passages, a Cypher tool for aggregations, a global-search tool for themes. Keep the tool descriptions sharp, because the model chooses on those descriptions alone.
+
+Start simple: a router that classifies the question and calls one retriever is easier to debug than a free-roaming agent, and often just as good.
+
+## Evaluate, do not eyeball
+
+Build a small test set before you tune anything:
+
+- **30 to 50 real questions**, including the hard multi-hop and corpus-wide ones.
+- **Reference answers or key facts** written by a human.
+- **A baseline score** from plain vector RAG.
+
+Then measure retrieval and generation separately:
+
+- **Faithfulness**: are the answer's claims supported by the retrieved context?
+- **Context precision and recall**: did retrieval fetch the useful passages, and miss none?
+- **Answer relevance**: does it actually address the question?
+
+Ragas is an open-source framework that provides metrics like these; check its docs for the current API since import paths and field names have changed between versions. LLM-based judges are noisy, so also read a sample of answers yourself.
+
+## Production checklist
+
+- **Cost**: log tokens per query and per indexing run. Set budgets.
+- **Latency**: graph traversals with unbounded hops are slow. Cap depth and result size.
+- **Freshness**: decide how new documents enter the graph and how duplicates are resolved on re-index.
+- **Safety**: read-only database credentials for generated Cypher; log every generated query.
+- **Provenance**: return the source chunks with every answer so users can verify it.
+
+## Resources
+
+<Resource kind="course" title="Using Neo4j with LangChain" href="https://graphacademy.neo4j.com/courses/genai-agent-langgraph/" source="Neo4j GraphAcademy">
+  Build the LangGraph-based agent with graph tools if you skipped it earlier.
+</Resource>
+
+<Resource kind="article" title="Create a Neo4j GraphRAG workflow using LangChain and LangGraph" href="https://neo4j.com/blog/developer/neo4j-graphrag-workflow-langchain-langgraph/" source="Neo4j Developer Blog">
+  Multi-stage workflow with query decomposition. Now is the time to read it.
+</Resource>
+
+<Resource kind="docs" title="Ragas documentation" href="https://docs.ragas.io/" source="Ragas">
+  Metrics, test set generation and evaluation guides for RAG systems.
+</Resource>
+
+## Check yourself
+
+1. Build your 30-question test set with reference facts.
+2. Score the baseline retriever and your best GraphRAG pattern with the same metrics.
+3. Write a half-page memo: which wins, on which question types, at what cost per query and per index build.

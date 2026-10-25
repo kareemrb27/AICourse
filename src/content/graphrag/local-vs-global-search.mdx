@@ -1,0 +1,57 @@
+Lesson 4 retrieves facts about specific things. This lesson handles the question that breaks everything else: **"What is this whole corpus about?"**
+
+## The idea from the Microsoft Research paper
+
+Microsoft's GraphRAG treats corpus-wide questions as a **query-focused summarization** problem rather than a retrieval problem. The method, in the paper's own two stages:
+
+1. **Index.** An LLM extracts an entity knowledge graph from the source documents. The graph is clustered into **communities** of closely related entities, and a summary is pre-written for each community.
+2. **Query.** For a global question, each community summary produces a partial answer, and those partial answers are combined into the final response.
+
+Because the expensive reading happens once at indexing time, a question like "what are the main themes?" no longer needs the model to see the entire corpus at query time.
+
+## Search modes you will see in the tool
+
+The open-source implementation exposes several ways to query the same index. Check the docs for the exact list in your version; the main ideas are:
+
+- **Global search**: answers corpus-wide questions from community summaries.
+- **Local search**: answers questions about a specific entity by pulling that entity, its neighbors and linked text.
+- **DRIFT search**: starts from community-level context, then follows up with local-style queries to add detail.
+- **Basic search**: ordinary vector RAG, useful as a comparison baseline.
+
+## The cost reality
+
+Indexing relies heavily on LLM calls across the whole corpus, so it can be expensive. Index a tiny sample first, read the token usage, and extrapolate before you point it at a large dataset. The payoff is cheap, broad answers afterwards.
+
+<Callout title="When to use it">
+  Choose community summaries when users ask sensemaking questions over a large,
+  fairly stable corpus. For fast-changing data or pinpoint lookups, the
+  retrieval patterns from lesson 4 are usually the better fit.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="From Local to Global: A Graph RAG Approach to Query-Focused Summarization" href="https://arxiv.org/abs/2404.16130" source="arXiv">
+  Read the method and evaluation sections this time. Note how they judge answers (comprehensiveness and diversity).
+</Resource>
+
+<Resource kind="article" title="GraphRAG: Unlocking LLM discovery on narrative private data" href="https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/" source="Microsoft Research">
+  The accessible companion to the paper.
+</Resource>
+
+<Resource kind="docs" title="Microsoft GraphRAG documentation" href="https://microsoft.github.io/graphrag/" source="Microsoft">
+  Indexing and query guides, including the search modes.
+</Resource>
+
+<Resource kind="repo" title="microsoft/graphrag" href="https://github.com/microsoft/graphrag" source="GitHub">
+  Source code, install instructions and a getting-started path.
+</Resource>
+
+<Resource kind="article" title="Research papers on GraphRAG" href="https://graphrag.com/appendices/research/" source="graphrag.com">
+  A reading list for going deeper after this lesson.
+</Resource>
+
+## Check yourself
+
+1. Index a small dataset (a few dozen pages) with the Microsoft implementation. Record the token usage.
+2. Ask the same three corpus-wide questions with global search and with your lesson 4 basic retriever.
+3. Write down where the answers differ and which you would trust for a decision.
