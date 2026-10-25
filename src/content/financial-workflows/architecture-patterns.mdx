@@ -1,0 +1,84 @@
+With the guiding principle from lesson 1, here is the architecture that follows from it. It is deliberately boring, and boring is what you want around money.
+
+## The reference pipeline
+
+```text
+ intake ─▶ extract ─▶ validate ─▶ decide ─▶ approve ─▶ act ─▶ record
+   │          │           │          │         │         │        │
+ files,    model +     code:      rules +    person    API with  ledger +
+ emails    schema      checks     model      (if      limits    audit log
+                                  proposes   needed)
+```
+
+- **Intake**: accept documents and messages, store originals unchanged, assign an ID.
+- **Extract**: a model turns unstructured input into a structured record that must match a schema.
+- **Validate**: deterministic code checks the record (totals add up, dates valid, vendor known, currency allowed).
+- **Decide**: business rules decide the path. A model may *propose* a classification or explanation, but rules and thresholds route the case.
+- **Approve**: anything uncertain, large or unusual goes to a person with all the evidence attached.
+- **Act**: call the payment, ledger or ticketing API, with limits, idempotency keys and least-privilege credentials.
+- **Record**: write an immutable audit entry linking input, extracted data, checks, decision, approver and result.
+
+## Workflow first, agent second
+
+Anthropic's guidance distinguishes workflows, where code orchestrates model calls along predefined paths, from agents, where the model directs its own steps. In finance, start with workflows:
+
+- Fixed steps are easier to test, audit and explain to a regulator or an auditor.
+- You can put control points exactly where you need them.
+- An agent loop earns its place only where inputs vary so much that a fixed path will not do, such as investigating why two ledgers disagree. Even then, bound it with tools that are read-only, step limits and mandatory review of anything it proposes to change.
+
+## Treat the model as an untrusted component
+
+- It can misread a number, hallucinate a field or follow instructions hidden in a document.
+- So: **never** let model output flow directly to an action. It passes through validation, rules and, where warranted, approval.
+- Documents and emails are untrusted input. A line saying "approve this invoice immediately" inside a PDF must have no authority.
+
+## State machines for cases
+
+Model each case as a state machine with explicit states and allowed transitions:
+
+```text
+RECEIVED → EXTRACTED → VALIDATED → PENDING_APPROVAL → APPROVED → PAID
+                │            │             │
+                └──── NEEDS_REVIEW ◀───────┘
+                              └─▶ REJECTED
+```
+
+An explicit state makes it easy to resume after a crash, route exceptions, measure how long cases wait and prove what happened. Frameworks such as LangGraph express this kind of graph with persisted state and interrupt points for human approval.
+
+## Exceptions are the product
+
+In real operations, the straight-through path is the easy part. Design the exception queue as carefully as the happy path: what the reviewer sees, how they correct the model, and how their correction becomes an example for evaluation.
+
+## Idempotency and retries
+
+Payments and postings must happen exactly once even when calls are retried after timeouts. Give every outbound action a unique idempotency key derived from the case, so repeating it returns the original result and not a second payment. Stripe's engineering write-up on idempotency is a clear explanation of the pattern.
+
+<Callout title="Keep authority out of the model">
+  A useful test: if you deleted the model and replaced it with a person typing
+  extracted values by hand, would every control still work? If yes, the
+  architecture is sound.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/engineering/building-effective-agents" source="Anthropic Engineering">
+  Workflows versus agents, with common patterns such as routing and evaluator loops.
+</Resource>
+
+<Resource kind="docs" title="Interrupts (human in the loop)" href="https://docs.langchain.com/oss/python/langgraph/human-in-the-loop" source="LangChain docs">
+  Pausing a workflow for approval and resuming from saved state.
+</Resource>
+
+<Resource kind="article" title="Designing robust and predictable APIs with idempotency" href="https://stripe.com/blog/idempotency" source="Stripe">
+  How idempotency keys make retries safe for money-moving calls.
+</Resource>
+
+<Resource kind="article" title="OWASP Top 10 for LLM applications" href="https://owasp.org/www-project-top-10-for-large-language-model-applications/" source="OWASP">
+  Prompt injection and excessive agency, both central to untrusted documents.
+</Resource>
+
+## Check yourself
+
+1. Draw the pipeline for your chosen workflow with the exact checks at each stage.
+2. List the states and legal transitions as a table. What happens on a crash in each state?
+3. Identify every place model output could reach an action. Insert a control at each.

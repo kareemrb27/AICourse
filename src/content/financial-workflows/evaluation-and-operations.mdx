@@ -1,0 +1,80 @@
+A finance agent is ready when you can show, with evidence, how often it is right, how it fails and what the failures cost. This lesson covers measurement and the move into daily operation.
+
+## Build the evaluation set from real shapes of data
+
+- Collect **representative documents** (with permission, anonymized or synthetic) across vendors, layouts, languages and quality levels, including bad scans and unusual formats.
+- Have people produce **ground truth** for every field and every decision.
+- Add **adversarial and edge cases**: duplicates, near-duplicates, missing fields, rounding differences, wrong currencies, manipulated totals, and documents containing instructions.
+- Keep a **held-out set** that you never tune against.
+- Grow the set from every error found in review or production.
+
+## Measure what the business cares about
+
+Accuracy alone hides the story. Track:
+
+| Metric | Why |
+| --- | --- |
+| **Field-level accuracy** | Which fields (amounts, dates, IDs) fail most |
+| **Document-level exact match** | Fraction fully correct with no human edits |
+| **Straight-through rate** | Share processed with no human touch, at the target quality |
+| **Exception rate and reasons** | Where reviewers spend time |
+| **Error cost** | Money and risk exposure of mistakes, not just counts |
+| **False accept and false reject rates** | A wrongly approved invoice and a wrongly blocked one cost differently |
+| **Reviewer agreement and correction rate** | How often people change the model's suggestion |
+| **Latency and cost per case** | Operating economics |
+
+Set the **thresholds that route cases to people** by looking at the cost of each error type. If a wrong approval costs 100 times a manual review, the threshold should reflect that.
+
+## Calibrate honestly
+
+Because model-reported confidence is unreliable, build a routing score from checkable signals: validation passes, agreement of two independent extractions, whether evidence quotes match the source, and distance from typical values for this vendor. Then measure on the evaluation set how error rate varies by score, and set thresholds from that curve.
+
+## Roll out gradually
+
+1. **Offline** on the evaluation set.
+2. **Shadow mode**: run on live traffic, compare with the human process, take no action.
+3. **Assisted mode**: suggestions shown to reviewers, who still do the work. Track acceptance and correction rates.
+4. **Limited automation**: straight-through only for the lowest-risk, highest-confidence segment, with sampling audits.
+5. **Expand** one segment at a time as evidence accumulates.
+
+Keep a **quality sampling** process forever: reviewers re-check a random slice of automated cases.
+
+## Monitor in production
+
+- Dashboards for the metrics above, by vendor, document type and model version.
+- **Drift detection**: new vendors, new formats, changed layouts, shifts in value distributions.
+- **Alerts** on spikes in exceptions, validation failures, latency or cost.
+- **Change control**: any change to prompts, models, rules or thresholds is versioned, tested on the evaluation set and approved. Roll out behind a flag with a quick rollback.
+- **Incident process**: stop, assess, correct (with reversing entries), notify and add an evaluation case so the failure cannot recur silently.
+
+Practices from the Production Agents course (tracing, retries, budgets, runbooks) apply directly here.
+
+<Callout title="Reconcile the automation itself">
+  Periodically compare the totals the agent processed with the totals in the
+  source systems. A silent systematic error, such as a dropped line, shows up
+  in reconciliation before anyone notices a single bad case.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="FinanceBench: A New Benchmark for Financial Question Answering" href="https://arxiv.org/abs/2311.11944" source="arXiv">
+  An example of how to build and grade a financial QA evaluation, and what failure analysis looks like.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  The Measure and Manage functions are a useful lens for monitoring.
+</Resource>
+
+<Resource kind="docs" title="SR 26-2: Revised Guidance on Model Risk Management" href="https://www.federalreserve.gov/supervisionreg/srletters/sr2602.htm" source="Federal Reserve">
+  See how supervisors frame validation and ongoing monitoring of models.
+</Resource>
+
+<Resource kind="article" title="Your AI Product Needs Evals" href="https://hamel.dev/blog/posts/evals/" source="Hamel Husain">
+  A practical approach to building evals that you can adapt to document workflows.
+</Resource>
+
+## Check yourself
+
+1. Build a 50-document evaluation set (synthetic or permissioned) with ground truth. Score your extraction by field.
+2. Estimate the cost of a false accept versus a false reject for your workflow, and pick routing thresholds from them.
+3. Write the shadow-mode plan: duration, comparison metric and the exit criteria to move to assisted mode.

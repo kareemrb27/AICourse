@@ -1,0 +1,62 @@
+Finance is a good place to learn agent engineering, because mistakes are visible, measurable and costly. This course teaches you to design systems where a language model helps with financial **workflows** without being trusted with things it should not decide.
+
+<Callout title="Scope and disclaimer">
+  This course is about software architecture for back-office and analysis
+  workflows. It is not investment, legal, tax or compliance advice, and it
+  does not cover trading, portfolio recommendations or advising individuals
+  on what to do with their money. Those activities are heavily regulated.
+  Rules differ by country and by firm type, so involve your compliance and
+  legal teams before putting anything into production.
+</Callout>
+
+## What a financial workflow looks like
+
+A workflow is a repeatable business process with inputs, rules, approvals and a record. Common ones where language models are useful:
+
+| Workflow | Inputs | The hard part |
+| --- | --- | --- |
+| **Accounts payable** | Invoices as PDFs and emails | Extracting the right amounts, matching to purchase orders, catching duplicates |
+| **Reconciliation** | Bank statements and ledger entries | Matching differently described transactions, explaining breaks |
+| **Expense review** | Receipts and policy documents | Applying policy consistently, flagging exceptions |
+| **KYC and onboarding support** | Identity and company documents | Completeness checks, summarizing, routing to a reviewer |
+| **Filings and report analysis** | Annual reports, earnings documents | Finding the right figure and citing where it came from |
+| **Customer service** | Questions about accounts and fees | Grounded answers, no invented policies, safe escalation |
+
+## Why it is different from a chatbot
+
+1. **Numbers must be exactly right.** A plausible-looking wrong amount is worse than no answer.
+2. **Actions move money or create records.** They need approvals, limits and the ability to undo.
+3. **Everything must be explainable and auditable.** Someone will ask later why a payment was released or a case closed.
+4. **Rules apply even though the tool is new.** FINRA's Regulatory Notice 24-09 reminds US broker-dealers that its technology-neutral rules apply when they use generative AI, and that the notice adds no new requirements of its own. Other regulators say similar things.
+5. **Some uses are classed as high risk.** The EU AI Act's Annex III lists, among others, systems used to evaluate the creditworthiness of natural persons or set their credit score (with an exception for detecting financial fraud), and risk assessment and pricing for life and health insurance. Check what applies where you operate.
+6. **The cost of errors is asymmetric.** Approving a fraudulent payment costs far more than sending a good one to a human.
+
+## The guiding principle
+
+> The model assists. The system decides. A person approves what matters.
+
+The model reads messy documents, proposes interpretations and drafts explanations. Deterministic code does the arithmetic, applies the rules and enforces limits. People approve anything above a threshold of risk. The rest of the course implements this principle.
+
+## Resources
+
+<Resource kind="docs" title="Regulatory Notice 24-09" href="https://www.finra.org/rules-guidance/notices/24-09" source="FINRA">
+  A short, readable example of how a regulator frames generative AI: existing rules still apply.
+</Resource>
+
+<Resource kind="docs" title="Artificial Intelligence in the Securities Industry" href="https://www.finra.org/rules-guidance/key-topics/fintech/report/artificial-intelligence-in-the-securities-industry" source="FINRA">
+  A regulator's overview of AI uses and risks in securities firms.
+</Resource>
+
+<Resource kind="docs" title="EU AI Act, Annex III: High-risk AI systems" href="https://artificialintelligenceact.eu/annex/3/" source="artificialintelligenceact.eu">
+  See the credit and insurance items under essential private services. Check the official text for the current version.
+</Resource>
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/engineering/building-effective-agents" source="Anthropic Engineering">
+  Why to prefer simple workflows over open-ended agents until you need more.
+</Resource>
+
+## Check yourself
+
+1. Pick one workflow from the table. Write its steps as a person does them today.
+2. Mark each step: reading or interpreting (a model can help), calculating or rule-applying (code), or approving (a person).
+3. Write the worst plausible failure of this workflow and who would notice it.

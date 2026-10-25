@@ -1,0 +1,109 @@
+Financial software has one non-negotiable rule: the numbers must be right. Language models are not calculators, and floating-point numbers are not money. This lesson covers both problems, and where trustworthy data comes from.
+
+## Never use floats for money
+
+Binary floating point cannot represent most decimal fractions exactly:
+
+```python
+>>> 0.1 + 0.2
+0.30000000000000004
+>>> from decimal import Decimal
+>>> Decimal("0.1") + Decimal("0.2")
+Decimal('0.3')
+```
+
+Use exact decimal types (Python's `decimal`, or integers of the smallest currency unit) end to end: parsing, storage, arithmetic and formatting. Pass money across APIs as strings or integers, never as JSON floats. Be explicit about **rounding mode** and where rounding happens, since rules differ by currency and context.
+
+Also store the **currency** with every amount. A bare number is ambiguous. Keep the minor-unit exponent in mind, because it differs by currency (for example, some have zero decimal places and some have three).
+
+## Do not let the model do arithmetic
+
+Models can add small numbers and still fail on long ones, percentages across periods or unit conversions, and they fail with confidence. The pattern that works is to let the model **write down the calculation** and let code **run it**:
+
+- **Program of Thoughts** prompting separates reasoning from computation by having the model express its reasoning as a program that an interpreter evaluates.
+- **PAL** (Program-aided Language Models) likewise generates programs as intermediate steps and offloads the arithmetic to a runtime.
+- **FinQA** is a dataset of numerical reasoning questions over financial reports, a good place to see what these questions look like.
+
+In your system: give the model **calculation tools** (sum, percent change, currency conversion with a supplied rate, date difference) that take exact decimals and return exact decimals. Log every tool call so a reviewer can replay it.
+
+## Get the facts from authoritative sources
+
+Prefer structured, official data to text the model remembers or scrapes.
+
+- **SEC EDGAR APIs** provide programmatic access to filing data for US public companies. Read the access rules and fair-use guidance, which include identifying your application.
+- **XBRL** is the standard for tagging financial statement data in machine-readable form, so a figure can be retrieved by its tag instead of searched in prose.
+- **FRED** (from the St. Louis Fed) offers an API for economic time series.
+- **ISO 20022** is a messaging standard widely used for payments and financial messages, and a good model of structured financial data.
+
+Cite the source and the retrieval date with every figure the system reports.
+
+## Dates, periods and units
+
+- Distinguish **fiscal year** from calendar year, and **period end** from filing date.
+- Normalize **units** ("in thousands", "in millions") before comparing.
+- Record **as-reported vs restated** values.
+- Treat time zones and business-day calendars explicitly.
+
+## Ledgers: how money records are kept
+
+Accounting systems use **double entry**: every transaction posts equal debits and credits across accounts, so the books always balance and each movement has a counterpart. Martin Fowler's "Accounting Transaction" pattern describes the idea in software terms, and open-source tools such as Beancount show a plain-text ledger model.
+
+Design implications for agents:
+
+- Write to the ledger only through a **posting service** that enforces balance and validity.
+- Make entries **append-only**. Fix mistakes with reversing entries, not edits.
+- Link each posting to its source documents and approval record.
+
+<Callout title="Cross-footing">
+  Cheap, powerful check: recompute every total from the line items and compare
+  to the stated total. Mismatches catch both model extraction errors and
+  documents that are wrong.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="decimal: Decimal fixed-point and floating-point arithmetic" href="https://docs.python.org/3/library/decimal.html" source="Python docs">
+  Exact decimal arithmetic, contexts and rounding modes.
+</Resource>
+
+<Resource kind="paper" title="Program of Thoughts Prompting" href="https://arxiv.org/abs/2211.12588" source="arXiv">
+  Disentangling computation from reasoning for numerical tasks.
+</Resource>
+
+<Resource kind="paper" title="PAL: Program-aided Language Models" href="https://arxiv.org/abs/2211.10435" source="arXiv">
+  Offloading arithmetic to a program interpreter.
+</Resource>
+
+<Resource kind="paper" title="FinQA: A Dataset of Numerical Reasoning over Financial Data" href="https://arxiv.org/abs/2109.00122" source="arXiv">
+  Questions requiring multi-step numeric reasoning over financial reports.
+</Resource>
+
+<Resource kind="docs" title="EDGAR Application Programming Interfaces (APIs)" href="https://www.sec.gov/search-filings/edgar-application-programming-interfaces" source="SEC">
+  Official access to US filing data. Read the usage requirements.
+</Resource>
+
+<Resource kind="docs" title="XBRL" href="https://www.xbrl.org/" source="XBRL International">
+  The standard for machine-readable financial reporting.
+</Resource>
+
+<Resource kind="docs" title="FRED API" href="https://fred.stlouisfed.org/docs/api/fred/" source="St. Louis Fed">
+  Economic time series via API.
+</Resource>
+
+<Resource kind="docs" title="ISO 20022" href="https://www.iso20022.org/" source="ISO 20022">
+  A financial messaging standard.
+</Resource>
+
+<Resource kind="article" title="Accounting Transaction" href="https://martinfowler.com/eaaDev/AccountingTransaction.html" source="Martin Fowler">
+  The double-entry idea explained for software designers.
+</Resource>
+
+<Resource kind="repo" title="Beancount" href="https://github.com/beancount/beancount" source="GitHub">
+  Double-entry accounting from plain-text files. A good sandbox for experiments.
+</Resource>
+
+## Check yourself
+
+1. Reproduce the float problem in your language of choice, then fix it with an exact type.
+2. Build three calculation tools (sum, percent change, currency convert) with exact decimals. Make a model use them to answer five questions.
+3. Parse a small ledger in Beancount. Post a balanced and an unbalanced transaction and observe what is accepted.

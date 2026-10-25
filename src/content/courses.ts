@@ -519,6 +519,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "financial-workflows",
+    title: "Architect Agentic Systems for Financial Workflows",
+    track: "Designing system architectures",
+    level: "Beginner",
+    summary:
+      "Design systems where language models help with financial workflows without being trusted with what they should not decide: exact money handling, validated extraction, approvals, audit trails, evaluation and safe rollout. Built on synthetic data only.",
+    prerequisites: [
+      "Comfortable with Python or TypeScript",
+      "You have called an LLM API with tools or structured output",
+      "No finance background needed; the course explains each workflow",
+    ],
+    outcomes: [
+      "Explain why finance workflows demand determinism, auditability and controls",
+      "Design a pipeline with the model at the edges and rules, approvals and limits at the core",
+      "Handle money exactly, and have models calculate through tools instead of in their heads",
+      "Extract and verify data from documents with evidence and validation",
+      "Evaluate, roll out and monitor an automated workflow, and map it to risk guidance",
+    ],
+    lessons: [
+      {
+        slug: "why-finance-is-different",
+        title: "Why finance is different",
+        summary: "Workflows, stakes and the principle: the model assists, the system decides.",
+        minutes: 45,
+        load: () => import("./financial-workflows/why-finance-is-different.mdx"),
+      },
+      {
+        slug: "architecture-patterns",
+        title: "Architecture patterns for financial workflows",
+        summary: "The reference pipeline, case state machines and exception queues.",
+        minutes: 90,
+        load: () => import("./financial-workflows/architecture-patterns.mdx"),
+      },
+      {
+        slug: "numbers-and-data",
+        title: "Numbers, data and ledgers",
+        summary: "Exact decimals, calculation tools, authoritative sources, double entry.",
+        minutes: 120,
+        load: () => import("./financial-workflows/numbers-and-data.mdx"),
+      },
+      {
+        slug: "documents-and-retrieval",
+        title: "Documents, extraction and retrieval",
+        summary: "Schemas with evidence, validation, and what FinanceBench showed.",
+        minutes: 120,
+        load: () => import("./financial-workflows/documents-and-retrieval.mdx"),
+      },
+      {
+        slug: "controls-and-compliance",
+        title: "Controls, compliance and risk guidance",
+        summary: "Approvals, audit trails, model risk management and frameworks.",
+        minutes: 120,
+        load: () => import("./financial-workflows/controls-and-compliance.mdx"),
+      },
+      {
+        slug: "evaluation-and-operations",
+        title: "Evaluation and operations",
+        summary: "Error-cost metrics, shadow mode, monitoring and incidents.",
+        minutes: 120,
+        load: () => import("./financial-workflows/evaluation-and-operations.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Build a controlled financial workflow on synthetic data.",
+        minutes: 300,
+        load: () => import("./financial-workflows/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

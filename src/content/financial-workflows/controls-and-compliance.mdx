@@ -1,0 +1,88 @@
+In finance, controls are not overhead. They are what lets the business trust automation at all. This lesson turns common control ideas into design requirements for an agentic system. It is engineering guidance, not legal or compliance advice.
+
+## Controls to design in
+
+### Approval thresholds and segregation of duties
+Define who or what may approve what. Typical rules: low-value, low-risk cases may flow straight through; anything above a threshold, from a new vendor or flagged by a check needs a person; and the person who creates a payment is not the one who approves it. An agent must not be able to approve its own proposals.
+
+### Least privilege
+Give each component the narrowest credentials: the extraction service cannot call the payment API, the payment service cannot read raw email, the reviewer UI cannot edit the ledger directly. Use separate service accounts, short-lived tokens and allow-lists of destinations and amounts.
+
+### Limits and kill switches
+Cap per-transaction, per-day and per-vendor amounts in code. Provide a way to pause the workflow instantly, and test it.
+
+### Audit trail
+For every case, an immutable record of:
+
+- the original input and its hash
+- the extracted data and the model, prompt version and parameters used
+- every validation result
+- the rule or person that made the decision, with time and identity
+- the action taken and the external reference returned
+
+Store it append-only, protect it from tampering and retain it according to your legal requirements.
+
+### Data protection
+Minimize personal and account data sent to a model, mask what you can, check where it is processed and stored, and apply retention and deletion rules. Logs and traces contain sensitive data too, so treat them the same way.
+
+## Model risk management
+
+Banks and other regulated firms manage the risk that a **model** produces wrong results through a discipline called model risk management: sound development, independent validation, governance and ongoing monitoring. In the US, the 2011 guidance known as SR 11-7 was long the reference. In April 2026 the Federal Reserve, the OCC and the FDIC issued **revised guidance (SR 26-2)** that supersedes SR 11-7. It emphasizes a risk-based approach tailored to a banking organization's model risk profile, size and complexity, and the Fed's letter says it is expected to be most relevant to organizations with over $30 billion in total assets. If you work at a bank, read the current guidance and talk to your model risk team before you start. Even if you do not, the principles transfer:
+
+- **Inventory** every model and its purpose, owner and risk tier.
+- **Document** the design, assumptions and limitations.
+- **Validate independently**, including on data the developers did not use.
+- **Monitor** performance and drift, with defined triggers for review.
+- **Govern** changes with approvals and change logs.
+
+For a language model, "the model" includes the prompt, the retrieval setup, the tools and the thresholds, and any change to them is a model change.
+
+## Frameworks to learn from
+
+- **NIST AI Risk Management Framework** and its **Generative AI Profile** (NIST AI 600-1) provide a vocabulary for mapping, measuring and managing AI risk.
+- **FINRA Regulatory Notice 24-09** is a concise example of a regulator saying that existing supervision and communications rules apply to generative AI uses.
+- **EU AI Act, Annex III** shows how some financial use cases fall into a high-risk category with additional obligations.
+- **OWASP's LLM risk list** covers technical threats such as prompt injection and excessive agency.
+
+## Fairness and explainability
+
+Where decisions affect people (credit, insurance, account access), you may need to **explain outcomes**, test for **disparate impact**, and let people **contest** decisions. Do not hide a decision behind a model's free-text rationale. Base decisions on documented rules and features you can justify, keep the reasoning inspectable, and involve legal and compliance early.
+
+<Callout title="The two-key principle">
+  For any irreversible, high-value action, require two independent controls:
+  for example an automated check and a human approval, or two humans. Make
+  sure no single compromised component, model or person can complete the
+  action alone.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="SR 26-2: Revised Guidance on Model Risk Management" href="https://www.federalreserve.gov/supervisionreg/srletters/sr2602.htm" source="Federal Reserve">
+  The current US interagency guidance, which supersedes SR 11-7. Read the attached guidance itself.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  A general framework for managing AI risks.
+</Resource>
+
+<Resource kind="docs" title="NIST AI 600-1: Generative AI Profile" href="https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf" source="NIST">
+  Risks specific to generative AI and suggested actions.
+</Resource>
+
+<Resource kind="docs" title="Regulatory Notice 24-09" href="https://www.finra.org/rules-guidance/notices/24-09" source="FINRA">
+  Existing rules apply to generative AI uses.
+</Resource>
+
+<Resource kind="docs" title="EU AI Act, Annex III" href="https://artificialintelligenceact.eu/annex/3/" source="artificialintelligenceact.eu">
+  High-risk categories, including credit and insurance uses.
+</Resource>
+
+<Resource kind="article" title="OWASP Top 10 for LLM applications" href="https://owasp.org/www-project-top-10-for-large-language-model-applications/" source="OWASP">
+  A threat checklist for LLM-based systems.
+</Resource>
+
+## Check yourself
+
+1. For your workflow, write the approval matrix: amount and risk level against who or what may approve.
+2. List the audit fields you would store for one case, and where each comes from.
+3. Write a one-page model inventory entry for your system: purpose, owner, inputs, limits, validation plan and monitoring triggers.

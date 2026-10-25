@@ -1,0 +1,68 @@
+Build a small but complete financial workflow with a language model in the right places and controls in all the others, using only synthetic data.
+
+<Callout title="Safety rules for this project">
+  Use fake data only: invented vendors, accounts and invoices. Do not connect
+  to real bank accounts, payment services or brokerages. Do not build trading
+  or investment-recommendation features. Nothing here moves real money.
+</Callout>
+
+## The brief
+
+Pick one of these workflows:
+
+- **Invoice to ledger.** Intake invoice PDFs and emails, extract structured data, validate, route for approval, and post balanced entries to a ledger (Beancount or a database).
+- **Bank reconciliation.** Match a statement to ledger entries, propose matches for ambiguous items with explanations, and send unmatched breaks to a reviewer.
+- **Expense review.** Check receipts against a written policy, flag exceptions with cited policy clauses and route approvals.
+- **Filing analyst.** Answer questions over a public company's filings with citations, calculation tools and abstention when evidence is missing.
+
+## Requirements
+
+1. **Process map.** Current manual steps, annotated with where a model, code or a person acts, and the intended failure modes.
+2. **Pipeline architecture.** Intake, extract, validate, decide, approve, act and record, with an explicit case state machine.
+3. **Exact money.** Decimal arithmetic everywhere, currency on every amount, explicit rounding, and calculation tools for anything the model must compute.
+4. **Extraction with evidence.** A strict schema with abstention, evidence quotes and automatic validation, including cross-footing and duplicate detection.
+5. **Controls.** An approval matrix, limits enforced in code, least-privilege service accounts, a working pause switch and idempotent actions.
+6. **Audit trail.** An append-only record linking input, extraction, checks, decision, approver and result for every case.
+7. **Untrusted-input test.** At least five documents that contain malicious instructions, with evidence they had no effect.
+8. **Evaluation.** At least 50 synthetic cases with ground truth, field-level and case-level metrics, error-cost analysis and routing thresholds derived from it.
+9. **Rollout plan.** Offline, shadow, assisted and limited-automation stages with exit criteria and monitoring.
+10. **Model inventory entry and write-up.** Purpose, owner, risk tier, validation, limitations, results and open risks. State plainly what you would need from compliance and legal before using real data.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Choose workflow and map it | process map and failure modes |
+| Generate synthetic documents and ground truth | evaluation set |
+| Build the deterministic core: ledger, validations, rules | tested core |
+| Add model extraction with schema and evidence | extraction results by field |
+| Add approvals, limits and audit log | control tests passing |
+| Attack it with malicious documents | security test results |
+| Evaluate, set thresholds, plan rollout | metrics and rollout plan |
+| Write up | public repo |
+
+## Stretch goals
+
+- Add a second independent extraction pass and route on disagreement.
+- Add a reviewer interface that shows evidence beside each field and captures corrections as new evaluation cases.
+- Add drift detection for new vendor formats.
+- Express the workflow as a LangGraph or similar graph with persisted state and an interrupt for approvals.
+- Connect to public data (SEC EDGAR, FRED) for the filing analyst option, following the data provider's access rules.
+
+## Share it
+
+Publish the repo with the synthetic data generator, the evaluation set, the control tests and the write-up. Strong projects show their failures, for example "extraction was 98% accurate on amounts, but all three errors were in handwritten totals, so those now always go to review".
+
+## Where to go next
+
+<Resource kind="paper" title="FinanceBench: A New Benchmark for Financial Question Answering" href="https://arxiv.org/abs/2311.11944" source="arXiv">
+  Run a public financial QA benchmark sample against your filing analyst.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  Map your project's risks using a recognized framework.
+</Resource>
+
+<Resource kind="docs" title="XBRL" href="https://www.xbrl.org/" source="XBRL International">
+  Go deeper into structured financial reporting data.
+</Resource>
