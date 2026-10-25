@@ -377,6 +377,77 @@ export const courses: Course[] = [
       },
     ],
   },
+  {
+    slug: "synthetic-data",
+    title: "Engineer Synthetic Data for Open LLMs",
+    track: "Machine learning foundations",
+    level: "Expert",
+    summary:
+      "Open models need good data. Learn to generate instruction, preference and pretraining-style data with LLMs, filter and decontaminate it, train small models on it, and prove with real held-out data that it helped.",
+    prerequisites: [
+      "Comfortable with Python and the Hugging Face ecosystem",
+      "You have fine-tuned or at least run an open LLM",
+      "Access to a GPU or a cloud notebook for training runs",
+    ],
+    outcomes: [
+      "Decide when synthetic data helps, and name its main failure modes",
+      "Generate diverse instruction data with Self-Instruct, Evol-Instruct and Magpie-style methods",
+      "Build responses and preference pairs with verification and validated judges",
+      "Filter, deduplicate and decontaminate, and avoid model collapse",
+      "Run controlled ablations, evaluate on real data, and document licensing",
+    ],
+    lessons: [
+      {
+        slug: "why-synthetic-data",
+        title: "Why synthetic data?",
+        summary: "Uses, benefits and the main ways it goes wrong.",
+        minutes: 60,
+        load: () => import("./synthetic-data/why-synthetic-data.mdx"),
+      },
+      {
+        slug: "instruction-data",
+        title: "Generating instruction data",
+        summary: "Self-Instruct, Evol-Instruct, Magpie and designing for diversity.",
+        minutes: 150,
+        load: () => import("./synthetic-data/instruction-data.mdx"),
+      },
+      {
+        slug: "responses-and-preferences",
+        title: "Responses, preferences and feedback",
+        summary: "Distillation, verification, judges and DPO pairs.",
+        minutes: 150,
+        load: () => import("./synthetic-data/responses-and-preferences.mdx"),
+      },
+      {
+        slug: "pretraining-style-data",
+        title: "Pretraining-style synthetic text",
+        summary: "Textbook-quality data, Cosmopedia and rephrasing.",
+        minutes: 120,
+        load: () => import("./synthetic-data/pretraining-style-data.mdx"),
+      },
+      {
+        slug: "quality-and-contamination",
+        title: "Quality, diversity, contamination and collapse",
+        summary: "Filtering pipelines, deduplication and decontamination.",
+        minutes: 150,
+        load: () => import("./synthetic-data/quality-and-contamination.mdx"),
+      },
+      {
+        slug: "training-evaluation-licensing",
+        title: "Training, evaluation and licensing",
+        summary: "Ablations, evaluation harnesses, terms and dataset cards.",
+        minutes: 150,
+        load: () => import("./synthetic-data/training-evaluation-licensing.mdx"),
+      },
+      {
+        slug: "capstone",
+        title: "Capstone project",
+        summary: "Generate data, train a small model and prove it helped.",
+        minutes: 360,
+        load: () => import("./synthetic-data/capstone.mdx"),
+      },
+    ],
+  },
 ];
 
 export function getCourse(slug: string) {

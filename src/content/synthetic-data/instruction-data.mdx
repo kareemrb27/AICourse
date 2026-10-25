@@ -1,0 +1,80 @@
+Instruction data is a set of prompts paired with good responses. This lesson covers the three best-known ways to generate the prompts, and what each teaches about diversity.
+
+## 1. Self-Instruct: bootstrap from a few seeds
+
+Self-Instruct starts with a small pool of human-written seed tasks (the paper used 175). The loop:
+
+1. Sample a few tasks from the pool as examples.
+2. Ask a model to propose **new** instructions.
+3. Ask it to produce inputs and outputs for each.
+4. **Filter** out low-quality or too-similar ones.
+5. Add survivors to the pool and repeat.
+
+Stanford's Alpaca used this approach with a stronger model to produce 52K examples, and showed how cheaply an instruction-following model could be made. The repository documents the data generation process.
+
+```text
+pool = seed_tasks
+while len(pool) < target:
+    examples = sample(pool, k=8)
+    candidates = generate_instructions(model, examples)
+    for c in candidates:
+        if too_similar(c, pool) or low_quality(c):
+            continue
+        c.output = generate_response(model, c)
+        pool.add(c)
+```
+
+(Pseudocode: the real work is in `too_similar` and `low_quality`.)
+
+## 2. Evol-Instruct: make prompts harder
+
+WizardLM's Evol-Instruct takes existing instructions and asks a model to rewrite them into more complex versions (add constraints, require multi-step reasoning, deepen the topic) or into different ones, then filters failed evolutions. It tackles a typical weakness of simple generation: too many easy prompts.
+
+Use it when your dataset is dominated by simple tasks and you need a difficulty gradient.
+
+## 3. Magpie: let an aligned model write the user turn
+
+Magpie uses a neat property of chat models. If you give an aligned open model only the template tokens that precede a user message, with no actual prompt, it continues by generating a plausible user query. You then feed that query back to get the response. The authors report generating millions of instruction-response pairs this way with open Llama-3 models, with no seed prompts, then selecting a high-quality subset. It is cheap and diverse in style, though it inherits the generator model's habits.
+
+## Designing for diversity
+
+Whatever method you use, diversity does not appear by itself. Engineer it:
+
+- **Topic and skill taxonomies.** Build a tree of domains, subtopics and task types, then sample across it.
+- **Personas and contexts.** Vary who is asking and why (a student, a nurse, a developer on a deadline).
+- **Format controls.** Vary length, tone, languages, constraints and output formats.
+- **Temperature and sampling.** Higher temperature helps variety but increases errors.
+- **Measure it.** Track distinct n-grams, embedding cluster coverage and topic counts, and look for dominant clusters.
+
+<Callout title="Read your data">
+  Before any training, read at least 100 random examples end to end. You will
+  find patterns, errors and repeated openings that no metric tells you about.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Self-Instruct: Aligning Language Models with Self-Generated Instructions" href="https://arxiv.org/abs/2212.10560" source="arXiv">
+  The bootstrap loop and its filtering heuristics.
+</Resource>
+
+<Resource kind="repo" title="tatsu-lab/stanford_alpaca" href="https://github.com/tatsu-lab/stanford_alpaca" source="GitHub">
+  Code and documentation for the Alpaca data generation process.
+</Resource>
+
+<Resource kind="paper" title="WizardLM: Empowering large pre-trained language models to follow complex instructions" href="https://arxiv.org/abs/2304.12244" source="arXiv">
+  Evol-Instruct and evolving prompts toward difficulty.
+</Resource>
+
+<Resource kind="paper" title="Magpie: Alignment Data Synthesis from Scratch by Prompting Aligned LLMs with Nothing" href="https://arxiv.org/abs/2406.08464" source="arXiv">
+  Generating instructions from the chat template alone.
+</Resource>
+
+<Resource kind="docs" title="Distilabel" href="https://distilabel.argilla.io/latest/" source="Argilla">
+  A framework for building synthetic data pipelines with open and hosted models.
+</Resource>
+
+## Check yourself
+
+1. Write 10 seed tasks for your skill. Run one round of Self-Instruct style expansion and inspect the results.
+2. Build a small taxonomy (5 topics, 4 task types) and generate 5 prompts per cell. Compare diversity with the unguided version.
+3. Pick the 20 easiest prompts and evolve them to be harder. Read the outcomes.

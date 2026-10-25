@@ -1,0 +1,69 @@
+Good prompts are half the job. The other half is the responses, and for preference tuning, the comparisons between them. This lesson covers how responses are produced and judged.
+
+## Producing responses
+
+### Distillation from a stronger model
+Ask a stronger "teacher" model to answer, and train a smaller "student" on the results. Orca showed the value of asking the teacher for **explanation traces** (step-by-step reasoning, system prompts that request careful thought) rather than just final answers, so the student learns how to reason as well as what to say.
+
+### Self-generated answers with checking
+Where answers can be **verified**, sample several responses and keep only those that pass: code that runs against tests, math with a known result, structured output that validates against a schema. This is called rejection sampling, and it yields cleaner data than trusting any single generation.
+
+### Human-in-the-loop
+Review a sample. People catch problems automatic filters miss, and a few hundred human-corrected examples can anchor a larger synthetic set.
+
+## Preference data
+
+Preference tuning methods such as DPO need pairs: for a prompt, a **chosen** response and a **rejected** one. Ways to create them:
+
+- **Multiple samples, then rank.** Generate several responses (ideally from different models or temperatures) and score them.
+- **Judge models.** An LLM grades each response against a rubric. UltraFeedback built a large preference dataset with AI-provided ratings and critiques.
+- **Reward models.** A trained scorer ranks responses. Nemotron-4's pipeline used a reward model rating attributes like helpfulness, correctness, coherence, complexity and verbosity.
+- **Principles-based feedback.** Constitutional AI replaces human harmlessness labels with AI feedback guided by written principles.
+
+## Judges need validation
+
+LLM judges are useful but biased. Studies of LLM-as-a-judge document issues such as favoring longer answers and position effects when comparing two responses. Protect yourself:
+
+1. Write an explicit **rubric** with examples of each score.
+2. **Randomize order** when comparing pairs, or score twice with positions swapped.
+3. **Hand-label a sample**, measure agreement, and revise until acceptable.
+4. Use a **different model** to judge than the one that generated, where possible.
+5. Prefer **verifiable** checks over judgment when you can.
+
+## Make the margin meaningful
+
+For DPO-style pairs, a chosen answer that is only slightly better than the rejected one teaches little. Keep pairs with a clear gap, and check that chosen answers are not just longer.
+
+<Callout title="Common trap">
+  If your chosen responses are systematically longer, the tuned model learns
+  to be verbose. Track length distributions for chosen versus rejected, and
+  balance them.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Orca: Progressive Learning from Complex Explanation Traces of GPT-4" href="https://arxiv.org/abs/2306.02707" source="arXiv">
+  Distilling reasoning, not only answers.
+</Resource>
+
+<Resource kind="paper" title="UltraFeedback: Boosting Language Models with Scaled AI Feedback" href="https://arxiv.org/abs/2310.01377" source="arXiv">
+  A large AI-feedback preference dataset and how it was built.
+</Resource>
+
+<Resource kind="paper" title="Constitutional AI: Harmlessness from AI Feedback" href="https://arxiv.org/abs/2212.08073" source="arXiv">
+  Feedback guided by written principles.
+</Resource>
+
+<Resource kind="paper" title="Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" href="https://arxiv.org/abs/2306.05685" source="arXiv">
+  Strengths, biases and agreement with humans for LLM judges.
+</Resource>
+
+<Resource kind="paper" title="Direct Preference Optimization" href="https://arxiv.org/abs/2305.18290" source="arXiv">
+  The training method that consumes chosen and rejected pairs.
+</Resource>
+
+## Check yourself
+
+1. Take 50 prompts. Generate 4 responses each, and judge them with a rubric.
+2. Hand-label 20 of the judgments. Compute agreement and refine the rubric.
+3. Build chosen and rejected pairs. Compare length and quality of chosen versus rejected.

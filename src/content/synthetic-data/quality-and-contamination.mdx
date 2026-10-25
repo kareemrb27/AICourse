@@ -1,0 +1,82 @@
+Generating data is easy. Producing data that makes a model better, and does not quietly make it worse, is the real work. This lesson is the quality-control layer.
+
+## A filtering pipeline
+
+Think in stages, cheapest first:
+
+1. **Format checks.** Valid structure, language, length bounds, no truncated or empty responses, no leaked system text.
+2. **Rule-based filters.** Remove refusals ("As an AI language model..."), boilerplate openings, repeated lines and obvious artifacts.
+3. **Verification.** Execute code, check math, validate schemas, confirm citations exist.
+4. **Deduplication.** Remove exact and near-duplicates (below).
+5. **Model-based scoring.** A judge or reward model rates quality, with a validated rubric (lesson 3).
+6. **Human spot checks.** Sample from every stage, including what you removed, to catch over-filtering.
+
+Log how many items each stage removes, and why. A filter that deletes 80% should make you suspicious.
+
+## Deduplication
+
+Duplicates inflate the dataset, bias the model toward repeated content, and increase memorization. Handle both:
+
+- **Exact duplicates** via hashing normalized text.
+- **Near duplicates** via similarity methods, such as comparing n-gram shingles with locality-sensitive hashing (MinHash) or comparing embeddings. Libraries like DataTrove implement large-scale deduplication.
+- **Semantic repetition**: different words, same content. Cluster embeddings and cap the count per cluster.
+
+## Diversity audit
+
+- Distribution of topics, task types, lengths, languages and difficulty.
+- Most frequent first words and phrases.
+- Embedding clusters: are 30% of examples in one blob?
+- Compare with your target use: does the data cover the cases you care about?
+
+## Contamination: do not train on the test
+
+If generated data contains your evaluation questions, or close paraphrases, your scores will be inflated and meaningless. The paper "Rethinking Benchmark and Contamination for Language Models with Rephrased Samples" shows that simple string-matching decontamination misses rephrased versions and that models can overfit to them. Mitigate:
+
+- Keep an **evaluation set that never touches the generation pipeline**, including as a seed or example.
+- Decontaminate with **n-gram and embedding similarity**, not only exact match.
+- Prefer **fresh, private** evaluations for decisions that matter.
+
+## Model collapse
+
+The Nature paper "AI models collapse when trained on recursively generated data" reports that training successive generations of models mostly on the previous generation's outputs makes the distribution narrow: rare, low-probability content vanishes first. Related work on "The Curse of Recursion" describes the same phenomenon.
+
+Read the scope carefully: those experiments replaced the training data with generated data each generation. Practical pipelines mix synthetic data with real data and filter it, and the real-world magnitude of the risk is debated. Sensible habits:
+
+- **Keep real data in the mix**, especially for rare and long-tail cases.
+- **Preserve diversity** deliberately (lesson 2), and measure it.
+- **Do not loop** a model's outputs back into its own training without fresh signal, such as verification or human review.
+- **Track provenance** so you know which data is synthetic and from which generator.
+
+<Callout title="Filtering is a modeling choice">
+  Every filter encodes a belief about what good data looks like. Test filters
+  the way FineWeb did: train small models with and without the filter and
+  compare on held-out evaluations.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Rethinking Benchmark and Contamination for Language Models with Rephrased Samples" href="https://arxiv.org/abs/2311.04850" source="arXiv">
+  Why exact-match decontamination is not enough.
+</Resource>
+
+<Resource kind="paper" title="AI models collapse when trained on recursively generated data" href="https://www.nature.com/articles/s41586-024-07566-y" source="Nature">
+  The model collapse result and its setup.
+</Resource>
+
+<Resource kind="paper" title="The Curse of Recursion: Training on Generated Data Makes Models Forget" href="https://arxiv.org/abs/2305.17493" source="arXiv">
+  The earlier preprint behind the same idea.
+</Resource>
+
+<Resource kind="paper" title="The FineWeb Datasets" href="https://arxiv.org/abs/2406.17557" source="arXiv">
+  A model for ablation-driven filtering decisions.
+</Resource>
+
+<Resource kind="repo" title="huggingface/datatrove" href="https://github.com/huggingface/datatrove" source="GitHub">
+  Tooling for filtering and deduplication at scale.
+</Resource>
+
+## Check yourself
+
+1. Build a four-stage filter for a generated set of 1,000 examples. Report how many each stage removes.
+2. Find near-duplicates with embeddings. Cap each cluster and compare the set before and after.
+3. Take 20 items from your evaluation set, paraphrase them, and check whether your decontamination catches them.

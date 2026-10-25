@@ -1,0 +1,64 @@
+Build a synthetic dataset for a specific skill, train a small open model on it, and prove with held-out real data that it helped.
+
+## The brief
+
+Choose a narrow, measurable skill where small models are weak. Examples:
+
+- turning messy text into valid structured JSON for a fixed schema
+- answering questions about a domain's documentation, with citations
+- writing SQL for a given schema from plain English
+- classifying and summarizing support tickets in a house style
+- following a strict output format or persona reliably
+
+Pick something where you can build a **verifiable evaluation**: tests that run, schemas that validate, or answers a person can check.
+
+## Requirements
+
+1. **Skill and evaluation first.** Define the skill, and build a held-out evaluation set of at least 100 real or human-verified examples before generating anything. Keep it out of the pipeline.
+2. **Baseline.** Score the base model, and a prompted baseline, on the evaluation set.
+3. **Generation design.** A taxonomy or seed strategy for diversity, with at least two generation methods (for example Self-Instruct style plus grounded generation), and a documented prompt set.
+4. **Responses and checks.** Responses verified where possible (execution, validation, rejection sampling) and a validated judge for the rest, with measured agreement against hand labels.
+5. **Filtering and dedup.** A staged pipeline with counts removed at each stage, near-duplicate removal and a diversity audit.
+6. **Decontamination.** Check generated data against your evaluation set using more than exact match.
+7. **Ablations.** At least four training runs that isolate the value of generation, filtering and mixing with real data.
+8. **Training and results.** Fine-tune a small open model (LoRA or QLoRA is fine), and report scores, general regression checks and example outputs.
+9. **Licensing and dataset card.** The terms of every model and source used, the license you chose and a complete dataset card.
+10. **Write-up.** Method, results table, failures you found in the data, cost in GPU hours or dollars, and what you would change.
+
+## Suggested path
+
+| Step | Output |
+| --- | --- |
+| Define skill, build eval set | held-out evaluation |
+| Score baselines | baseline table |
+| Design taxonomy, generate pilot of 200 | pilot data and read-through notes |
+| Add verification and judge | validated pipeline |
+| Filter, dedup, decontaminate | clean dataset with stage counts |
+| Scale generation, train ablations | run table |
+| Evaluate, write dataset card | results and card |
+| Publish | public dataset and repo |
+
+## Stretch goals
+
+- Add a preference stage with chosen/rejected pairs and DPO, and measure the gain over SFT alone.
+- Try a second generator model and compare the resulting data and model quality.
+- Test for model collapse by training a second generation on the first model's outputs, and measure the loss on rare cases.
+- Release the dataset on a hub with versioning and a license.
+
+## Share it
+
+Publish the dataset, the pipeline code, the evaluation set (if licensing permits) and the results. The most useful reports show what did not work: "unfiltered data hurt; filtering recovered 9 points; mixing in 200 real examples added 4 more."
+
+## Where to go next
+
+<Resource kind="paper" title="Best Practices and Lessons Learned on Synthetic Data" href="https://arxiv.org/abs/2404.07503" source="arXiv">
+  Re-read with your own experiment in mind.
+</Resource>
+
+<Resource kind="paper" title="Nemotron-4 340B Technical Report" href="https://arxiv.org/abs/2406.11704" source="arXiv">
+  Study how a large synthetic alignment pipeline is put together end to end.
+</Resource>
+
+<Resource kind="docs" title="Distilabel" href="https://distilabel.argilla.io/latest/" source="Argilla">
+  Rebuild your pipeline as a reusable, resumable workflow.
+</Resource>

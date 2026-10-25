@@ -1,0 +1,69 @@
+So far we generated chat data. Synthetic data also fills pretraining and continued pretraining corpora, where the unit is documents, not conversations. The goal is to teach knowledge and reasoning in a clean, structured form.
+
+## Textbook-quality data
+
+The "Textbooks Are All You Need" paper trained a small code model on a mix of filtered web data and synthetic textbook-style content plus exercises, and reported strong results for its size. The idea: models learn efficiently from clear, well-explained, self-contained material, unlike noisy web pages.
+
+## Cosmopedia: a worked recipe
+
+Hugging Face's Cosmopedia is a large open synthetic corpus of textbooks, blog posts, stories and how-to articles generated with an open model. Their write-up is the best public walkthrough of the practical problems:
+
+- **Seed data drives variety.** They built prompts from topics found in existing web samples and curated educational sources, so generations covered a wide range.
+- **Audience and format matter.** The same topic prompted for different audiences (young children, high school students, researchers) and formats yields different and complementary text.
+- **Scale needs tooling.** Generating billions of tokens requires efficient inference and orchestration.
+- **Check for duplicates and contamination.** At this scale, repetition and benchmark leakage are real risks.
+
+## Rephrasing and grounding
+
+Not all synthetic pretraining data is invented from scratch. Two common alternatives:
+
+- **Rephrasing** noisy web text into clearer prose, keeping the facts.
+- **Grounded generation**, where the model writes from a supplied document or source, reducing made-up facts.
+
+Grounding gives you a verification path: the output should be supported by its source.
+
+## Filtering real data is half the story
+
+FineWeb documents how a large web corpus was filtered and deduplicated, and how each filter was tested by training small models and comparing results. This is a transferable method: **decide on data changes with controlled ablations, not intuition**. Tools such as DataTrove provide building blocks for large-scale processing pipelines like filtering and deduplication.
+
+## Prompt design for documents
+
+- Specify the **topic, audience, format, length and tone**.
+- Ask for **explanations and worked examples**, not just definitions.
+- Include **constraints** to avoid boilerplate ("do not start with 'Sure' or restate the prompt").
+- Add **a seed** (a short passage or a topic from a taxonomy) so generations differ.
+- Keep a **template library** and track which template produced which output.
+
+<Callout title="Where facts come from">
+  A generator can write fluent, wrong text. For factual domains, ground
+  generations in sources, spot-check against references, and be wary of data
+  that teaches the model errors in an authoritative tone.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Cosmopedia: how to create large-scale synthetic data for pre-training Large Language Models" href="https://huggingface.co/blog/cosmopedia" source="Hugging Face Blog">
+  The detailed recipe, with prompt styles and lessons learned.
+</Resource>
+
+<Resource kind="paper" title="Textbooks Are All You Need" href="https://arxiv.org/abs/2306.11644" source="arXiv">
+  The case for textbook-quality training data.
+</Resource>
+
+<Resource kind="paper" title="The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale" href="https://arxiv.org/abs/2406.17557" source="arXiv">
+  Filtering, deduplication and ablation-driven data decisions.
+</Resource>
+
+<Resource kind="repo" title="huggingface/datatrove" href="https://github.com/huggingface/datatrove" source="GitHub">
+  Pipeline blocks for filtering and deduplicating large text corpora.
+</Resource>
+
+<Resource kind="docs" title="Distilabel" href="https://distilabel.argilla.io/latest/" source="Argilla">
+  Orchestrating large generation jobs across models.
+</Resource>
+
+## Check yourself
+
+1. Write a prompt template that produces a short textbook section for a topic, audience and format. Generate 30 samples across varied inputs.
+2. Cluster the outputs (even roughly). Find the dominant openings and phrases, and revise the template.
+3. Generate the same topic grounded in a source passage and compare factual accuracy with the ungrounded version.
