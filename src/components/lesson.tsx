@@ -34,9 +34,14 @@ export function Resource({
     >
       <div className="label flex items-center justify-between">
         <span className="text-accent">{KINDS[kind]}</span>
-        <span>{source} ↗</span>
+        <span>
+          {source} <span aria-hidden="true">↗</span>
+        </span>
       </div>
-      <div className="mt-2 text-base font-semibold text-foreground">{title}</div>
+      <div className="mt-2 text-base font-semibold text-foreground">
+        {title}
+        <span className="sr-only"> (opens in a new tab)</span>
+      </div>
       {children ? (
         <div className="mt-1 text-sm leading-6 text-muted">{children}</div>
       ) : null}

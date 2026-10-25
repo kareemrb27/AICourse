@@ -3,7 +3,7 @@ import { courses, formatDuration, totalMinutes } from "@/content/courses";
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-6xl px-6">
+    <main id="main" className="mx-auto max-w-6xl px-6">
       <section className="border-x border-line px-6 py-20 sm:px-12 sm:py-28">
         <p className="label inline-block rounded border border-accent/40 bg-accent-dim px-2 py-1 text-accent">
           Free · Open · No signup

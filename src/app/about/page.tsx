@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "About" };
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "How AICourse builds free courses from public videos, docs, papers and tutorials, and credits the original authors.",
+};
 
 export default function About() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main id="main" className="mx-auto max-w-3xl px-6 py-16">
       <p className="label">About</p>
       <h1 className="mt-3 text-5xl font-extrabold tracking-[-0.03em]">
         Knowledge should not cost $799

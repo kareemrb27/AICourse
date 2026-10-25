@@ -18,12 +18,15 @@ export async function generateMetadata({
 }: PageProps<"/courses/[course]">): Promise<Metadata> {
   const { course: slug } = await params;
   const course = getCourse(slug);
-  return { title: course?.title ?? "Course" };
+  return {
+    title: course?.title ?? "Course",
+    description: course?.summary,
+  };
 }
 
 export default function CoursePage(props: PageProps<"/courses/[course]">) {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-4xl px-6 py-16" />}>
+    <Suspense fallback={<main id="main" className="mx-auto max-w-4xl px-6 py-16" />}>
       <CourseContent params={props.params} />
     </Suspense>
   );
@@ -39,7 +42,7 @@ async function CourseContent({
   if (!course) notFound();
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
+    <main id="main" className="mx-auto max-w-4xl px-6 py-16">
       <p className="label">
         {course.track} · <span className="text-accent">{course.level}</span>
       </p>

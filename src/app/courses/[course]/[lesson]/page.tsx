@@ -14,15 +14,19 @@ export async function generateMetadata({
   params,
 }: PageProps<"/courses/[course]/[lesson]">): Promise<Metadata> {
   const { course: cs, lesson: ls } = await params;
-  const lesson = getCourse(cs)?.lessons.find((l) => l.slug === ls);
-  return { title: lesson?.title ?? "Lesson" };
+  const course = getCourse(cs);
+  const lesson = course?.lessons.find((l) => l.slug === ls);
+  return {
+    title: lesson && course ? `${lesson.title} · ${course.title}` : "Lesson",
+    description: lesson?.summary,
+  };
 }
 
 export default function LessonPage(
   props: PageProps<"/courses/[course]/[lesson]">,
 ) {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-3xl px-6 py-14" />}>
+    <Suspense fallback={<main id="main" className="mx-auto max-w-3xl px-6 py-14" />}>
       <LessonContent params={props.params} />
     </Suspense>
   );
@@ -44,10 +48,10 @@ async function LessonContent({
   const { default: Content } = await lesson.load();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-14">
+    <main id="main" className="mx-auto max-w-3xl px-6 py-14">
       <Link
         href={`/courses/${course.slug}`}
-        className="label hover:text-foreground"
+        className="label inline-flex min-h-11 items-center hover:text-foreground"
       >
         ← {course.title}
       </Link>
@@ -63,7 +67,10 @@ async function LessonContent({
         <Content />
       </article>
 
-      <nav className="mt-16 grid gap-4 border-t border-line pt-8 sm:grid-cols-2">
+      <nav
+        aria-label="Lesson navigation"
+        className="mt-16 grid gap-4 border-t border-line pt-8 sm:grid-cols-2"
+      >
         {prev ? (
           <Link
             href={`/courses/${course.slug}/${prev.slug}`}
