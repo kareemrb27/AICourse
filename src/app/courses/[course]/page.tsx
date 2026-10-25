@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import {
   courses,
   formatDuration,
@@ -20,9 +21,19 @@ export async function generateMetadata({
   return { title: course?.title ?? "Course" };
 }
 
-export default async function CoursePage({
+export default function CoursePage(props: PageProps<"/courses/[course]">) {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-4xl px-6 py-16" />}>
+      <CourseContent params={props.params} />
+    </Suspense>
+  );
+}
+
+async function CourseContent({
   params,
-}: PageProps<"/courses/[course]">) {
+}: {
+  params: PageProps<"/courses/[course]">["params"];
+}) {
   const { course: slug } = await params;
   const course = getCourse(slug);
   if (!course) notFound();
