@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { courses, formatDuration, getCourse } from "@/content/courses";
+import { reportIssueUrl } from "@/lib/site";
 
 export function generateStaticParams() {
   return courses.flatMap((c) =>
@@ -66,6 +67,20 @@ async function LessonContent({
       <article className="prose-lesson mt-10">
         <Content />
       </article>
+
+      <p className="mt-10 text-sm text-muted">
+        Found a broken link or a mistake?{" "}
+        <a
+          href={reportIssueUrl(`Problem in "${lesson.title}" (${course.title})`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent underline underline-offset-4"
+        >
+          Report it
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
+        .
+      </p>
 
       <nav
         aria-label="Lesson navigation"

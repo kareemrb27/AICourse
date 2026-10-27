@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { REPO_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,13 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const DESCRIPTION =
+  "Free, open AI engineering courses built from the best public videos, docs, papers and tutorials.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "AICourse — free AI engineering courses",
     template: "%s · AICourse",
   },
-  description:
-    "Free, open AI engineering courses built from the best public videos, docs, papers and tutorials.",
+  description: DESCRIPTION,
+  alternates: { canonical: "./" },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    description: DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -65,6 +76,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             Free to use · Every lesson links to public resources, with credit
             to the original authors · Independent project, not affiliated with
             any conference or course provider.
+            <div className="mt-3 flex flex-wrap gap-x-6">
+              <a
+                href={`${REPO_URL}/issues/new`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground"
+              >
+                Report a broken link or error
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground"
+              >
+                Source on GitHub
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </div>
           </div>
         </footer>
       </body>
