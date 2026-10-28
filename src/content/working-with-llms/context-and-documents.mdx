@@ -1,0 +1,96 @@
+A model only knows what it learned in training plus what is in the conversation right now. Most of the difference between a useless answer and an excellent one is what you put in front of it. This lesson covers how to supply that material well.
+
+## The context window, in practice
+
+Everything the model can use at one time sits in its **context window**: your instructions, earlier messages, attached files, search results, and the answer it is writing. The window is measured in tokens and has a limit.
+
+Four consequences:
+
+1. **The model does not know your files, systems or history** unless you provide them.
+2. **Long chats fill the window.** Old details can be dropped, summarized or ignored, so long threads drift.
+3. **More is not always better.** Irrelevant material can distract the model and raise cost.
+4. **Position matters.** Research on long inputs has found that models can use information at the start and end of a long text better than information buried in the middle.
+
+You can see how text becomes tokens with a free tokenizer tool, which makes limits and costs feel concrete.
+
+## Give it the source, not a description
+
+Compare:
+
+- "Summarize our refund policy." The model will invent a plausible generic policy.
+- "Summarize the refund policy below for a new support agent." followed by the policy text. The model can now be accurate.
+
+Rule of thumb: **if the answer must be based on a specific document, include that document**, and tell the model to use only it.
+
+```text
+Answer using only the document below. If the answer is not in the document,
+say "not stated" and do not guess. Quote the sentence you relied on.
+
+<document>
+...policy text...
+</document>
+
+Question: Can a customer get a refund after 45 days?
+```
+
+Asking for the quote makes the answer much easier to check.
+
+## Working with long documents
+
+- **Put the document first and the question after it**, and label both clearly.
+- **Ask narrow questions** rather than "tell me everything".
+- **Ask for evidence**: quotes, section names or page numbers.
+- **Use two passes for big material**: first extract the relevant parts, then reason over them.
+- **Split by section** when a document is much longer than the window, then combine the partial summaries.
+- **Check the extraction.** Uploaded files can be read imperfectly: tables, scanned pages and images are common trouble spots.
+
+## Common document tasks
+
+| Task | A good instruction |
+| --- | --- |
+| Summarize | "Five bullets for a manager who has two minutes. Put the decision needed first." |
+| Extract | "List every date, owner and deadline as a table. Use 'unknown' if missing." |
+| Compare | "Compare version A and B. List changes that affect security or cost." |
+| Review | "Find contradictions or missing information. Quote the lines involved." |
+| Answer | "Answer only from the text. Quote your source. Say 'not stated' if unsure." |
+
+## Keep conversations healthy
+
+- **Start a new chat for a new task.** Old context can leak into new answers.
+- **Restate key facts** when a thread gets long, or ask for a summary and paste it into a fresh chat.
+- **Use projects or custom instructions** for standing context such as your role, house style and recurring documents, so you do not repeat yourself.
+- **Be careful with memory features.** They are convenient, and they also store information about you. Know what is saved and how to turn it off.
+
+## Context for you, not only for the model
+
+Good context also helps *you* check the answer. If the assistant quotes the source text, you can look it up. If it works from memory, you cannot tell where a claim came from.
+
+<Callout title="Privacy of what you upload">
+  Anything you paste or attach goes to the provider. Remove names, secrets and
+  customer data, or use an approved tool with proper data terms. Lesson 6 turns
+  this into a checklist.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Tokenizer" href="https://platform.openai.com/tokenizer" source="OpenAI">
+  An interactive tool that shows how text is split into tokens. Paste in a paragraph and a line of code to see the difference.
+</Resource>
+
+<Resource kind="paper" title="Lost in the Middle: How Language Models Use Long Contexts" href="https://arxiv.org/abs/2307.03172" source="Liu et al., arXiv">
+  A study showing that models can use information in the middle of long inputs less reliably. Read the abstract. Newer models have improved, but the lesson about placement and focus still holds.
+</Resource>
+
+<Resource kind="docs" title="Long context" href="https://ai.google.dev/gemini-api/docs/long-context" source="Google">
+  An explanation of long context windows, what they allow and how to use them well.
+</Resource>
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/research/effective-context-engineering-for-ai-agents" source="Anthropic">
+  A deeper look at deciding what goes into the context window. Written for builders, and it previews stage 2 and 3. Read the opening sections now.
+</Resource>
+
+## Check yourself
+
+1. Take a real document at work (with confidential details removed). Ask three questions about it using the "answer only from the document, quote your source" prompt. Check every quote.
+2. Why can a long chat produce worse answers than a fresh one?
+3. What would you remove from a document before uploading it to a public assistant?

@@ -49,6 +49,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "working-with-llms",
+    title: "Working with LLMs",
+    track: "Stage 1 · Understand",
+    level: "Beginner",
+    summary:
+      "Learn to get reliable, useful results from AI assistants. Choose the right assistant and mode, write clear prompts, use proven patterns, work with documents, use search and reasoning tools, and check answers and protect your data, with no coding required.",
+    prerequisites: [
+      "Comfortable with everyday IT concepts such as files, APIs and logs",
+      "Recommended: complete AI Foundations for IT Professionals first, or know what a language model is",
+      "A free account with at least one chat assistant, ideally two, to try the exercises",
+    ],
+    outcomes: [
+      "Choose an assistant, model and mode that suit a task",
+      "Write prompts with clear task, context, input, constraints and format",
+      "Apply patterns such as examples, steps, structured output and chaining",
+      "Give a model documents and context, and get answers you can trace to a source",
+      "Use search, reasoning and code execution appropriately, and know their risks",
+      "Check outputs, protect sensitive data and recognize prompt injection",
+    ],
+    lessons: [
+      { slug: "choosing-an-assistant", title: "Choosing and using an assistant", summary: "Models versus products, the controls that matter, and a two-assistant test.", minutes: 60 },
+      { slug: "prompting-basics", title: "Prompting basics", summary: "The five parts of a good prompt and the habit of iterating.", minutes: 90 },
+      { slug: "prompt-patterns", title: "Prompt patterns that work", summary: "Examples, steps, formats, chaining and self-review.", minutes: 90 },
+      { slug: "context-and-documents", title: "Context and documents", summary: "Context windows, grounding answers in a source, and long documents.", minutes: 90 },
+      { slug: "tools-and-reasoning", title: "Search, reasoning and tools", summary: "Reasoning modes, web search, deep research, code execution and connectors.", minutes: 90 },
+      { slug: "verify-and-stay-safe", title: "Verify and stay safe", summary: "Checking answers, privacy rules, prompt injection and a personal policy.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: your prompt playbook", summary: "Build and test reusable prompts for five real tasks.", minutes: 180 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

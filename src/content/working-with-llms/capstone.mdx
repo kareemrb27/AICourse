@@ -1,0 +1,87 @@
+Turn what you have learned into a tool you will actually use: a personal prompt playbook for the work you do every week. It becomes your second portfolio piece, and it is the habit that separates people who use AI well from people who just try it.
+
+## The playbook
+
+Build a short document, a page or two per task, covering **five real tasks** from your job. Choose tasks that happen repeatedly, such as incident summaries, user documentation, ticket triage, meeting notes, test-case ideas, or customer replies.
+
+## For each task, record
+
+1. **The task and its stakes.** What it is, who reads the result, and what a mistake would cost.
+2. **A reusable prompt template.** Use the five parts from lesson 2 and the patterns from lesson 3, with clear blanks such as `[paste text here]`.
+3. **The right mode.** Fast or reasoning, search on or off, files or not, and why (lesson 5).
+4. **The input rules.** What you will paste, what you will remove first, and which tool is approved for it (lesson 6).
+5. **A checking step.** Exactly what you verify before using the result: which claims, which numbers, which sources.
+6. **Test results.** Run the template on at least three real inputs, in two assistants or two models. Score each answer from 1 to 5 for accuracy, usefulness and how much editing it needed.
+7. **A note on what went wrong.** The failure you saw, and the change you made to the prompt in response.
+
+## Prompt template example
+
+```text
+Task: Summarize the incident notes below for the weekly operations review.
+Context: Readers are team leads and the head of service. They need impact,
+cause and next steps, not technical detail.
+Input:
+<notes>
+[paste notes here, with names and customer details removed]
+</notes>
+Constraints: Use only the notes. If cause or impact is not stated, write
+"not stated". No blame. Under 150 words.
+Format: Three labelled lines: Impact, Cause, Next steps. Then a list of any
+open questions.
+```
+
+## One-page front sheet
+
+Open the playbook with a front sheet that contains:
+
+- Your **five tasks** and the mode you use for each.
+- Your **personal policy** for what you will not paste into an assistant.
+- Your **checking routine** in five lines.
+- Your **three most useful lessons**, in your own words.
+- One **experiment** for the next two weeks, such as saving an hour a week on one task, with a way to measure it.
+
+## How to check your work
+
+- Could a colleague use your templates tomorrow with no help from you?
+- Does each template say what to do when information is missing?
+- Is the checking step specific, or just "review it"?
+- Do your test notes include at least one failure and the fix?
+- Did you keep confidential details out of the playbook itself?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Task choice | Real, repeated tasks with clear stakes | One-off or invented tasks |
+| Prompts | Context, constraints and format are explicit | Short, vague requests |
+| Testing | Several inputs, two assistants, scores and notes | One lucky run |
+| Verification | Specific checks matched to the stakes | "Read it over" |
+| Safety | Clear rules on data and approved tools | Not addressed |
+| Honesty | Includes failures and limits | Only successes |
+
+## Stretch goals
+
+- Share the playbook with your team and ask each person to try one template and report back.
+- Measure one task before and after: time taken and edits needed.
+- Add a template that uses a document you provide and requires quotes in the answer.
+- Write a one-paragraph guide for a colleague who has never used an assistant.
+
+## Share it
+
+Keep a version with no confidential details for your portfolio or profile. A candid note such as "this template failed on long threads, so I now summarize first" shows more judgment than a list of wins.
+
+## Where to go next
+
+The next course on this path is Python and data essentials. You have learned to work with models by hand. Next you will learn enough Python, notebooks, APIs and JSON to start working with them from code, which is the doorway to stage 2.
+
+<Resource kind="course" title="AI Fluency: Framework and Foundations" href="https://anthropic.skilljar.com/ai-fluency-framework-foundations" source="Anthropic">
+  Free: use the four habits as a checklist for your playbook.
+</Resource>
+
+<Resource kind="docs" title="Prompt engineering overview" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview" source="Anthropic">
+  A reference for improving your templates, including the point that you should define success criteria and test before you tune.
+</Resource>
+
+<Resource kind="docs" title="Prompt engineering" href="https://developers.openai.com/api/docs/guides/prompt-engineering" source="OpenAI">
+  A second view on instructions, examples and context, useful for comparing assistants.
+</Resource>

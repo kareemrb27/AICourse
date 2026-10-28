@@ -1,0 +1,93 @@
+Modern assistants are more than a text predictor. Around the model sit tools: search, code execution, file analysis, and connections to other apps. Knowing what each tool adds, and what it does not fix, lets you choose the right mode for each job.
+
+## Reasoning modes
+
+Some models, or settings, spend extra effort working through a problem before they answer. Providers call this reasoning, thinking, or extended thinking.
+
+- **Good for**: multi-step maths and logic, debugging, planning, comparing options, hard coding problems.
+- **Costs**: slower answers, and sometimes higher usage limits or price.
+- **Not needed for**: rewriting an email, simple lookups, brainstorming.
+
+A good habit: try the fast mode first, and switch to reasoning when the answer is shallow or wrong in a way that more thought would fix. For tricky questions, you can also ask in the prompt to show the steps (lesson 3).
+
+Reasoning helps with hard problems. It does not remove hallucination, so checking still applies.
+
+## Web search
+
+With search on, the assistant looks up pages and writes an answer from them, usually with links.
+
+- **Use it for** anything recent, prices, product details, news, documentation versions.
+- **Do** open the links. Check that the page really says what the answer claims, and judge the source.
+- **Remember** it is only as good as the pages it finds. Search results can be wrong, outdated or written to manipulate search.
+
+## Deep research
+
+Some assistants can run a longer research task: plan, search many sources, read them, and write a cited report in several minutes.
+
+- Useful for first-pass literature reviews, market scans and comparing technologies.
+- Treat it as a well-read intern: a strong starting point, to be checked, not a finished source.
+- Narrow, specific questions give better reports than broad ones. Say what decision the report is for.
+
+## Code execution and data analysis
+
+Assistants that can run code do real calculations instead of guessing. You can upload a spreadsheet or CSV and ask for cleaning, summaries, charts and statistics.
+
+- Ask it to show the code or the steps, so you can verify them.
+- Check a few numbers by hand or in a spreadsheet.
+- Be careful with sensitive data (lesson 6).
+
+This is the fix for the "bad at arithmetic" problem: the model writes code, and the computer calculates.
+
+## Files, images and voice
+
+- **Images and screenshots**: describe what is wrong, read text from a photo, explain a diagram or an error dialog.
+- **Documents and spreadsheets**: see lesson 4.
+- **Voice and camera**: quick questions while your hands are busy, or live troubleshooting. Remember transcription mistakes.
+
+## Connectors and tools
+
+Many assistants can connect to your mail, calendar, documents, ticketing system or code repository, so they can read from them or act in them. Open standards such as the Model Context Protocol (MCP) exist to make these connections work across products.
+
+This is powerful, and it changes the risk:
+
+- A read-only connector can leak what it reads if something goes wrong.
+- A connector that can send, change or delete things needs approval steps and a human watching.
+- Content the assistant reads from outside (web pages, emails, documents) can contain hidden instructions. Lesson 6 explains this.
+
+Start with read-only access, to non-sensitive data, and widen only with a clear reason.
+
+## Choosing the right mode
+
+| You need | Try |
+| --- | --- |
+| A quick draft, rewrite or idea | Fast model, no tools |
+| A careful answer to a hard problem | Reasoning mode |
+| Current facts | Web search, then open the sources |
+| A thorough, cited overview | Deep research, then check the key claims |
+| Exact numbers from your data | Code execution, with the steps shown |
+| Help in a document or codebase | A tool that can see it, with limited permissions |
+
+<Callout title="Tools reduce some errors, not all">
+  Search reduces outdated answers. Code execution reduces arithmetic mistakes.
+  Reasoning reduces shallow logic. None of them removes the need to check.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Using AI right now: a quick guide" href="https://www.oneusefulthing.org/p/using-ai-right-now-a-quick-guide" source="Ethan Mollick, One Useful Thing">
+  Covers deep research, voice mode, and using the stronger model for serious work. Treat the product names as a snapshot.
+</Resource>
+
+<Resource kind="article" title="Here's how I use LLMs to help me write code" href="https://simonwillison.net/2025/Mar/11/using-llms-for-code/" source="Simon Willison">
+  A candid, practical set of habits for coding with assistants, including treating the model as a fast but fallible collaborator. Useful beyond code.
+</Resource>
+
+<Resource kind="docs" title="Model Context Protocol: introduction" href="https://modelcontextprotocol.io/introduction" source="Model Context Protocol">
+  What MCP is and why it exists. You will use it for real in stage 3.
+</Resource>
+
+## Check yourself
+
+1. For each of five tasks from your week, choose the mode from the table and say why.
+2. Why does a calculation done by running code beat a calculation done in the model's head?
+3. A connector can read your email. Name one risk and one precaution.

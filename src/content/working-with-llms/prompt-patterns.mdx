@@ -1,0 +1,137 @@
+Once the basics are in place, a handful of reusable patterns will take you most of the way. Each one solves a specific problem. Learn to recognize the problem, and the pattern follows.
+
+## Pattern 1: show an example
+
+**Problem**: the model keeps missing the style or format you have in mind.
+
+**Fix**: give one to three examples of the input and the output you want. This is called **few-shot prompting**. One example is often enough to fix tone and format.
+
+```text
+Turn each support ticket into a one-line summary in this style.
+
+Ticket: "Hi, I can't log in since the update, it says invalid token."
+Summary: Login fails with "invalid token" after update.
+
+Ticket: "The export button does nothing when I click it on Safari."
+Summary: Export button unresponsive in Safari.
+
+Ticket: "{paste new ticket here}"
+Summary:
+```
+
+Make the examples varied, and make them correct. The model copies mistakes as faithfully as it copies style.
+
+## Pattern 2: separate instructions from material
+
+**Problem**: the model confuses your instructions with the text you want it to work on, especially with long pasted content.
+
+**Fix**: mark the boundaries clearly with labels, quote marks, triple dashes or simple tags.
+
+```text
+Summarize the document below in five bullets for a manager.
+
+<document>
+...pasted text...
+</document>
+```
+
+Consistent labels also help you reuse the same prompt, and they reduce the chance that instructions hidden inside pasted text are followed by mistake.
+
+## Pattern 3: ask for the steps
+
+**Problem**: multi-step questions such as calculations, comparisons or planning give wrong answers when the model jumps to a conclusion.
+
+**Fix**: ask it to work step by step before answering, or use a reasoning mode if your assistant has one. Writing the steps gives the model room to work, and gives you something to check. This idea is often called **chain of thought**.
+
+```text
+Decide which of these three vendors best fits our needs. First list our
+requirements, then score each vendor against each requirement, then give your
+recommendation and the main reason.
+```
+
+On assistants with built-in reasoning, you often do not need to ask: the model already thinks first. For simple questions, steps just add length.
+
+## Pattern 4: specify the output format
+
+**Problem**: the answer is correct but cannot be used as it is.
+
+**Fix**: describe the exact shape: a table with named columns, a numbered list, JSON with given keys, a message under 60 words.
+
+```text
+Extract the following from the email below and return only JSON:
+{"customer": string, "issue": string, "urgency": "low" | "medium" | "high"}
+If a field is missing, use null.
+```
+
+Structured output is what makes prompts usable inside scripts and tools, which you will do in stage 2.
+
+## Pattern 5: break big tasks into steps (chaining)
+
+**Problem**: one huge prompt gives a mushy result.
+
+**Fix**: split the work. First extract the facts, then analyze them, then write the final text. Each step is short, and you can check each one.
+
+A small example: (1) "List the key claims in this report", (2) "For each claim, say what evidence the report gives", (3) "Write a one-page summary that separates well-supported claims from weak ones".
+
+## Pattern 6: let it ask you
+
+**Problem**: you are not sure what information the model needs.
+
+**Fix**: tell it to ask first.
+
+```text
+I want to plan a migration from our on-premises file server to cloud storage.
+Before you suggest anything, ask me up to five questions you need answered.
+```
+
+## Pattern 7: draft, critique, revise
+
+**Problem**: the first answer is acceptable but not good.
+
+**Fix**: have the model review its own work against criteria you give, then rewrite.
+
+```text
+Review your answer against these criteria: accurate, no jargon, under 150
+words, includes one concrete example. List problems, then give a revised version.
+```
+
+Self-review catches style and completeness problems. It is much less reliable at catching factual errors, which is why you still check facts yourself (lesson 6).
+
+## Keep what works
+
+When a prompt works well, save it. A short library of reusable prompts with blanks for the details is worth more than any trick. You will build one in the capstone.
+
+<Callout title="Match the pattern to the problem">
+  Wrong format: specify the format. Wrong style: show an example. Wrong
+  conclusion: ask for steps. Too big: chain it. Missing information: let it ask.
+</Callout>
+
+## Watch
+
+<Video id="T9aRN5JkmL8" title="AI prompt engineering: A deep dive" channel="Anthropic" minutes={77}>
+  A long, candid roundtable with Anthropic's prompt engineers about what good prompting looks like in practice. Optional: dip into the parts that interest you.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Prompting best practices" href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices" source="Anthropic">
+  The living reference for techniques including clarity, examples, structure, thinking and chaining prompts.
+</Resource>
+
+<Resource kind="paper" title="Chain-of-Thought Prompting Elicits Reasoning in Large Language Models" href="https://arxiv.org/abs/2201.11903" source="Wei et al., arXiv">
+  The paper that showed step-by-step prompting improves reasoning. Read the abstract and the examples.
+</Resource>
+
+<Resource kind="paper" title="Large Language Models are Zero-Shot Reasoners" href="https://arxiv.org/abs/2205.11916" source="Kojima et al., arXiv">
+  Showed that even a simple "let's think step by step" can help. Useful history: modern assistants often do this on their own.
+</Resource>
+
+<Resource kind="article" title="Learn Prompting" href="https://learnprompting.org/docs/introduction" source="Learn Prompting">
+  A free course on prompting techniques with examples.
+</Resource>
+
+## Check yourself
+
+1. Pick one of the seven patterns and apply it to a real task. What changed in the answer?
+2. For each problem (wrong format, wrong style, wrong conclusion, too big), name the pattern that fixes it.
+3. Why is asking a model to critique its own answer weaker for facts than for style?

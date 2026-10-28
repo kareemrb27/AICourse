@@ -69,6 +69,13 @@ import L66 from "./ai-foundations/how-llms-work.mdx";
 import L67 from "./ai-foundations/strengths-and-limits.mdx";
 import L68 from "./ai-foundations/the-ai-landscape.mdx";
 import L69 from "./ai-foundations/capstone.mdx";
+import L70 from "./working-with-llms/choosing-an-assistant.mdx";
+import L71 from "./working-with-llms/prompting-basics.mdx";
+import L72 from "./working-with-llms/prompt-patterns.mdx";
+import L73 from "./working-with-llms/context-and-documents.mdx";
+import L74 from "./working-with-llms/tools-and-reasoning.mdx";
+import L75 from "./working-with-llms/verify-and-stay-safe.mdx";
+import L76 from "./working-with-llms/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -143,4 +150,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "ai-foundations/strengths-and-limits": L67,
   "ai-foundations/the-ai-landscape": L68,
   "ai-foundations/capstone": L69,
+  "working-with-llms/choosing-an-assistant": L70,
+  "working-with-llms/prompting-basics": L71,
+  "working-with-llms/prompt-patterns": L72,
+  "working-with-llms/context-and-documents": L73,
+  "working-with-llms/tools-and-reasoning": L74,
+  "working-with-llms/verify-and-stay-safe": L75,
+  "working-with-llms/capstone": L76,
 };
