@@ -17,10 +17,16 @@ export default function Home() {
           docs, papers and tutorials. We assemble it into structured courses
           you can finish in order, for free.
         </p>
-        <div className="mt-10 flex gap-4">
+        <div className="mt-10 flex flex-wrap gap-4">
+          <Link
+            href="/path"
+            className="rounded bg-accent px-5 py-3 font-mono text-sm font-semibold tracking-wide text-black"
+          >
+            START THE LEARNING PATH
+          </Link>
           <Link
             href="#courses"
-            className="rounded bg-accent px-5 py-3 font-mono text-sm font-semibold tracking-wide text-black"
+            className="rounded border border-line px-5 py-3 font-mono text-sm tracking-wide hover:border-accent"
           >
             BROWSE COURSES
           </Link>

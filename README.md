@@ -21,6 +21,10 @@ Live site: https://ai-course-six-ecru.vercel.app
 | Architect Agentic Systems for Financial Workflows | Beginner | 7 lessons, first draft |
 | Analyze AI-Generated Code for Quality and Security | Intermediate | 7 lessons, first draft |
 
+## Learning path
+
+`/path` shows a beginner-to-"AI solution designer" path: three stages and a final capstone. It is defined in `src/content/path.ts`. An item with a `course` slug links to that course; items without one show as planned. Progress is stored in the visitor's browser only.
+
 ## Run locally
 
 ```bash
