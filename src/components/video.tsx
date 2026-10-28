@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 // Click-to-load YouTube embed. Nothing is requested from YouTube until the
 // viewer presses play, and the player uses the privacy-enhanced domain.
@@ -18,6 +18,14 @@ export function Video({
   children?: ReactNode;
 }) {
   const [playing, setPlaying] = useState(false);
+
+  // After a client-side navigation Next.js keeps the previous page mounted but
+  // hidden, so a playing video would keep its sound going behind the new page.
+  // React runs effect cleanups when a page is hidden or unmounted, so stop
+  // playback there and show the play button again.
+  useEffect(() => {
+    return () => setPlaying(false);
+  }, []);
 
   return (
     <figure className="rounded-lg border border-line bg-surface p-3 sm:p-4">
