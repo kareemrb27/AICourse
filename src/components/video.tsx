@@ -2,8 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-// Click-to-load YouTube embed. Nothing is requested from YouTube until the
-// viewer presses play, and the player uses the privacy-enhanced domain.
+// Click-to-load YouTube embed. The page shows YouTube's preview image, but the
+// player itself is not loaded until the viewer presses play, and it uses the
+// privacy-enhanced domain.
 export function Video({
   id,
   title,
@@ -46,18 +47,33 @@ export function Video({
             aria-label={`Play video: ${title}`}
             className="group absolute inset-0 flex h-full w-full flex-col items-start justify-end gap-3 bg-gradient-to-br from-[#14141b] to-[#1b1b24] p-5 text-left sm:p-8"
           >
+            {/* sddefault is 640x480 with letterbox bars; object-cover crops them.
+                (maxresdefault is sharper but missing for some videos, and
+                YouTube answers with a grey placeholder the browser accepts.) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://i.ytimg.com/vi/${id}/sddefault.jpg`}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
             <span
               aria-hidden="true"
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black transition-transform group-hover:scale-105"
+              className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"
+            />
+            <span
+              aria-hidden="true"
+              className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-black transition-transform group-hover:scale-105"
             >
               <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6" fill="currentColor">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </span>
-            <span className="text-base font-semibold leading-snug text-foreground sm:text-lg">
+            <span className="relative text-base font-semibold leading-snug text-white sm:text-lg">
               {title}
             </span>
-            <span className="label">
+            <span className="label relative !text-[#d6d6de]">
               {channel} · {minutes} min
             </span>
           </button>
@@ -75,7 +91,7 @@ export function Video({
             Watch on YouTube
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
-          <span className="label">Video by {channel}. No data is sent to YouTube until you press play.</span>
+          <span className="label">Video by {channel}. The player loads only when you press play.</span>
         </div>
       </figcaption>
     </figure>
