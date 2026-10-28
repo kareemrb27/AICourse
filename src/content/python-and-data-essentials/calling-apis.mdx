@@ -1,0 +1,189 @@
+Every AI model service is reached through an **API**: you send a request over HTTP and get a response back, usually as JSON. If you can call a weather API from Python, you can call an AI model, because the pattern is identical. This lesson teaches that pattern on harmless, free services.
+
+## How an API call works
+
+An HTTP request has:
+
+- a **method**: `GET` to read, `POST` to send or create, `PUT` or `PATCH` to update, `DELETE` to remove,
+- a **URL**, sometimes with query parameters such as `?city=Berlin`,
+- **headers**: extra information, including authentication,
+- an optional **body**: the data you send, often JSON.
+
+The response has a **status code**, headers and a body:
+
+| Code | Meaning |
+| --- | --- |
+| 200, 201 | Success, or created |
+| 400 | Your request was malformed |
+| 401, 403 | Not signed in, or not allowed |
+| 404 | Not found |
+| 429 | Too many requests: slow down |
+| 500, 503 | The server had a problem: try later |
+
+## Your first request
+
+Install the `requests` library in your virtual environment (`pip install requests`), then:
+
+```python
+import requests
+
+response = requests.get("https://jsonplaceholder.typicode.com/todos/1", timeout=10)
+
+print(response.status_code)      # 200
+print(response.headers["content-type"])
+data = response.json()           # parse the JSON body into a dict
+print(data)
+print(data["title"])
+```
+
+JSONPlaceholder is a free fake API made for practice. Always pass a **timeout**, or a stuck server can freeze your script forever.
+
+## Query parameters
+
+Instead of building the URL by hand, pass `params` and let the library encode it:
+
+```python
+import requests
+
+geo = requests.get(
+    "https://geocoding-api.open-meteo.com/v1/search",
+    params={"name": "Berlin", "count": 1},
+    timeout=10,
+)
+geo.raise_for_status()
+place = geo.json()["results"][0]
+print(place["name"], place["latitude"], place["longitude"])
+```
+
+`raise_for_status()` turns an error status (4xx or 5xx) into a Python exception, so failures are loud rather than silent. Open-Meteo is a free weather service that needs no account or key, which makes it ideal for learning.
+
+## Sending data
+
+For a `POST`, pass your dictionary as `json=` and the library sets the headers and encodes it:
+
+```python
+import requests
+
+payload = {"title": "Check backups", "userId": 1, "completed": False}
+r = requests.post(
+    "https://jsonplaceholder.typicode.com/todos",
+    json=payload,
+    timeout=10,
+)
+print(r.status_code)     # 201 means created
+print(r.json())
+```
+
+This is exactly the shape of an AI request: you build a dictionary describing what you want, `POST` it, and read the JSON that returns.
+
+## Authentication and API keys
+
+Most real services want to know who you are. The usual way is a key or token in a header:
+
+```text
+Authorization: Bearer YOUR_TOKEN
+```
+
+```python
+import os
+import requests
+
+api_key = os.environ.get("EXAMPLE_API_KEY")
+if not api_key:
+    print("Set EXAMPLE_API_KEY first. Never write keys inside your code.")
+else:
+    headers = {"Authorization": f"Bearer {api_key}"}
+    r = requests.get("https://api.example.com/v1/items", headers=headers, timeout=10)
+    print(r.status_code)
+```
+
+The rules for keys, which matter more than any code:
+
+- **Never put a key in your script, a notebook or a screenshot.** Anyone who sees it can spend your money or read your data.
+- **Keep keys in environment variables** or a `.env` file that is listed in `.gitignore` and never committed.
+- **Give each key the least access it needs**, and revoke any key that leaks.
+- **Do not paste keys into chat assistants.**
+
+Set a variable for one terminal session on macOS or Linux with `export EXAMPLE_API_KEY="..."`, and on Windows PowerShell with `$env:EXAMPLE_API_KEY="..."`.
+
+## Handling failures properly
+
+Networks and servers fail. A robust call checks for errors and retries gently:
+
+```python
+import time
+import requests
+
+def get_json(url, params=None, retries=3):
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, params=params, timeout=10)
+            if r.status_code == 429 or r.status_code >= 500:
+                raise requests.HTTPError(f"temporary error {r.status_code}")
+            r.raise_for_status()
+            return r.json()
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as err:
+            print(f"attempt {attempt} failed: {err}")
+            if attempt == retries:
+                raise
+            time.sleep(2 ** attempt)     # wait 2s, then 4s, then give up
+
+print(get_json("https://jsonplaceholder.typicode.com/todos/2")["title"])
+```
+
+Three ideas to carry forward: **timeouts**, **retries with a growing wait**, and **stop and report** when it keeps failing. You will use the same pattern with model APIs, which also rate-limit you and sometimes return 429 or 500.
+
+## Be a good API citizen
+
+- Read the service's documentation and terms, and respect rate limits.
+- Cache results you reuse instead of asking again.
+- Do not hammer a free service with loops that run thousands of requests.
+- Treat the data you receive as untrusted input. Check its shape before you use it.
+
+## Try it with the tools you already know
+
+If you have used Postman, `curl` or a browser's developer tools, you have made these calls before. The same request in `curl`:
+
+```bash
+curl "https://geocoding-api.open-meteo.com/v1/search?name=Berlin&count=1"
+```
+
+Trying a request in `curl` first, then translating it to Python, is a good way to debug.
+
+## Watch
+
+<Video id="tb8gHvYlCFs" title="Python Requests Tutorial: Request Web Pages, Download Images, POST Data, Read JSON, and More" channel="Corey Schafer" minutes={25}>
+  A hands-on tour of the `requests` library: GET, POST, parameters, headers and reading JSON. It uses a different practice service, but the code is the same.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Requests: HTTP for Humans" href="https://requests.readthedocs.io/en/latest/" source="Requests documentation">
+  The official quickstart covers everything in this lesson.
+</Resource>
+
+<Resource kind="docs" title="Open-Meteo API documentation" href="https://open-meteo.com/en/docs" source="Open-Meteo">
+  A free weather API with no key, for non-commercial use. You will use it in the capstone.
+</Resource>
+
+<Resource kind="docs" title="JSONPlaceholder" href="https://jsonplaceholder.typicode.com/" source="typicode">
+  A free fake REST API for practice, with `GET` and `POST` examples.
+</Resource>
+
+<Resource kind="docs" title="HTTP response status codes" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status" source="MDN Web Docs">
+  A reference for every status code you will meet.
+</Resource>
+
+<Resource kind="repo" title="Public APIs" href="https://github.com/public-apis/public-apis" source="public-apis on GitHub">
+  A large list of free APIs to practice with. Check each one's terms and whether it needs a key.
+</Resource>
+
+<Resource kind="docs" title="python-dotenv" href="https://pypi.org/project/python-dotenv/" source="PyPI">
+  A small library that loads keys from a `.env` file into environment variables.
+</Resource>
+
+## Check yourself
+
+1. Look up the coordinates of your own city with the geocoding call above.
+2. Why should a request always have a timeout? What happens if it does not?
+3. Name three rules for keeping API keys safe, and say where yours would live.

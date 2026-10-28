@@ -79,6 +79,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "python-and-data-essentials",
+    title: "Python and Data Essentials",
+    track: "Stage 1 · Understand",
+    level: "Beginner",
+    summary:
+      "Learn just enough Python to start building with AI. Set up a clean environment, write and read scripts, work with files and JSON, call APIs safely, analyze data with pandas, use notebooks, and get help from an AI assistant without losing control, with examples from IT work.",
+    prerequisites: [
+      "Comfortable with a terminal and everyday IT concepts such as files, APIs and logs",
+      "No programming experience is required, though any scripting helps",
+      "A computer where you can install software, or a browser to use Google Colab",
+    ],
+    outcomes: [
+      "Set up Python with a virtual environment and run scripts from the terminal",
+      "Read and write Python using variables, lists, dictionaries, loops and functions",
+      "Read and write files, JSON and CSV, and handle errors",
+      "Call web APIs with requests, keep keys safe, and handle failures and rate limits",
+      "Load, clean, summarize and chart data with pandas",
+      "Use notebooks, Git and an AI assistant to write code you have checked and understand",
+    ],
+    lessons: [
+      { slug: "setup-and-first-script", title: "Set up and run your first script", summary: "Install Python, use virtual environments and read error messages.", minutes: 90 },
+      { slug: "python-basics", title: "Python basics for IT work", summary: "Values, text, lists, dictionaries, decisions and loops.", minutes: 120 },
+      { slug: "functions-files-and-json", title: "Functions, files and JSON", summary: "Reusable functions, error handling, files, JSON and CSV.", minutes: 120 },
+      { slug: "calling-apis", title: "Calling APIs", summary: "HTTP requests, keys, timeouts, retries and handling failures.", minutes: 90 },
+      { slug: "data-with-pandas", title: "Data with pandas", summary: "DataFrames, cleaning, grouping, dates and a first chart.", minutes: 120 },
+      { slug: "notebooks-and-ai-help", title: "Notebooks, Git and AI help", summary: "Notebook habits, coding with an assistant safely, and version control.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: a weather brief", summary: "Fetch, clean, summarize and chart real API data in a tested script.", minutes: 180 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

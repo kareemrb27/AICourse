@@ -1,0 +1,129 @@
+Build a small, complete data project: fetch real data from an API, clean it, summarize it, chart it, and write down what it shows. It uses everything in this course, and it is the template for the AI projects in stage 2, where a model call replaces one of the steps.
+
+## The project: a weather brief
+
+Use the free Open-Meteo services to make a short weather report for a city you choose. You may pick a different public API if you prefer, as long as it needs no payment and you respect its terms.
+
+## Requirements
+
+Build it as a script, `weather_brief.py`, in its own folder with its own virtual environment. It must:
+
+1. **Look up** the city's coordinates with the geocoding API.
+2. **Fetch** daily data for about two weeks: highest and lowest temperature and total precipitation.
+3. **Handle failure**: a timeout, a status check, and a clear message if the city is not found.
+4. **Load** the data into a pandas DataFrame with proper types, and save it to `data/weather.csv`.
+5. **Summarize**: the warmest and coldest day, average temperatures, number of rainy days, and total rainfall.
+6. **Chart**: save a PNG with temperatures over time, with labeled axes and a title that states the finding.
+7. **Write a brief**: print or save a short text report in plain language.
+8. Keep code in **small functions**, with no keys in the code (this API needs none, but design as if it did).
+
+## A starting skeleton
+
+```python
+import requests
+import pandas as pd
+
+def find_city(name):
+    """Return (latitude, longitude, display_name) for a city, or raise ValueError."""
+    r = requests.get(
+        "https://geocoding-api.open-meteo.com/v1/search",
+        params={"name": name, "count": 1},
+        timeout=10,
+    )
+    r.raise_for_status()
+    results = r.json().get("results")
+    if not results:
+        raise ValueError(f"City not found: {name}")
+    top = results[0]
+    return top["latitude"], top["longitude"], f'{top["name"]}, {top.get("country", "")}'
+
+def fetch_daily(lat, lon):
+    """Return a DataFrame of daily weather for about two weeks."""
+    r = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
+            "timezone": "auto",
+            "past_days": 7,
+            "forecast_days": 7,
+        },
+        timeout=10,
+    )
+    r.raise_for_status()
+    daily = r.json()["daily"]
+    df = pd.DataFrame(daily)
+    df["time"] = pd.to_datetime(df["time"])
+    return df
+
+lat, lon, label = find_city("Berlin")
+df = fetch_daily(lat, lon)
+print(label)
+print(df.head())
+print(df.dtypes)
+```
+
+That covers steps 1 to 3 and the start of 4. The rest is yours: save the file, calculate the summary, chart it and write the brief. Run `df.describe()` and look at the numbers before you summarize them.
+
+## Hints for the summary
+
+- `df.loc[df["temperature_2m_max"].idxmax()]` gives the row of the warmest day.
+- `(df["precipitation_sum"] > 0).sum()` counts days with rain.
+- `df["temperature_2m_max"].mean()` gives an average.
+- The first rows are past days and the later ones are forecasts. Say which in your brief.
+
+## Check your work
+
+- Does it run from a fresh terminal after `pip install -r requirements.txt`?
+- Does it give a sensible message for a misspelled city?
+- Do the numbers in the brief match the CSV when you check three of them by hand?
+- Is the chart readable by someone who has not seen the code?
+- Is the project in a Git repository with a `.gitignore` and at least three commits?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Correctness | Numbers match the data when you check them | Unchecked results |
+| Robustness | Timeouts, status checks and clear errors | Crashes on bad input |
+| Structure | Small named functions, readable code | One long script |
+| Data handling | Correct types, missing values considered | Everything as text |
+| Communication | Chart and brief state the finding plainly | Raw output only |
+| Hygiene | Virtual environment, `.gitignore`, no secrets | Packages and keys everywhere |
+
+## Stretch goals
+
+- Take the city name as a command-line argument, using `sys.argv` or `argparse`.
+- Fetch several cities and compare them in one chart.
+- Add retries with a growing wait to your fetch function.
+- Ask an AI assistant to review your code, and to turn your summary numbers into a two-sentence brief. Check every number it states against your data. This is a small preview of stage 2.
+- Move your code into a notebook version with notes explaining each step.
+
+## Share it
+
+Put the project in a public repository without any secrets, with a short README that explains what it does and how to run it. It is your third portfolio piece and proof that you can do the hands-on part of AI work.
+
+## Where to go next
+
+Machine learning basics is the next course on this path: how models are trained, tested and judged, using the pandas skills you now have. After that, stage 2 begins with building applications that call language models from Python.
+
+## Watch
+
+<Video id="UO98lJQ3QGI" title="Matplotlib Tutorial (Part 1): Creating and Customizing Our First Plots" channel="Corey Schafer" minutes={35}>
+  If you want to polish your chart, this walks through titles, labels, styles and saving figures.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Open-Meteo forecast API" href="https://open-meteo.com/en/docs" source="Open-Meteo">
+  The full list of variables and options for the weather data, including the terms of use.
+</Resource>
+
+<Resource kind="docs" title="Matplotlib quick start guide" href="https://matplotlib.org/stable/users/explain/quick_start.html" source="Matplotlib documentation">
+  Reference for the charts in this project.
+</Resource>
+
+<Resource kind="docs" title="10 minutes to pandas" href="https://pandas.pydata.org/docs/user_guide/10min.html" source="pandas documentation">
+  A quick refresher on selecting, grouping and summarizing.
+</Resource>

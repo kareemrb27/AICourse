@@ -1,0 +1,221 @@
+Spreadsheets, exports, logs and API responses are all tables once you look closely. **pandas** is the standard Python library for working with tables. You will use it for AI work to prepare, inspect and summarize data before and after it reaches a model.
+
+## Install and import
+
+```bash
+pip install pandas matplotlib
+```
+
+```python
+import pandas as pd
+```
+
+`pd` is the universal short name. A pandas table is a **DataFrame**: rows and named columns. One column is a **Series**.
+
+## Make a DataFrame
+
+```python
+import pandas as pd
+
+tickets = pd.DataFrame(
+    {
+        "id": [101, 102, 103, 104, 105, 106],
+        "team": ["network", "security", "network", "helpdesk", "security", "helpdesk"],
+        "priority": ["high", "high", "low", "medium", "low", None],
+        "hours_to_close": [4.5, 12.0, 1.5, 3.0, 20.5, 2.0],
+        "opened": ["2026-03-01", "2026-03-01", "2026-03-02", "2026-03-03", "2026-03-03", "2026-03-04"],
+    }
+)
+
+print(tickets)
+print(tickets.shape)        # (rows, columns)
+tickets.info()              # column types and missing values
+print(tickets.describe())   # numeric summary
+```
+
+More often, you load data from a file or an API:
+
+```text
+df = pd.read_csv("tickets.csv")
+df = pd.read_json("tickets.json")
+df = pd.DataFrame(list_of_dicts)
+```
+
+The `info()` and `describe()` calls are the first things you do with any new data: how big, what types, what is missing, and does it look reasonable.
+
+## Select columns and rows
+
+```python
+import pandas as pd
+
+tickets = pd.DataFrame(
+    {
+        "id": [101, 102, 103, 104],
+        "team": ["network", "security", "network", "helpdesk"],
+        "hours_to_close": [4.5, 12.0, 1.5, 3.0],
+    }
+)
+
+print(tickets["team"])                    # one column (a Series)
+print(tickets[["id", "hours_to_close"]])  # several columns
+print(tickets.iloc[0])                    # row by position
+print(tickets.loc[tickets["hours_to_close"] > 3])   # rows by condition
+```
+
+Filtering with a condition inside the brackets is the most useful trick in pandas. Combine conditions with `&` (and) and `|` (or), and put each condition in parentheses.
+
+## Clean the data
+
+Real data is messy. Typical fixes:
+
+```python
+import pandas as pd
+
+df = pd.DataFrame(
+    {
+        "team": [" Network", "security ", "NETWORK", None],
+        "hours": ["4.5", "12", "bad", "3"],
+        "opened": ["2026-03-01", "2026-03-02", "2026-03-02", "not a date"],
+    }
+)
+
+df["team"] = df["team"].str.strip().str.lower()
+df["hours"] = pd.to_numeric(df["hours"], errors="coerce")       # bad values become NaN
+df["opened"] = pd.to_datetime(df["opened"], errors="coerce")    # bad dates become NaT
+print(df.isna().sum())                                           # missing values per column
+
+df = df.dropna(subset=["team"])             # drop rows without a team
+df["hours"] = df["hours"].fillna(df["hours"].median())
+print(df)
+print(df.drop_duplicates())
+```
+
+Decide on purpose what to do with missing values: drop the rows, fill with a sensible number, or keep them and report them. Never let a tool decide silently.
+
+## Summarize: groupby
+
+```python
+import pandas as pd
+
+tickets = pd.DataFrame(
+    {
+        "team": ["network", "security", "network", "helpdesk", "security", "helpdesk"],
+        "hours_to_close": [4.5, 12.0, 1.5, 3.0, 20.5, 2.0],
+    }
+)
+
+summary = (
+    tickets.groupby("team")["hours_to_close"]
+    .agg(["count", "mean", "max"])
+    .round(1)
+    .sort_values("mean", ascending=False)
+)
+print(summary)
+```
+
+Read it as: group the rows by team, take the closing hours, calculate count, mean and maximum, round, and sort. This "split, calculate, combine" pattern answers most business questions: which team is slowest, which day is busiest, which server fails most.
+
+## Work with dates
+
+```python
+import pandas as pd
+
+df = pd.DataFrame(
+    {
+        "opened": pd.to_datetime(["2026-03-01", "2026-03-01", "2026-03-02", "2026-03-04"]),
+        "id": [1, 2, 3, 4],
+    }
+)
+per_day = df.groupby(df["opened"].dt.date)["id"].count()
+print(per_day)
+```
+
+The `.dt` accessor gives you parts of a date, such as the day, month or weekday.
+
+## Nested JSON into a table
+
+API data is often nested. `json_normalize` flattens it:
+
+```python
+import pandas as pd
+
+records = [
+    {"id": 1, "user": {"name": "Ada", "team": "platform"}, "score": 0.91},
+    {"id": 2, "user": {"name": "Lin", "team": "security"}, "score": 0.77},
+]
+df = pd.json_normalize(records)
+print(df)       # columns: id, score, user.name, user.team
+```
+
+## A first chart
+
+```python
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")           # draw to a file, no window needed
+import matplotlib.pyplot as plt
+
+tickets = pd.DataFrame(
+    {
+        "team": ["network", "security", "network", "helpdesk", "security", "helpdesk"],
+        "hours_to_close": [4.5, 12.0, 1.5, 3.0, 20.5, 2.0],
+    }
+)
+avg = tickets.groupby("team")["hours_to_close"].mean()
+
+ax = avg.plot(kind="bar", title="Average hours to close, by team")
+ax.set_ylabel("hours")
+plt.tight_layout()
+plt.savefig("tickets.png")
+print("saved tickets.png")
+```
+
+In a notebook the chart appears under the cell, and you do not need the `Agg` line or `savefig`. Always label axes and give the chart a title that states the finding.
+
+## Habits that prevent bad analysis
+
+- **Look at the data first.** `head()`, `info()`, `describe()`, and a few random rows with `sample()`.
+- **Check your assumptions**, such as units, time zones, and what a blank means.
+- **Count rows before and after** each filter or merge. If the number is unexpected, find out why.
+- **Keep the original data untouched** and write cleaned versions to a new file.
+- **Do not trust a number you cannot explain.** This is exactly how you will treat AI-generated analysis too.
+
+<Callout title="Where this shows up in AI work">
+  Preparing documents for retrieval, checking an evaluation set, tallying how
+  often a model got an answer right, and analyzing usage cost are all pandas
+  jobs. A model can write the code, but you need to read it.
+</Callout>
+
+## Watch
+
+<Video id="ZyhVh-qRZPA" title="Python Pandas Tutorial (Part 1): Getting Started with Data Analysis" channel="Corey Schafer" minutes={23}>
+  Installing pandas, using Jupyter, and loading a real dataset.
+</Video>
+
+<Video id="zmdjNSmRXF4" title="Python Pandas Tutorial (Part 2): DataFrame and Series Basics" channel="Corey Schafer" minutes={34}>
+  Selecting rows and columns, and the difference between `loc` and `iloc`. The rest of the series is worth following if you enjoy this.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="10 minutes to pandas" href="https://pandas.pydata.org/docs/user_guide/10min.html" source="pandas documentation">
+  The official quick tour of the essential operations.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Pandas" href="https://www.kaggle.com/learn/pandas" source="Kaggle">
+  Short free lessons with exercises that run in your browser.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Data Cleaning" href="https://www.kaggle.com/learn/data-cleaning" source="Kaggle">
+  Practical lessons on missing values, scaling, dates and inconsistent text.
+</Resource>
+
+<Resource kind="docs" title="Matplotlib quick start guide" href="https://matplotlib.org/stable/users/explain/quick_start.html" source="Matplotlib documentation">
+  How figures and axes work, with examples.
+</Resource>
+
+## Check yourself
+
+1. Build a DataFrame of ten servers with a name, region and CPU percentage. Print the average CPU per region.
+2. Create a column with some missing values. List three ways to handle them and the risk of each.
+3. Filter the rows where CPU is over 80 and the region is "eu". Why do you need parentheses around each condition?

@@ -1,0 +1,148 @@
+Two habits make a beginner far more effective: working in notebooks for exploration, and using an AI assistant to write and explain code, while staying in charge of what runs. This lesson covers both, plus the minimum of version control you need to keep your work safe.
+
+## Notebooks
+
+A **notebook** is a document made of cells. Some cells hold code, which you run one at a time, and some hold notes. Output, tables and charts appear right under the code. Jupyter is the standard format, and Google Colab and VS Code both run it.
+
+When to use a notebook:
+
+- Exploring data and trying ideas step by step.
+- Showing your work with explanations and charts.
+- Experimenting with an API or a model.
+
+When to use a plain `.py` script instead:
+
+- Anything that must run on a schedule or on a server.
+- Code you want to test, reuse or share as a tool.
+
+A common path: explore in a notebook, then move the working code into a script.
+
+### Notebook habits
+
+- **Run cells in order.** The notebook remembers variables from cells you ran earlier, even ones you later changed or deleted, which causes confusing results.
+- **Restart and run all** before you trust or share the result. It proves the notebook works from top to bottom.
+- **Never leave keys in a notebook.** Read them from environment variables, or from Colab's secrets feature.
+- **Clear outputs** before sharing if they contain private data.
+- **Write short notes** in text cells saying what each section does and why.
+
+## Using an AI assistant to help you code
+
+Assistants are very good at this work: explaining unfamiliar code, writing a first draft, converting between formats, writing tests, and explaining an error. They are also confidently wrong in specific ways. The skill is getting the benefit while keeping control.
+
+### Ask well
+
+Use the prompting habits from the previous course:
+
+```text
+I'm learning Python. I have a CSV called tickets.csv with columns id, team,
+priority, hours_to_close, opened (YYYY-MM-DD). Using pandas, write code that
+shows the average hours_to_close per team, sorted from slowest to fastest.
+Keep it simple, add a comment above each step, and tell me what each step does.
+```
+
+Say what you have, what you want, what libraries to use, and how simple it should be. Paste the **complete error message** when something fails, with the code that caused it, and say what you expected.
+
+### Read before you run
+
+Never run code you do not understand, especially code that:
+
+- **deletes, moves or overwrites files** (`rm`, `shutil.rmtree`, opening a file in write mode),
+- **runs system commands** (`os.system`, `subprocess`),
+- **sends data over the network**,
+- **installs packages**,
+- **needs your keys or passwords**.
+
+Ask the assistant to explain each line, then ask "what could go wrong if I run this?". Try it on a copy of your data first.
+
+### Known failure modes
+
+| Problem | What it looks like | What to do |
+| --- | --- | --- |
+| Invented functions or packages | `ImportError` or `AttributeError` for something that sounds real | Check the official documentation. Never install an unfamiliar package without looking it up |
+| Outdated code | Warnings about deprecated features, or code that fails on your version | Tell the assistant your versions and ask for current usage |
+| Plausible but wrong logic | Runs fine, gives a wrong number | Test with a tiny example where you know the answer |
+| Hidden assumptions | Works on the sample, fails on real data | Ask what it assumes about the data, and test missing values |
+| Over-engineering | A 100-line answer to a 10-line problem | Ask for the simplest version |
+
+A particularly dangerous one: assistants sometimes suggest package names that do not exist, and attackers register such names with harmful code in them. Verify any package on PyPI (is it well known, maintained, and the right name?) before you install it.
+
+### Test what you can
+
+```python
+def to_percent(text):
+    return float(text.strip("%"))
+
+assert to_percent("93%") == 93.0
+assert to_percent("7.5") == 7.5
+print("all checks passed")
+```
+
+An `assert` stops the program if something is false. Writing two or three of these for a function the assistant wrote takes a minute and catches many mistakes. Ask the assistant for tests too, and then read them critically.
+
+### Privacy
+
+The code and data you paste leave your machine. Remove keys, passwords, personal data and confidential content first, and use your organization's approved tool for work code. If you need the assistant to understand a data file, share its column names and a few invented rows instead of the real thing.
+
+<Callout title="Your job and the assistant's job">
+  The assistant drafts. You decide what to run, you check that the result is
+  right, and you can explain what the code does. If you cannot explain it, you
+  are not ready to rely on it.
+</Callout>
+
+## Version control in five commands
+
+**Git** records the history of your files, so you can undo mistakes and see what changed. You do not need to master it now, only to use it for every project.
+
+```bash
+git init
+git add .
+git commit -m "Load tickets and chart average hours"
+git status
+git log --oneline
+```
+
+Create a `.gitignore` file before your first commit, so secrets and clutter never enter the history:
+
+```text
+.venv/
+.env
+__pycache__/
+*.ipynb_checkpoints
+data/private/
+```
+
+If you ever commit a key by accident, **assume it is compromised**: revoke it and create a new one. Deleting it in a later commit does not remove it from the history.
+
+## Watch
+
+<Video id="HW29067qVWk" title="Jupyter Notebook Tutorial: Introduction, Setup, and Walkthrough" channel="Corey Schafer" minutes={30}>
+  A walkthrough of the notebook interface, cells, keyboard shortcuts and good habits.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Project Jupyter" href="https://jupyter.org/" source="Project Jupyter">
+  The home of Jupyter, with a way to try notebooks in your browser.
+</Resource>
+
+<Resource kind="docs" title="Google Colab" href="https://colab.research.google.com/" source="Google">
+  Free hosted notebooks. Look for the "Secrets" panel for storing keys.
+</Resource>
+
+<Resource kind="docs" title="GitHub Skills" href="https://skills.github.com/" source="GitHub">
+  Free, interactive courses that teach Git and GitHub inside a repository.
+</Resource>
+
+<Resource kind="article" title="Here's how I use LLMs to help me write code" href="https://simonwillison.net/2025/Mar/11/using-llms-for-code/" source="Simon Willison">
+  Practical habits from an experienced developer: keep control, test everything and treat the model as a fast but fallible collaborator.
+</Resource>
+
+<Resource kind="docs" title="Getting started with Jupyter notebooks in VS Code" href="https://code.visualstudio.com/docs/datascience/jupyter-notebooks" source="Microsoft">
+  How to run notebooks inside the editor you may already use for scripts.
+</Resource>
+
+## Check yourself
+
+1. Ask an assistant to write a short script for a real task, such as counting error lines in a log. Before running it, explain each line in your own words. What did you not understand?
+2. Find one thing the assistant assumed. Test it with data that breaks the assumption.
+3. Create a Git repository for this course, add a `.gitignore`, and make your first commit.

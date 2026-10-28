@@ -1,0 +1,173 @@
+Real scripts reuse logic, handle failures, and read and write files. They also exchange data in **JSON**, the format APIs and AI tools speak. This lesson covers all of it.
+
+## Functions
+
+A **function** packages steps under a name so you can reuse and test them.
+
+```python
+def parse_log_line(line):
+    """Split a log line into date, time, level and message."""
+    date, time, level, message = line.split(" ", 3)
+    return {"date": date, "time": time, "level": level, "message": message}
+
+line = "2026-03-01 10:02:11 ERROR disk /dev/sda1 is 93% full"
+print(parse_log_line(line))
+```
+
+- `def` defines it, and `return` hands back a result.
+- The text in triple quotes is a **docstring**: a short description of what it does.
+- Give functions clear verb names, and keep each one doing one thing.
+- Arguments can have defaults: `def alert(metric, limit=90):`.
+
+## Handling errors
+
+Things fail: files are missing, networks drop, data is not what you expected. `try` and `except` let your script respond instead of crashing.
+
+```python
+def to_percent(text):
+    try:
+        return float(text.strip("%"))
+    except ValueError:
+        return None
+
+print(to_percent("93%"))
+print(to_percent("n/a"))
+```
+
+Catch the **specific** error you expect (`ValueError` here), not everything. Catching all errors silently hides real bugs. When a failure should stop the program, let it, or raise your own error with a clear message.
+
+## Reading and writing files
+
+Use `with` so the file is always closed, and `pathlib` for file paths that work on every system.
+
+```python
+from pathlib import Path
+
+folder = Path("data")
+folder.mkdir(exist_ok=True)
+
+notes = folder / "notes.txt"
+notes.write_text("first line\nsecond line\n", encoding="utf-8")
+
+with open(notes, encoding="utf-8") as f:
+    for line in f:
+        print(line.strip())
+
+print(notes.exists(), notes.stat().st_size, "bytes")
+```
+
+Always pass `encoding="utf-8"` for text, or odd characters will break on some systems. Use `mode="a"` to append and never overwrite by accident.
+
+## JSON: the language of APIs
+
+**JSON** is text that describes data with objects (key and value pairs), arrays (lists), strings, numbers, booleans and `null`. It maps almost one-to-one onto Python dictionaries and lists.
+
+```python
+import json
+
+server = {"name": "web-01", "cpu": 73.5, "tags": ["prod", "eu"], "maintenance": False}
+
+text = json.dumps(server, indent=2)    # Python object -> JSON text
+print(text)
+
+back = json.loads(text)                # JSON text -> Python object
+print(back["tags"][0])
+
+with open("data/server.json", "w", encoding="utf-8") as f:
+    json.dump(server, f, indent=2)
+
+with open("data/server.json", encoding="utf-8") as f:
+    print(json.load(f)["name"])
+```
+
+Memorize the four names: `dumps` and `loads` work on **strings**, `dump` and `load` work on **files**. Python `True`, `False` and `None` become `true`, `false` and `null` in JSON.
+
+## Nested data
+
+API responses are often nested. Walk down one level at a time, and use `.get()` when parts may be missing.
+
+```python
+import json
+
+response = json.loads("""
+{
+  "user": {"name": "Ada", "teams": [{"name": "platform"}, {"name": "security"}]},
+  "status": "ok"
+}
+""")
+
+print(response["user"]["name"])
+team_names = [t["name"] for t in response["user"]["teams"]]
+print(team_names)
+print(response.get("error", "no error"))
+```
+
+When you are unsure of the shape, print the response with `json.dumps(..., indent=2)` and read it first.
+
+## CSV files
+
+CSV is the other common data format: rows of values separated by commas.
+
+```python
+import csv
+
+rows = [
+    {"server": "web-01", "cpu": 91, "region": "eu"},
+    {"server": "web-02", "cpu": 45, "region": "us"},
+]
+
+with open("data/servers.csv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=["server", "cpu", "region"])
+    writer.writeheader()
+    writer.writerows(rows)
+
+with open("data/servers.csv", newline="", encoding="utf-8") as f:
+    for row in csv.DictReader(f):
+        print(row["server"], int(row["cpu"]))
+```
+
+Values read from a CSV are always text, which is why the code converts `cpu` with `int(...)`. For anything bigger than a few rows, `pandas` (lesson 5) is easier.
+
+## Your own modules
+
+When a script grows, move helper functions into another file, for example `logtools.py`, and use `from logtools import parse_log_line`. Keeping code in small files is a habit that makes both your own work and AI-written code easier to check.
+
+<Callout title="Why this matters for AI work">
+  Calling an AI model is a function call that sends JSON and returns JSON.
+  If you can build a dictionary, send it, parse the response and handle an
+  error, you can use every AI API in stage 2.
+</Callout>
+
+## Watch
+
+<Video id="9N6a-VLBa2I" title="Python Tutorial: Working with JSON Data using the json module" channel="Corey Schafer" minutes={21}>
+  A practical walkthrough of loading, reading and writing JSON, with a realistic nested example.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Defining functions" href="https://docs.python.org/3/tutorial/controlflow.html#defining-functions" source="Python documentation">
+  The official section on functions, default arguments and docstrings.
+</Resource>
+
+<Resource kind="docs" title="json: JSON encoder and decoder" href="https://docs.python.org/3/library/json.html" source="Python documentation">
+  Reference for `dumps`, `loads`, `dump` and `load`.
+</Resource>
+
+<Resource kind="docs" title="pathlib: object-oriented filesystem paths" href="https://docs.python.org/3/library/pathlib.html" source="Python documentation">
+  The modern, cross-platform way to work with file paths.
+</Resource>
+
+<Resource kind="docs" title="Reading and writing files" href="https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files" source="Python documentation">
+  The official section on `open`, `with` and reading and writing text.
+</Resource>
+
+<Resource kind="docs" title="Automate the Boring Stuff with Python" href="https://automatetheboringstuff.com/" source="Al Sweigart">
+  Look for the chapters on files, spreadsheets and CSV and JSON data in this free online book.
+</Resource>
+
+## Check yourself
+
+1. Write a function `parse_log_line` that also returns `None` for a blank line. Test it on three lines.
+2. Save a list of three server dictionaries to a JSON file, load it, and print the names.
+3. What goes wrong if you use `except:` with no error type? Give an example.

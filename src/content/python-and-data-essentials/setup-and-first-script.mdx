@@ -1,0 +1,149 @@
+Almost every AI tool, tutorial and example you will meet in stage 2 is written in Python. You do not need to become a software engineer. You need enough Python to read a script, change it, run it, and connect to a service. This course gets you there with small steps, using examples from IT work.
+
+## Why Python
+
+- It reads close to plain English, so it is the easiest serious language to start with.
+- It has the largest ecosystem for data and AI: the libraries you will use (`requests`, `pandas`, the model providers' own packages) are Python first.
+- It is a natural fit for IT tasks: parsing logs, calling APIs, moving data between systems, automating repetitive work.
+
+If you already write scripts in PowerShell, Bash or another language, you will pick this up quickly. If you have never coded, go slowly and type every example yourself. Typing, running and breaking small programs is how this sticks.
+
+## Two ways to start
+
+| Option | Good for | Trade-off |
+| --- | --- | --- |
+| **Online notebook** such as Google Colab | Starting in two minutes with nothing to install | Needs a browser, and files live in the cloud |
+| **Local install** on your computer | Real projects, files, long-term use | A little setup (this lesson) |
+
+If you want to begin immediately, open Colab, create a notebook and skip to the first script. Come back to the local setup within the first week, because stage 2 projects run on your machine.
+
+## Install Python
+
+1. Download the current version from python.org. Any version from the last few years is fine for this course.
+2. On **Windows**, tick "Add python.exe to PATH" in the installer.
+3. On **macOS or Linux**, Python 3 is often already present. Newer is better.
+
+Open a terminal (Terminal on macOS and Linux, PowerShell or Windows Terminal on Windows) and check:
+
+```bash
+python3 --version
+```
+
+On Windows the command is usually `python --version`. If you see a version number, you are ready.
+
+## Your first script
+
+Create a folder for this course, then a file named `hello.py` containing:
+
+```python
+name = "Ada"
+print(f"Hello, {name}! 2 + 3 = {2 + 3}")
+```
+
+Run it from a terminal opened in that folder:
+
+```bash
+python3 hello.py
+```
+
+You should see `Hello, Ada! 2 + 3 = 5`. You have written and run a program. The `f"..."` is an **f-string**: anything inside curly braces is calculated and inserted into the text.
+
+## The interactive prompt
+
+Type `python3` with no file name to open an interactive session, where each line runs as you press Enter. It is perfect for trying things:
+
+```text
+>>> 7 * 6
+42
+>>> "ai".upper()
+'AI'
+>>> exit()
+```
+
+Use it as a calculator and a scratch pad whenever you wonder "what does this do?".
+
+## Editors
+
+You can write Python in any text editor, but a code editor helps by coloring the code, warning about mistakes and running scripts with a button. Visual Studio Code with its Python extension is a free and common choice. Whatever you use, learn to run scripts from the terminal too, because that is how they run on servers.
+
+## Virtual environments
+
+Python projects use **packages**, which are libraries written by others. Different projects may need different versions. A **virtual environment** is a private folder of packages for one project, so projects do not interfere with each other and your system Python stays clean.
+
+Create one inside your project folder and switch it on:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows, activate it with `.venv\Scripts\activate` instead. Your prompt will show `(.venv)` when it is active. Now install a package, and list what you have:
+
+```bash
+pip install requests
+pip freeze > requirements.txt
+```
+
+Later, on any machine, `pip install -r requirements.txt` recreates the same set. When you finish, type `deactivate`.
+
+Good habits from day one:
+
+- **One environment per project**, always created with `python3 -m venv .venv`.
+- **Never use `sudo pip`** or install packages into the system Python.
+- **Keep `.venv` out of version control**: add it to `.gitignore`.
+- If you see "module not found", check first that the right environment is active.
+
+A newer tool called `uv` does the same job faster and is worth knowing about. The standard `venv` and `pip` shown here work everywhere and are enough for this course.
+
+## Reading error messages
+
+Python errors look scary and are very informative. Read from the **bottom**: the last line names the problem, and the lines above show where it happened.
+
+```text
+Traceback (most recent call last):
+  File "hello.py", line 2, in <module>
+    print(f"Hello, {nam}!")
+NameError: name 'nam' is not defined
+```
+
+This says line 2 uses a name that was never defined: a typo. Most errors in your first weeks will be typos, wrong indentation or a missing package. Paste the full error into an assistant if you are stuck, and say what you expected. Lesson 6 covers doing this safely.
+
+<Callout title="Practice that works">
+  Type the examples instead of pasting them, change one thing at a time, and
+  deliberately break them to see the error. A beginner who has seen twenty
+  errors is better off than one who has seen none.
+</Callout>
+
+## Watch
+
+<Video id="N5vscPTWKOk" title="Python Tutorial: virtualenv and why you should use virtual environments" channel="Corey Schafer" minutes={10}>
+  A short, clear explanation of why virtual environments exist and how to use them. The tools have evolved slightly, the idea has not.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Download Python" href="https://www.python.org/downloads/" source="Python Software Foundation">
+  The official installer for Windows, macOS and Linux.
+</Resource>
+
+<Resource kind="docs" title="Virtual environments and packages" href="https://docs.python.org/3/tutorial/venv.html" source="Python documentation">
+  The official short guide to `venv` and `pip`.
+</Resource>
+
+<Resource kind="docs" title="Getting started with Python in VS Code" href="https://code.visualstudio.com/docs/python/python-tutorial" source="Microsoft">
+  Install the editor, select your environment, and run and debug your first script.
+</Resource>
+
+<Resource kind="docs" title="Google Colab" href="https://colab.research.google.com/" source="Google">
+  A free online notebook where you can run Python with nothing installed.
+</Resource>
+
+<Resource kind="docs" title="uv: a fast Python package and project manager" href="https://docs.astral.sh/uv/" source="Astral">
+  An optional modern alternative to `venv` and `pip`. Look at it once you are comfortable with the basics.
+</Resource>
+
+## Check yourself
+
+1. Run `hello.py` with your own name and one more calculation inside the f-string.
+2. Create a virtual environment, install `requests`, and run `pip freeze`. What do you see, and why is the file useful?
+3. Cause a `NameError` on purpose. Read the message from the bottom and explain it in one sentence.

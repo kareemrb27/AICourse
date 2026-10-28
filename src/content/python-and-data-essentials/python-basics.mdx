@@ -1,0 +1,191 @@
+This lesson covers the small set of ideas that make up most Python you will read: values, text, lists, dictionaries, decisions and loops. The examples come from IT work, because that is where you will use them.
+
+## Values and variables
+
+A **variable** is a name for a value. Python figures out the type itself.
+
+```python
+server = "web-01"        # str: text
+cpu_percent = 73.5       # float: decimal number
+open_tickets = 12        # int: whole number
+is_production = True     # bool: True or False
+nothing_yet = None       # None: "no value"
+
+print(server, type(server))
+print(cpu_percent > 70, open_tickets + 3)
+```
+
+Names are lowercase with underscores by convention. Lines starting with `#` are comments, which Python ignores.
+
+## Text
+
+```python
+host = "WEB-01.example.com"
+print(host.lower())
+print(host.split("."))            # ['WEB-01', 'example', 'com']
+print(host.startswith("WEB"))     # True
+print(host.replace("WEB", "DB"))
+
+user = "ada"
+count = 3
+print(f"{user} has {count} failed logins")
+```
+
+Strings are written in single or double quotes. Use f-strings, as above, to build messages.
+
+## Lists
+
+A **list** is an ordered collection you can change.
+
+```python
+servers = ["web-01", "web-02", "db-01"]
+servers.append("cache-01")
+print(servers[0])        # first item: counting starts at 0
+print(servers[-1])       # last item
+print(len(servers))      # 4
+print("db-01" in servers)
+```
+
+## Dictionaries
+
+A **dictionary** stores values under keys, like a small record. It is the shape of almost all JSON and API data you will meet.
+
+```python
+server = {"name": "web-01", "cpu": 73.5, "tags": ["prod", "eu"]}
+print(server["name"])
+print(server.get("memory", "unknown"))   # a safe default if the key is missing
+server["cpu"] = 80.2
+server["owner"] = "platform-team"
+print(server)
+```
+
+Use `.get(key, default)` when a key might be missing, so your script does not crash.
+
+## Decisions
+
+```python
+cpu = 91
+
+if cpu >= 90:
+    status = "critical"
+elif cpu >= 70:
+    status = "warning"
+else:
+    status = "ok"
+
+print(status)
+```
+
+**Indentation matters.** The indented lines belong to the `if`. Use four spaces. Comparison operators are `==`, `!=`, `<`, `>`, `<=` and `>=`, and you combine conditions with `and`, `or` and `not`.
+
+## Loops
+
+```python
+log_lines = [
+    "2026-03-01 10:02:11 ERROR disk /dev/sda1 is 93% full",
+    "2026-03-01 10:05:40 INFO backup completed",
+    "2026-03-01 10:09:02 ERROR login failed for user admin",
+]
+
+error_count = 0
+for line in log_lines:
+    if "ERROR" in line:
+        error_count += 1
+        print("Found:", line)
+
+print(f"{error_count} errors out of {len(log_lines)} lines")
+```
+
+`for` repeats for each item. `while` repeats while a condition holds, and `break` leaves a loop early. Loop over a dictionary's pairs with `.items()`:
+
+```python
+limits = {"cpu": 90, "memory": 85, "disk": 95}
+for metric, limit in limits.items():
+    print(f"alert when {metric} passes {limit}%")
+```
+
+## List comprehensions
+
+A compact way to build a list from another list. You will see this a lot, so learn to read it:
+
+```python
+log_lines = [
+    "10:02 ERROR disk full",
+    "10:05 INFO backup completed",
+    "10:09 ERROR login failed",
+]
+errors = [line for line in log_lines if "ERROR" in line]
+times = [line.split(" ")[0] for line in log_lines]
+print(errors)
+print(times)
+```
+
+Read it as "give me `line` for each `line` in the list, where it contains ERROR". If it confuses you, write it as an ordinary loop first.
+
+## Putting it together
+
+```python
+servers = [
+    {"name": "web-01", "cpu": 91},
+    {"name": "web-02", "cpu": 45},
+    {"name": "db-01", "cpu": 78},
+]
+
+for s in servers:
+    if s["cpu"] >= 90:
+        level = "critical"
+    elif s["cpu"] >= 70:
+        level = "warning"
+    else:
+        level = "ok"
+    print(f'{s["name"]}: {level}')
+
+busiest = max(servers, key=lambda s: s["cpu"])
+print("Busiest:", busiest["name"])
+```
+
+A list of dictionaries is the most common shape of real data. The `lambda` here is a tiny inline function: "for each server `s`, use `s["cpu"]`". Tools like `pandas` (lesson 5) turn this shape into tables.
+
+## Common beginner mistakes
+
+- **Indentation errors.** Mixed tabs and spaces, or the wrong number.
+- **Off-by-one with lists.** The first item is `[0]`, not `[1]`.
+- **Using `=` instead of `==`.** One assigns, the other compares.
+- **Changing a list while looping over it.** Build a new list instead.
+- **Forgetting the quotes.** `name` is a variable, `"name"` is text.
+
+Use a visualizer such as Python Tutor to watch code run one line at a time. It makes loops and variables concrete.
+
+## Watch
+
+<Video id="_uQrJ0TkZlc" title="Python Full Course for Beginners" channel="Programming with Mosh" minutes={374}>
+  A full six-hour beginner course. You do not need all of it. Watch the first hour for variables, types, lists and loops, and come back for the rest as you need it.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="The Python Tutorial" href="https://docs.python.org/3/tutorial/" source="Python documentation">
+  The official tutorial. Read the sections on numbers, strings, lists, control flow and dictionaries.
+</Resource>
+
+<Resource kind="course" title="Python for Everybody" href="https://www.py4e.com/" source="Charles Severance">
+  A free university-level course with book, lectures and exercises, written for people with no programming background.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Python" href="https://www.kaggle.com/learn/python" source="Kaggle">
+  Short, free, hands-on lessons with exercises that run in the browser.
+</Resource>
+
+<Resource kind="docs" title="Automate the Boring Stuff with Python" href="https://automatetheboringstuff.com/" source="Al Sweigart">
+  A free online book about using Python for everyday tasks such as files, spreadsheets and the web. A good fit for IT work.
+</Resource>
+
+<Resource kind="docs" title="Python Tutor" href="https://pythontutor.com/" source="Philip Guo">
+  A free visualizer that shows your code running step by step.
+</Resource>
+
+## Check yourself
+
+1. Write a script with a list of five servers (dictionaries with a name and a disk percentage). Print the names of those over 80 percent.
+2. Rewrite your answer using a list comprehension. Which version is easier to read for you?
+3. What is the difference between `server["owner"]` and `server.get("owner")` when the key is missing?

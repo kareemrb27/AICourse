@@ -76,6 +76,13 @@ import L73 from "./working-with-llms/context-and-documents.mdx";
 import L74 from "./working-with-llms/tools-and-reasoning.mdx";
 import L75 from "./working-with-llms/verify-and-stay-safe.mdx";
 import L76 from "./working-with-llms/capstone.mdx";
+import L77 from "./python-and-data-essentials/setup-and-first-script.mdx";
+import L78 from "./python-and-data-essentials/python-basics.mdx";
+import L79 from "./python-and-data-essentials/functions-files-and-json.mdx";
+import L80 from "./python-and-data-essentials/calling-apis.mdx";
+import L81 from "./python-and-data-essentials/data-with-pandas.mdx";
+import L82 from "./python-and-data-essentials/notebooks-and-ai-help.mdx";
+import L83 from "./python-and-data-essentials/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -157,4 +164,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "working-with-llms/tools-and-reasoning": L74,
   "working-with-llms/verify-and-stay-safe": L75,
   "working-with-llms/capstone": L76,
+  "python-and-data-essentials/setup-and-first-script": L77,
+  "python-and-data-essentials/python-basics": L78,
+  "python-and-data-essentials/functions-files-and-json": L79,
+  "python-and-data-essentials/calling-apis": L80,
+  "python-and-data-essentials/data-with-pandas": L81,
+  "python-and-data-essentials/notebooks-and-ai-help": L82,
+  "python-and-data-essentials/capstone": L83,
 };

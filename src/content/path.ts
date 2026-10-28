@@ -26,7 +26,7 @@ export const pathStages: PathStage[] = [
     items: [
       { key: "foundations", course: "ai-foundations", title: "AI Foundations for IT Professionals", sub: "What AI is and is not", after: "Explain AI, machine learning and LLMs to a colleague, and spot the hype." },
       { key: "llms", course: "working-with-llms", title: "Working with LLMs", sub: "Prompting, limits, tools", after: "Get reliable results from chat models and know where they fail." },
-      { key: "python", title: "Python and data essentials", sub: "Notebooks, APIs, JSON", after: "Run notebooks, call APIs and handle data well enough to build." },
+      { key: "python", course: "python-and-data-essentials", title: "Python and data essentials", sub: "Notebooks, APIs, JSON", after: "Run notebooks, call APIs and handle data well enough to build." },
       { key: "ml", title: "Machine learning basics", sub: "Train, test, evaluate", after: "Know when classic machine learning beats an LLM, and how to judge a model." },
     ],
   },
