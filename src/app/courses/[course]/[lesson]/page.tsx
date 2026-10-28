@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { courses, formatDuration, getCourse } from "@/content/courses";
+import { lessonContent } from "@/content/lesson-content";
 import { reportIssueUrl } from "@/lib/site";
 
 export function generateStaticParams() {
@@ -23,21 +23,14 @@ export async function generateMetadata({
   };
 }
 
-export default function LessonPage(
-  props: PageProps<"/courses/[course]/[lesson]">,
-) {
-  return (
-    <Suspense fallback={<main id="main" className="mx-auto max-w-3xl px-6 py-14" />}>
-      <LessonContent params={props.params} />
-    </Suspense>
-  );
-}
+// Every lesson is known at build time, so each page is fully prerendered with
+// its text in the HTML. Skipping the instant-navigation check avoids wrapping
+// the lesson in a Suspense boundary, which would stream long lessons in later.
+export const instant = false;
 
-async function LessonContent({
+export default async function LessonPage({
   params,
-}: {
-  params: PageProps<"/courses/[course]/[lesson]">["params"];
-}) {
+}: PageProps<"/courses/[course]/[lesson]">) {
   const { course: cs, lesson: ls } = await params;
   const course = getCourse(cs);
   const index = course?.lessons.findIndex((l) => l.slug === ls) ?? -1;
@@ -46,7 +39,8 @@ async function LessonContent({
   const lesson = course.lessons[index];
   const prev = course.lessons[index - 1];
   const next = course.lessons[index + 1];
-  const { default: Content } = await lesson.load();
+  const Content = lessonContent[`${course.slug}/${lesson.slug}`];
+  if (!Content) notFound();
 
   return (
     <main id="main" className="mx-auto max-w-3xl px-6 py-14">
