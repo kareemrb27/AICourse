@@ -1,5 +1,21 @@
 You cannot build or debug a GraphRAG system without being comfortable with the graph itself. This lesson covers the property graph model, how to design one, and enough Cypher to read and write it.
 
+## Watch
+
+Three short videos from Neo4j's own channel. The first two are lessons from the free Neo4j Fundamentals course on GraphAcademy, and the third is a hands-on Cypher walkthrough.
+
+<Video id="EhwYM5E0S3c" title="GraphAcademy - Neo4j Fundamentals - What is Neo4j?" channel="Neo4j" minutes={3}>
+  The opening lesson of Neo4j Fundamentals: what Neo4j is and what a graph database does.
+</Video>
+
+<Video id="1g8hmyFO8xo" title="GraphAcademy - Neo4j Fundamentals - Thinking in Graphs" channel="Neo4j" minutes={3}>
+  The second lesson of Neo4j Fundamentals, on how to think about data as nodes and relationships.
+</Video>
+
+<Video id="TfojDtTfzcc" title="Episode 2: Neo4j Cypher Basics: Reading & Writing Data" channel="Neo4j" minutes={4}>
+  A hands-on look at Cypher, retrieving and creating data patterns in a Neo4j graph with a movie dataset.
+</Video>
+
 ## The property graph model
 
 A property graph has four building blocks:
@@ -47,22 +63,6 @@ RETURN path LIMIT 25
 - **Keep the schema small at first.** Five node labels you trust beat thirty the extractor invents.
 - **Model for the questions you will ask.** List ten real questions, then check each is answerable by a short path.
 - **Keep the source text.** In GraphRAG you usually also store `Chunk` or `Document` nodes linked to the entities extracted from them, so every fact can cite its source.
-
-## Watch
-
-Three short videos from Neo4j's own channel. The first two are lessons from the free Neo4j Fundamentals course on GraphAcademy, and the third is a hands-on Cypher walkthrough.
-
-<Video id="EhwYM5E0S3c" title="GraphAcademy - Neo4j Fundamentals - What is Neo4j?" channel="Neo4j" minutes={3}>
-  The opening lesson of Neo4j Fundamentals: what Neo4j is and what a graph database does.
-</Video>
-
-<Video id="1g8hmyFO8xo" title="GraphAcademy - Neo4j Fundamentals - Thinking in Graphs" channel="Neo4j" minutes={3}>
-  The second lesson of Neo4j Fundamentals, on how to think about data as nodes and relationships.
-</Video>
-
-<Video id="TfojDtTfzcc" title="Episode 2: Neo4j Cypher Basics: Reading & Writing Data" channel="Neo4j" minutes={4}>
-  A hands-on look at Cypher, retrieving and creating data patterns in a Neo4j graph with a movie dataset.
-</Video>
 
 ## Resources
 

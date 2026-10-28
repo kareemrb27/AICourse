@@ -1,5 +1,11 @@
 AI assistants do not only write code; they choose libraries. A suggested dependency brings in someone else's code, permissions and vulnerabilities, and sometimes does not exist at all.
 
+## Watch
+
+<Video id="82QwZ2ue8BA" title="Understanding AI Package Hallucination: The latest dependency security threat" channel="GitGuardian" minutes={8}>
+  A short explainer from GitGuardian, a security vendor, on AI package hallucination, with a demo of ChatGPT recommending packages that do not exist.
+</Video>
+
 ## Hallucinated packages
 
 A study of package hallucinations (Spracklen et al., USENIX Security 2025) tested 16 code-generating models over 576,000 samples and found 205,474 unique hallucinated package names. The risk is practical: an attacker can **register a hallucinated name** on a public registry and publish malicious code, then wait for a developer or an agent to install it. This is sometimes called "slopsquatting".
@@ -53,12 +59,6 @@ AI-generated configuration often includes example credentials or broad permissio
   visible in the diff, require a short justification, and automate the checks
   above in CI.
 </Callout>
-
-## Watch
-
-<Video id="82QwZ2ue8BA" title="Understanding AI Package Hallucination: The latest dependency security threat" channel="GitGuardian" minutes={8}>
-  A short explainer from GitGuardian, a security vendor, on AI package hallucination, with a demo of ChatGPT recommending packages that do not exist.
-</Video>
 
 ## Resources
 
