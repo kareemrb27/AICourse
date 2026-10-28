@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CourseShell } from "@/components/course-shell";
 import {
   courses,
   formatDuration,
@@ -35,7 +36,7 @@ export default async function CoursePage({
   if (!course) notFound();
 
   return (
-    <main id="main" className="mx-auto max-w-4xl px-6 py-16">
+    <CourseShell course={course} active={null}>
       <p className="label">
         {course.track} · <span className="text-accent">{course.level}</span>
       </p>
@@ -50,7 +51,7 @@ export default async function CoursePage({
         {" "}· Free
       </p>
 
-      <div className="mt-12 grid gap-10 sm:grid-cols-2">
+      <div className="mt-12 grid gap-10 md:grid-cols-2">
         <section>
           <h2 className="label text-accent">You will learn to</h2>
           <ul className="mt-4 space-y-3 text-[15px] leading-7">
@@ -99,6 +100,6 @@ export default async function CoursePage({
           ))}
         </ol>
       </section>
-    </main>
+    </CourseShell>
   );
 }

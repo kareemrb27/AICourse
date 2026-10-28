@@ -57,9 +57,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <nav aria-label="Primary" className="label flex gap-2">
               <Link
                 href="/path"
+                aria-label="Learning path"
                 className="inline-flex min-h-11 items-center px-2 hover:text-foreground"
               >
-                Learning path
+                <span aria-hidden className="sm:hidden">Path</span>
+                <span aria-hidden className="hidden sm:inline">Learning path</span>
               </Link>
               <Link
                 href="/#courses"

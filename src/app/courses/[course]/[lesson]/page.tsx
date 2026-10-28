@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CourseShell } from "@/components/course-shell";
 import { courses, formatDuration, getCourse } from "@/content/courses";
 import { lessonContent } from "@/content/lesson-content";
 import { reportIssueUrl } from "@/lib/site";
@@ -43,7 +44,7 @@ export default async function LessonPage({
   if (!Content) notFound();
 
   return (
-    <main id="main" className="mx-auto max-w-3xl px-6 py-14">
+    <CourseShell course={course} active={lesson.slug}>
       <Link
         href={`/courses/${course.slug}`}
         className="label inline-flex min-h-11 items-center hover:text-foreground"
@@ -101,6 +102,6 @@ export default async function LessonPage({
           </Link>
         ) : null}
       </nav>
-    </main>
+    </CourseShell>
   );
 }
