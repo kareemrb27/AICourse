@@ -20,6 +20,35 @@ export type Course = {
 
 export const courses: Course[] = [
   {
+    slug: "ai-foundations",
+    title: "AI Foundations for IT Professionals",
+    track: "Stage 1 · Understand",
+    level: "Beginner",
+    summary:
+      "Start here if you work in IT and have no AI background. Learn what AI actually is, how machines learn, how neural networks and language models work, where they fail, and how to read the landscape, with no coding required.",
+    prerequisites: [
+      "Comfortable with everyday IT concepts such as APIs, servers and files",
+      "No programming or maths beyond school level is needed",
+      "Optional: a free account with any chat assistant to try the examples",
+    ],
+    outcomes: [
+      "Explain AI, machine learning, deep learning and generative AI to a colleague",
+      "Describe the learning loop and why data quality and testing matter",
+      "Understand neural networks and language models well enough to reason about their behaviour",
+      "Judge which tasks suit AI using a practical checklist, and spot hallucination, bias and security risks",
+      "Read the AI landscape: hosted versus open models, the stack, and the jargon",
+    ],
+    lessons: [
+      { slug: "what-is-ai", title: "What AI is, and is not", summary: "The map of terms and the shift from rules to learning.", minutes: 60 },
+      { slug: "how-machines-learn", title: "How machines learn", summary: "Data, models, training, overfitting and the metrics that matter.", minutes: 90 },
+      { slug: "neural-networks", title: "Neural networks in plain terms", summary: "Neurons, layers, parameters and how a network learns.", minutes: 90 },
+      { slug: "how-llms-work", title: "How language models work", summary: "Tokens, embeddings, attention, context and training stages.", minutes: 120 },
+      { slug: "strengths-and-limits", title: "Strengths, limits and risks", summary: "Hallucination, bias, privacy, security and a suitability checklist.", minutes: 90 },
+      { slug: "the-ai-landscape", title: "The AI landscape for IT professionals", summary: "Hosted versus open models, the stack, jargon and where you fit.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: your AI literacy brief", summary: "Write a brief that helps your team make better AI decisions.", minutes: 180 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

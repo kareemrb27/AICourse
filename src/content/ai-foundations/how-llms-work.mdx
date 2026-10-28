@@ -1,0 +1,91 @@
+Large language models are the part of AI most people actually touch. This lesson explains what they do, in plain terms, so their strengths and their odd failures both stop being mysterious.
+
+## The core trick: predict the next piece of text
+
+An LLM does one thing: given some text, it predicts what text is likely to come next. Then it appends that and predicts again. A whole answer is produced one small piece at a time.
+
+It sounds too simple to produce reasoning, code and essays, but predicting text well across a huge range of subjects requires picking up a great deal about how language, facts, logic and people work. That is the surprising finding of the last few years.
+
+A useful mental model: **a very capable autocomplete, trained on a large share of the written internet, then taught to be a helpful assistant.**
+
+## Tokens
+
+Models do not read letters or whole words. They read **tokens**: chunks of text, roughly three-quarters of a word on average in English. "Understanding" may be two tokens, and unusual words or other languages can take many more.
+
+Tokens matter to you because:
+
+- Providers **charge per token** for input and output.
+- Models have a **limit on tokens** they can handle at once (below).
+- Odd behavior with spelling, counting letters or exact formatting often traces back to tokenization.
+
+## Embeddings: meaning as numbers
+
+Before processing, each token is turned into a long list of numbers called an **embedding**. Tokens with related meanings end up with similar numbers, the way nearby points on a map are close in space. "Invoice" sits near "bill" and far from "volcano". Embeddings are the basis of semantic search and of RAG, which you will meet in stage 2.
+
+## Attention: reading with context
+
+The key breakthrough is the **transformer** design with a mechanism called **attention**. When the model processes a word, attention lets it weigh how relevant every other word in the text is. In "The server crashed because it ran out of memory", attention helps link "it" to "server". Because this can be computed in parallel on GPUs, models could be scaled up enormously, which is why this design took over.
+
+## The context window
+
+A model can only consider a limited amount of text at once, its **context window**, measured in tokens. Your question, any documents you paste, the conversation so far and the answer all share this space. It has no memory beyond it: if something is not in the window, the model does not know it unless it was learned in training. Early lessons in the Persistent Memory course go deep on this.
+
+## How a model is trained
+
+1. **Pretraining**: learn to predict the next token across enormous amounts of text. This builds general knowledge and language skill. It is the most expensive step.
+2. **Instruction tuning**: further training on examples of questions paired with good answers, so the model follows requests rather than just continuing text.
+3. **Preference tuning**: people (or other models) rank answers, and the model is adjusted toward the preferred ones. This shapes tone, helpfulness and refusal behavior.
+
+## Why answers vary
+
+When predicting the next token, the model produces a probability for each option, then **samples** from them. A setting called **temperature** controls how adventurous the sampling is. At low temperature it picks the most likely token nearly every time, and at high temperature it takes more risks. This is why asking the same question twice can give different answers, and why LLM-based features need testing in a different way from ordinary code.
+
+## What follows from this
+
+- The model produces **plausible** text, not verified facts. Sometimes plausible and true coincide, and sometimes they do not.
+- It has a **knowledge cutoff**: it knows nothing after training unless you provide it.
+- It does not "look things up" by default. Tools and retrieval are added around the model.
+- It cannot see your files, systems or intentions unless they are in the context window.
+
+<Callout title="One sentence to keep">
+  An LLM is a next-token predictor trained on a lot of text and then tuned to
+  be helpful. Everything else, good and bad, follows from that.
+</Callout>
+
+## Watch
+
+<Video id="LPZh9BOjkQs" title="Large Language Models explained briefly" channel="3Blue1Brown" minutes={7}>
+  A seven-minute visual introduction to LLMs, chatbots, pretraining and transformers. Watch this first.
+</Video>
+
+<Video id="zjkBMFhNj_g" title="[1hr Talk] Intro to Large Language Models" channel="Andrej Karpathy" minutes={59}>
+  A general-audience hour on what LLMs are, how they compare with operating systems, and some of their security challenges. Optional but excellent if you have the time.
+</Video>
+
+## Resources
+
+<Resource kind="article" title="The Illustrated Transformer" href="https://jalammar.github.io/illustrated-transformer/" source="Jay Alammar">
+  The classic picture-driven explanation of attention and the transformer. Read it after the videos.
+</Resource>
+
+<Resource kind="article" title="What Is ChatGPT Doing … and Why Does It Work?" href="https://writings.stephenwolfram.com/2023/02/what-is-chatgpt-doing-and-why-does-it-work/" source="Stephen Wolfram">
+  A long, thoughtful essay on next-word prediction. Skim for the intuition.
+</Resource>
+
+<Resource kind="article" title="Catching up on the weird world of LLMs" href="https://simonwillison.net/2023/Aug/3/weird-world-of-llms/" source="Simon Willison">
+  A written version of a talk covering how LLMs work, how they are trained and what they are good for. From 2023, so read it for the ideas, not the product details.
+</Resource>
+
+<Resource kind="docs" title="LLM Course: Introduction" href="https://huggingface.co/learn/llm-course/chapter1/1" source="Hugging Face">
+  A free course that goes deeper when you are ready to write code.
+</Resource>
+
+<Resource kind="paper" title="Attention Is All You Need" href="https://arxiv.org/abs/1706.03762" source="arXiv">
+  The original transformer paper. Optional: just read the abstract and look at the architecture figure.
+</Resource>
+
+## Check yourself
+
+1. Ask a chat assistant the same open question five times. Note what changes and what stays the same. Explain why using sampling and temperature.
+2. Paste a long paragraph into a provider's token counter or tokenizer demo. Compare the word count to the token count.
+3. Explain to a colleague why an LLM cannot know about yesterday's incident unless you tell it, and what that means for an internal support bot.

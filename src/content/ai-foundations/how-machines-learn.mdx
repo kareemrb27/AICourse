@@ -1,0 +1,104 @@
+Every AI system you will meet, from a spam filter to a chat assistant, learns the same basic way. Once you understand the loop, many confusing headlines become simple.
+
+## The learning loop
+
+1. **Collect data**: examples of the thing you care about.
+2. **Choose a model**: a flexible function with adjustable settings called **parameters** (or weights).
+3. **Train**: show the model examples, compare its guesses with the right answers, and nudge the parameters to reduce the error. Repeat many times.
+4. **Evaluate**: measure how it performs on examples it has never seen.
+5. **Use it (inference)**: give it new inputs and get predictions.
+
+Training is the slow, expensive part, done once or occasionally. Inference is what happens every time someone uses the system, and it is where most of your operational cost lives.
+
+## The vocabulary
+
+| Term | Plain meaning |
+| --- | --- |
+| Dataset | The collection of examples |
+| Features or inputs | What the model sees (an email's text, a transaction's amount) |
+| Labels | The right answer for an example (spam or not spam) |
+| Model | The learned function that maps inputs to outputs |
+| Parameters | The numbers the training process adjusts. Modern LLMs have billions |
+| Training | Adjusting parameters using data |
+| Inference | Using the trained model on new inputs |
+| Loss | A score of how wrong the model currently is. Training tries to lower it |
+
+## Three ways of learning
+
+- **Supervised learning**: examples come with labels. Predict a price, classify an email, detect fraud. The most common type in business.
+- **Unsupervised learning**: no labels. Find structure, such as grouping similar customers or spotting unusual log lines.
+- **Reinforcement learning**: an agent tries actions and gets rewards or penalties. Used for games, robotics, and for tuning how chat models respond.
+
+LLMs combine them. Their first training pass is a form of self-supervised learning on text, and later stages use human feedback.
+
+## A tiny example
+
+```text
+training data:   "Win a free prize now"        → spam
+                 "Meeting moved to 3pm"        → not spam
+                 "Claim your reward today"     → spam
+                 ... thousands more ...
+
+training:        adjust parameters until predictions match labels
+
+new email:       "Free gift card, click here"  → model says: 94% spam
+```
+
+Nobody wrote a rule about the word "free". The model found the pattern, including patterns the author never thought of, and including spurious ones.
+
+## Train, validate, test
+
+Treat data like environments. You never test in the same place you build.
+
+- **Training set**: the model learns from this.
+- **Validation set**: you tune settings against this.
+- **Test set**: held back until the end, for an honest score.
+
+If you evaluate on data the model trained on, you are grading a student on the exam questions they memorized.
+
+## Overfitting: memorizing instead of learning
+
+A model that fits its training data perfectly but fails on new data has **overfitted**. It memorized instead of finding the general pattern. The opposite, **underfitting**, means it is too simple to capture the pattern at all. Almost all practical ML work is finding the balance, and guarding against overfitting by testing on unseen data.
+
+## Accuracy is not enough
+
+Suppose 1 transaction in 100 is fraud. A model that always says "not fraud" is 99% accurate and completely useless. So we also ask:
+
+- **Precision**: of everything flagged as fraud, how much really was? (Low precision means many false alarms.)
+- **Recall**: of all the real fraud, how much did we catch? (Low recall means missed fraud.)
+
+Which matters more depends on the cost of each kind of mistake. A cancer screen favours recall; an automatic account suspension favours precision.
+
+## Garbage in, garbage out
+
+A model learns whatever patterns are in its data, including unfair or accidental ones. If past hiring data favoured one group, a model trained on it can copy that. If all sample photos of a defect were taken in daylight, the model may fail at night. Data quality, coverage and bias are usually the biggest factors in whether a system works, far more than the choice of algorithm.
+
+<Callout title="The IT lens">
+  Training data is a dependency, like a library, and it needs the same care:
+  provenance, versioning, access control and testing. A model is only as
+  trustworthy as the data behind it.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Machine Learning Crash Course" href="https://developers.google.com/machine-learning/crash-course" source="Google for Developers">
+  Work through the sections on regression, classification, data and overfitting. The visualizations make the loop tangible.
+</Resource>
+
+<Resource kind="course" title="Elements of AI" href="https://www.elementsofai.com/" source="University of Helsinki and MinnaLearn">
+  The machine learning chapters explain these ideas with everyday examples and no code.
+</Resource>
+
+<Resource kind="docs" title="Machine Learning Glossary" href="https://developers.google.com/machine-learning/glossary" source="Google for Developers">
+  Look up loss, overfitting, precision, recall and any other term from this lesson.
+</Resource>
+
+<Resource kind="repo" title="AI for Beginners" href="https://github.com/microsoft/AI-For-Beginners" source="Microsoft on GitHub">
+  Optional: a longer curriculum with notebooks for those who want to try the ideas in code later.
+</Resource>
+
+## Check yourself
+
+1. A model reviews 200 emails. It flags 40 as spam: 30 truly are, 10 are not. It missed 20 real spam emails. Calculate precision and recall by hand.
+2. Name a situation in your work where you would prefer high recall, and one where you would prefer high precision. Explain why.
+3. Describe what overfitting would look like for a system that predicts server failures from logs.

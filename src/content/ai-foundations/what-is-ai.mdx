@@ -1,0 +1,88 @@
+You have spent your career making computers do exactly what you tell them. AI flips part of that: instead of writing the rules, you show the machine examples and let it find the rules. This lesson gives you the map and the vocabulary, so the rest of the course (and every news headline) makes sense.
+
+## The words, in order of size
+
+These terms are nested. Each one is a smaller, more specific slice of the one before it.
+
+```text
+Artificial intelligence (AI)         any technique that makes machines act intelligently
+└─ Machine learning (ML)             systems that learn patterns from data
+   └─ Deep learning                  ML using large neural networks
+      └─ Generative AI               models that create text, images, audio, code
+         └─ Large language models    generative AI for text (ChatGPT, Claude, Gemini)
+```
+
+- **AI** is the umbrella. A chess program using hand-written search rules counts, and so does a chatbot.
+- **Machine learning** is the part that learns from data instead of following only hand-written rules.
+- **Deep learning** uses neural networks with many layers. Almost every recent breakthrough comes from here.
+- **Generative AI** creates new content rather than only labelling or predicting.
+- **Large language models (LLMs)** are generative models trained on vast amounts of text. They power today's chat assistants.
+
+## Rules in, answers out versus data in, rules out
+
+Traditional software: a developer writes the **rules**, the program applies them to **data**, and you get **answers**.
+
+Machine learning: you provide **data and the right answers**, and training produces the **rules** (called a model).
+
+An IT analogy: a firewall with hand-written rules versus a system that studies months of traffic and learns what "normal" looks like. The first is predictable and explainable. The second can catch things you never thought to write a rule for, and can also surprise you.
+
+## Narrow and general
+
+Every AI system you can use today is **narrow**: very good at what it was built and trained for, with no general understanding behind it. An image classifier cannot write an email, and a chatbot is not a database. "General" AI that matches human flexibility is a research goal, not a product, and experts disagree about when or whether it will arrive.
+
+LLMs feel more general because language is a flexible interface. They can attempt thousands of tasks. That breadth is real, but so are the gaps, which later lessons cover.
+
+## The AI effect
+
+People joke that "AI is whatever computers cannot do yet." Once something works reliably, such as spell check, route planning or spam filtering, we stop calling it AI and call it software. Expect today's impressive demos to become tomorrow's ordinary features, and plan your skills accordingly.
+
+## Why now
+
+Three things came together:
+
+1. **Data**: the internet and digital records produced huge training sets.
+2. **Compute**: GPUs made it practical to train very large models.
+3. **Better methods**: the transformer design (lesson 4) scaled far better than earlier approaches.
+
+On top of that, chat made it usable. Anyone can now try a powerful model by typing a sentence.
+
+## Myths to drop early
+
+- "AI understands like a person." It predicts patterns. Whether that counts as understanding is a debate, but it behaves differently from a human mind.
+- "AI is always right, or always wrong." It is neither. Quality varies by task, and it can be wrong while sounding certain.
+- "You need a maths degree to work with AI." Building models from scratch needs deep expertise. Using and integrating them well mostly needs good engineering judgement, which you already have.
+- "It will replace IT." Tasks change. People who can direct AI, check its work and fit it into real systems become more valuable, not less.
+
+<Callout title="Your advantage">
+  AI projects fail mostly on integration, data quality, security, cost and
+  reliability. Those are IT problems. This path builds on what you already
+  know.
+</Callout>
+
+## Resources
+
+<Resource kind="course" title="Elements of AI" href="https://www.elementsofai.com/" source="University of Helsinki and MinnaLearn">
+  A free, self-paced course for a general audience on what AI is, what it can and cannot do, and how it affects daily life. Part 1 needs no programming.
+</Resource>
+
+<Resource kind="docs" title="Machine Learning Crash Course" href="https://developers.google.com/machine-learning/crash-course" source="Google for Developers">
+  Short videos, interactive visualizations and exercises. Browse the contents and read the introduction now; you will use specific modules in later lessons.
+</Resource>
+
+<Resource kind="docs" title="Machine Learning Glossary" href="https://developers.google.com/machine-learning/glossary" source="Google for Developers">
+  Keep this open in a tab. Look up any term you do not know.
+</Resource>
+
+<Resource kind="repo" title="AI for Beginners" href="https://github.com/microsoft/AI-For-Beginners" source="Microsoft on GitHub">
+  A 12-week curriculum for those who want a longer, structured path through the same ideas.
+</Resource>
+
+<Resource kind="course" title="AI Fluency: Framework and Foundations" href="https://anthropic.skilljar.com/ai-fluency-framework-foundations" source="Anthropic">
+  A free course on working with AI effectively, efficiently, ethically and safely. A good companion for lessons 1, 5 and 6.
+</Resource>
+
+## Check yourself
+
+1. Explain to a colleague, in three sentences, the difference between AI, machine learning and generative AI.
+2. List ten software features you use daily. Mark each as hand-written rules, machine learning, or generative AI.
+3. Pick a rules-based system you maintain. What would it mean for it to "learn" instead? Name one benefit and one risk.

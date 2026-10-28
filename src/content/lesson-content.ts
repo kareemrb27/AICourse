@@ -62,6 +62,13 @@ import L59 from "./ai-code-analysis/dependencies-and-supply-chain.mdx";
 import L60 from "./ai-code-analysis/automated-analysis.mdx";
 import L61 from "./ai-code-analysis/testing-ai-code.mdx";
 import L62 from "./ai-code-analysis/capstone.mdx";
+import L63 from "./ai-foundations/what-is-ai.mdx";
+import L64 from "./ai-foundations/how-machines-learn.mdx";
+import L65 from "./ai-foundations/neural-networks.mdx";
+import L66 from "./ai-foundations/how-llms-work.mdx";
+import L67 from "./ai-foundations/strengths-and-limits.mdx";
+import L68 from "./ai-foundations/the-ai-landscape.mdx";
+import L69 from "./ai-foundations/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -129,4 +136,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "ai-code-analysis/automated-analysis": L60,
   "ai-code-analysis/testing-ai-code": L61,
   "ai-code-analysis/capstone": L62,
+  "ai-foundations/what-is-ai": L63,
+  "ai-foundations/how-machines-learn": L64,
+  "ai-foundations/neural-networks": L65,
+  "ai-foundations/how-llms-work": L66,
+  "ai-foundations/strengths-and-limits": L67,
+  "ai-foundations/the-ai-landscape": L68,
+  "ai-foundations/capstone": L69,
 };

@@ -1,0 +1,81 @@
+Almost every recent AI breakthrough, including every chat assistant, runs on neural networks. You do not need the maths to understand what they are. You need a mental picture, and this lesson gives you one.
+
+## One neuron
+
+An artificial neuron is a tiny calculation:
+
+1. Take several numbers as input.
+2. Multiply each by a **weight** (how much that input matters).
+3. Add them up, and add a **bias**.
+4. Pass the result through a simple **activation function** that decides how strongly the neuron "fires".
+
+That is all. One neuron is nearly useless. The power comes from connecting very many of them.
+
+## Layers
+
+Neurons are arranged in **layers**. The first layer takes the raw input (the pixels of an image, the numbers that represent a word). Each following layer takes the previous layer's outputs and combines them. The last layer gives the answer, such as "cat: 92%".
+
+A network with many layers is "deep", which is where the name **deep learning** comes from.
+
+In image models, early layers tend to pick up simple things like edges, middle layers combine them into shapes, and later layers recognize objects. Nobody programs those steps. The network works out useful intermediate features during training.
+
+## Parameters: where the knowledge lives
+
+Every weight and bias is a **parameter**. A small network may have thousands. Today's large language models have billions or hundreds of billions. After training, those numbers are the model. There is no database of facts inside, only a very large set of tuned numbers that together produce behavior.
+
+This is also why you cannot open a model and read why it did something. It is a **black box** in a practical sense, which matters for trust, auditing and regulation.
+
+## How a network learns
+
+Training works like tuning a mixing desk with millions of knobs:
+
+1. Feed an example through the network and get a prediction.
+2. Measure the error (the **loss**).
+3. Work out, for every knob, which direction would reduce the error. This clever bookkeeping is called **backpropagation**.
+4. Nudge every knob a small step in that direction. This is **gradient descent**.
+5. Repeat across millions or billions of examples.
+
+Over time the error shrinks and the knobs settle into values that work.
+
+## Why it took off now
+
+The core ideas are decades old. Two things changed: huge amounts of data, and **GPUs**, chips built for the same simple maths done in parallel, which turned out to be perfect for neural networks. Training a frontier model today uses thousands of GPUs for weeks, which is why only a few organizations do it and why most of us use models through an API or download one that someone else trained.
+
+## Different shapes for different jobs
+
+- **Convolutional networks** for images.
+- **Recurrent networks**, an older design for sequences such as text and speech.
+- **Transformers**, the design behind modern language models and many image and audio models. The next lesson explains why they matter.
+
+## What to remember
+
+- A network is a stack of simple calculations whose weights were tuned by training.
+- Knowledge is spread across parameters, not stored as readable facts.
+- Training is costly and rare. Using a trained model is cheap by comparison.
+- It is powerful pattern recognition, and it fails in pattern-recognition ways, such as odd mistakes on inputs unlike its training data.
+
+## Watch
+
+<Video id="aircAruvnKk" title="But what is a neural network? | Deep learning chapter 1" channel="3Blue1Brown" minutes={18}>
+  The best visual introduction to neurons, layers and what the numbers are doing. It shows a network learning to read handwritten digits. The maths appears, but you can follow the pictures without it.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Machine Learning Crash Course" href="https://developers.google.com/machine-learning/crash-course" source="Google for Developers">
+  The neural networks and embeddings modules, with interactive exercises.
+</Resource>
+
+<Resource kind="docs" title="Neural Networks: Zero to Hero" href="https://karpathy.ai/zero-to-hero.html" source="Andrej Karpathy">
+  Optional, for later: a hands-on video course that builds networks in code from scratch. Not needed for this path, but a rewarding stretch goal.
+</Resource>
+
+<Resource kind="repo" title="AI for Beginners" href="https://github.com/microsoft/AI-For-Beginners" source="Microsoft on GitHub">
+  Lessons on neural networks, with notebooks you can run when you are ready.
+</Resource>
+
+## Check yourself
+
+1. Without notes, explain a neuron, a layer and a parameter in your own words.
+2. Why can nobody simply read a neural network to see why it made a decision? Why does that matter for a bank or a hospital?
+3. Training is expensive and using a model is cheap. What does that imply for how your company should get its first AI capability?

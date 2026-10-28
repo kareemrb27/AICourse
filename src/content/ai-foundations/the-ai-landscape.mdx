@@ -1,0 +1,106 @@
+Now that you know how AI works and where it fails, you need a map of the practical landscape: who builds models, how you use them, what the jargon means, and where an IT professional fits. This lesson is the bridge to stage 2, where you start building.
+
+## Who builds the models
+
+Two broad groups:
+
+- **Hosted (closed) models**, used through a paid API or chat product. Examples include models from Anthropic, OpenAI and Google. You send text to their service and get an answer back. They tend to be the most capable, and you depend on the provider for price, availability and data terms.
+- **Open-weight models**, whose trained parameters are published so you can download and run them yourself. Examples include the Llama, Mistral and Qwen families. Hugging Face is the main hub for finding them. You control where they run and what data they see, but you provide the hardware and the effort, and licenses vary, so read them.
+
+"Open" has several meanings. Open weights are not the same as open training data or open source code.
+
+## Where models run
+
+| Option | You get | You give up |
+| --- | --- | --- |
+| Hosted API | Best quality, no hardware, fast start | Data leaves your control, usage costs, provider dependence |
+| Cloud platform service | Enterprise controls, your cloud account | Cost, configuration effort |
+| On your own servers | Privacy and control | Hardware, operations, usually lower capability |
+| On a laptop (small models) | Free to try, fully private | Limited size and speed |
+
+Most organizations start with hosted APIs or a managed cloud service, and move specific workloads on-premises if privacy or cost requires it.
+
+## The stack, layer by layer
+
+```text
+Application        the feature users see (a support assistant, a report writer)
+Orchestration      prompts, retrieval (RAG), tools, agents, guardrails
+Model              the LLM that generates text
+Serving            the API or runtime that runs the model
+Hardware           GPUs and the cloud or data center they live in
+Cross-cutting      data, security, evaluation, monitoring, cost control
+```
+
+Most AI projects you will work on live in the top three layers. You are mostly **using** a model and building the system around it, not training one.
+
+## Jargon decoder
+
+| Term | What it means |
+| --- | --- |
+| Prompt | The instructions and text you give the model |
+| Context window | How much text the model can consider at once |
+| Embedding | Numbers representing meaning, used for search and comparison |
+| Vector database | A store that finds items by similarity of embeddings |
+| RAG | Retrieval-augmented generation: fetch relevant documents and give them to the model with the question |
+| Fine-tuning | Further training of a model on your own examples |
+| Tool calling | Letting a model request actions, like a search or an API call |
+| Agent | A system where the model decides steps and uses tools in a loop |
+| MCP | Model Context Protocol, a standard way to connect models to tools and data |
+| Guardrails | Checks and limits around inputs and outputs |
+| Evals | Tests that measure how well an AI system performs |
+| Hallucination | Confident but false output |
+
+You will use every one of these by the end of the path.
+
+## Where IT professionals fit
+
+AI projects need many skills beyond data science:
+
+- **Integration and APIs**: connecting models to real systems.
+- **Security and compliance**: protecting data, reviewing risks, setting policy.
+- **Platform and operations**: deploying, monitoring, scaling and controlling cost.
+- **Data**: finding, cleaning, governing and securing the data a system relies on.
+- **Support and change**: helping people adopt tools safely.
+
+These roles are where many AI projects succeed or fail.
+
+## Build, buy or configure?
+
+A useful rule: **start with the least you can build.** Try an existing product or a hosted model with a good prompt first. Add retrieval over your data if the answers need your information. Consider fine-tuning or your own hosting only when you can show, with measurements, that the simpler options fall short.
+
+## Costs in plain terms
+
+- **Usage**: tokens in and out, multiplied by volume.
+- **Hosting**: GPUs if you run models yourself.
+- **People**: building, testing, securing and maintaining. Usually the largest cost.
+- **Risk**: the cost of mistakes, which good design and review reduce.
+
+<Callout title="Next on the path">
+  Stage 1 continues with working skillfully with LLMs, then the Python and
+  data essentials you need to start building. Stage 2 is where you build your
+  first real AI solution.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="LLM Course" href="https://huggingface.co/learn/llm-course/chapter1/1" source="Hugging Face">
+  A free course on language models, the ecosystem and the tools around them.
+</Resource>
+
+<Resource kind="repo" title="Generative AI for Beginners" href="https://github.com/microsoft/generative-ai-for-beginners" source="Microsoft on GitHub">
+  A 21-lesson course on building with generative AI. Good preview of stage 2.
+</Resource>
+
+<Resource kind="docs" title="Claude Academy" href="https://www.anthropic.com/learn" source="Anthropic">
+  Free learning material on working and building with Claude. Look through the catalogue for what suits your role.
+</Resource>
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  An early look at the difference between simple workflows and agents. You will study this properly in stage 3.
+</Resource>
+
+## Check yourself
+
+1. Choose a real problem at your workplace. Sketch the six-layer stack for it, and say which layers you would buy and which you would build.
+2. Compare a hosted API and a locally run model for that problem on privacy, cost and quality. Which would you start with, and why?
+3. Pick five terms from the decoder you could not have explained before this course. Write a one-sentence explanation of each from memory.

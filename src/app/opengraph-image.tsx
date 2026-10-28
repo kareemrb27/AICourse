@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { courses } from "@/content/courses";
 
 export const alt = "AICourse: free AI engineering courses";
 export const size = { width: 1200, height: 630 };
@@ -44,7 +45,7 @@ export default function OpengraphImage() {
           Free, open AI engineering courses
         </div>
         <div style={{ display: "flex", marginTop: 12, fontSize: 28, color: "#10b981" }}>
-          9 courses · 63 lessons · no signup
+          {`${courses.length} courses · ${courses.reduce((sum, c) => sum + c.lessons.length, 0)} lessons · no signup`}
         </div>
       </div>
     ),
