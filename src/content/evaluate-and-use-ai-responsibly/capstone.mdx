@@ -1,0 +1,169 @@
+Take an AI feature you built earlier in this path and put it through the review it should have had before launch. You will test it, attack it, check it for fairness and privacy problems, document it, and then make and defend a ship decision. This is the course's real deliverable: a review package that a manager, a security lead and a lawyer could each read and act on.
+
+## The project: a responsible AI review
+
+Choose one system to review:
+
+- **The support ticket assistant** from the API course, or
+- **The document assistant** from the RAG course, or
+- **Another AI feature** you have access to, using only non-confidential data and examples.
+
+If you reviewed a system you did not build, say so, and note what you could not see.
+
+## What to produce
+
+Your package is a folder with these parts, each short and specific:
+
+1. **A scope and stakes statement.** What the system does, who uses it, who is affected, what a wrong answer costs, and which stakes level it belongs to (lesson 5). Say what it is **not** for.
+2. **An evaluation report.** A test set of at least 60 questions with a stated source, results with **intervals**, results by **at least three slices**, and a repeat-run consistency check. Include unanswerable or out-of-scope questions.
+3. **A fairness or equal-treatment check** suited to the system: counterfactual tests with at least three templates and six variants, and a quality-of-service comparison across the slices that matter (such as language or topic). Say which fairness definition you chose and why.
+4. **A privacy review.** A data-flow table, the provider terms you checked, what you redact and what your redactor misses, how long you keep data, and how you would delete one person's data.
+5. **A red-team report.** At least 24 attacks across at least four categories, each with an automatic check, run several times, with success rates and intervals, and the fixes you made.
+6. **A system card** using the template from lesson 5.
+7. **A risk register** of at least eight risks with scores, controls and named owners.
+8. **A launch gate** with rules written **before** testing, the results, and the verdict.
+9. **A rollout, monitoring and incident plan**: stages, the kill switch and how you tested it, what you watch, thresholds and who responds.
+10. **A one-page decision memo** from the template in lesson 6: ship, ship with conditions, or do not ship, and why.
+
+## A starting skeleton
+
+This turns your numbers into a readable report. Save it as `review.py`, and fill the dictionaries with **your** results:
+
+```python
+# review.py
+import math
+
+
+def wilson_interval(successes, n, z=1.96):
+    if n == 0:
+        return (0.0, 1.0)
+    p = successes / n
+    d = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / d
+    margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / d
+    return centre - margin, centre + margin
+
+
+def check_rule(count, total, rule):
+    low, high = wilson_interval(count, total)
+    if "min_lower_bound" in rule:
+        return low >= rule["min_lower_bound"], f"lower bound {low:.0%}, needs at least {rule['min_lower_bound']:.0%}"
+    return high <= rule["max_upper_bound"], f"upper bound {high:.0%}, needs at most {rule['max_upper_bound']:.0%}"
+
+
+def render_report(system, stakes, results, rules, risks, conditions):
+    lines = [f"# Responsible AI review: {system}", "", f"**Stakes level:** {stakes}", "", "## Launch gate", "",
+             "| Measure | Result | Interval | Rule | Verdict |", "| --- | --- | --- | --- | --- |"]
+    passed = True
+    for measure, rule in rules.items():
+        count, total = results[measure]
+        ok, detail = check_rule(count, total, rule)
+        low, high = wilson_interval(count, total)
+        passed &= ok
+        lines.append(f"| {measure} | {count}/{total} | {low:.0%} to {high:.0%} | {detail} | {'PASS' if ok else 'FAIL'} |")
+    lines += ["", "## Top risks", ""]
+    for risk in sorted(risks, key=lambda r: -r["likelihood"] * r["impact"])[:3]:
+        lines.append(f"- **{risk['risk']}** (score {risk['likelihood'] * risk['impact']}): {risk['mitigation']} (owner: {risk['owner']})")
+    decision = "SHIP WITH CONDITIONS" if passed and conditions else "SHIP" if passed else "DO NOT SHIP YET"
+    lines += ["", f"## Decision: {decision}", ""]
+    lines += [f"- {condition}" for condition in conditions] or ["- No conditions."]
+    return "\n".join(lines), passed
+```
+
+Try it with placeholder numbers so you can see the shape. Replace every number with your own measurements:
+
+```python
+from review import render_report
+
+report, passed = render_report(
+    system="Support ticket assistant",
+    stakes="Medium",
+    results={
+        "answers correct": (101, 120),
+        "attacks that succeeded": (3, 96),
+        "correct on weakest slice": (22, 30),
+    },
+    rules={
+        "answers correct": {"min_lower_bound": 0.75},
+        "attacks that succeeded": {"max_upper_bound": 0.10},
+        "correct on weakest slice": {"min_lower_bound": 0.70},
+    },
+    risks=[
+        {"risk": "Wrong policy answer", "likelihood": 4, "impact": 3, "mitigation": "Citations, decline rule", "owner": "product"},
+        {"risk": "Personal data in prompts", "likelihood": 3, "impact": 5, "mitigation": "Redaction, retention limit", "owner": "privacy"},
+        {"risk": "Prompt injection", "likelihood": 3, "impact": 4, "mitigation": "No tools, output checks", "owner": "security"},
+    ],
+    conditions=["Staged rollout: staff first, then 10% of users", "Weekly sampled review for the first month"],
+)
+print(report)
+print("\ngate passed:", passed)
+```
+
+Everything else, the tests, the attacks, the documents and the memo, is yours. Do the work in this order: scope, test set, evaluation, attacks, fairness and privacy checks, risks, gate rules, **then** run the gate, and only after that write the memo. Never adjust the gate rules after seeing the results without writing down why.
+
+## Hints
+
+- Write the gate rules **first**, in a file with a date, before you run anything. Commit it, so the history shows the rules came first.
+- Reuse the pieces from earlier courses: the test sets and judge from the RAG course, the fake-client tests from the API course, the harnesses from lessons 1, 2 and 4.
+- If a result fails, resist loosening the rule. Fix the system, narrow the scope, or write down the risk you are accepting and who accepts it.
+- Look for **small slices**. If a slice has under 30 questions, say the evidence is thin and collect more.
+- Treat your own fixes as part of the findings: list what you found, what you changed and what you re-measured.
+- Have someone **else** read the package and ask: "what would make you say no?"
+
+## How to check your work
+
+- Was every gate rule written **before** the results existed?
+- Does every number have a sample size and an interval?
+- Is the weakest slice visible, not hidden in an average?
+- Could a stranger repeat your tests from the repository?
+- Does the red-team suite include benign requests, to check the defenses do not break normal use?
+- Is there a named owner for each risk, and a tested kill switch?
+- Does the decision memo say what it does **not** approve?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Evidence | Intervals, slices, repeated runs, unanswerable cases | One average |
+| Pre-registration | Rules written and dated before testing | Rules chosen to fit results |
+| Fairness | Metric chosen and justified, counterfactual and slice tests | "No bias found" with no method |
+| Privacy | Data flow, provider terms, tested redaction, deletion plan | Not addressed |
+| Safety | Dozens of automated attacks, rates with intervals, fixes re-tested | A few manual tries |
+| Governance | System card, risk register with owners, oversight design | Generic statements |
+| Judgment | A clear decision with conditions, and honest limits | Only good news |
+| Reproducibility | Everything re-runs from the repository | Screenshots and memory |
+
+## Stretch goals
+
+- Run the full suite against **two models** or two prompts and compare them with the paired bootstrap from lesson 1.
+- Add a **canary** and an **output filter**, and measure how much each reduces the attack success rate.
+- Build a **review queue** with sampling and a reviewer interface, and measure reviewer agreement.
+- Write a **public-facing summary** for users in plain language: what the system is, what it can get wrong and how to reach a person.
+- Have a **second person red team** your system for an hour and add their attacks to the suite.
+- Map your package to the **NIST AI RMF** functions, noting which parts of each function you covered.
+
+## Share it
+
+Put the package in a public repository without any private data. It is your seventh portfolio piece, and the most distinctive: most people can build an AI demo, far fewer can show a defensible decision to ship it. A review that ends in "not yet, and here is exactly why" is a strong result.
+
+## Where to go next
+
+Stage 2 is complete. In Stage 3 you move from single calls to **agents**: systems that plan, use tools and act over many steps. Everything you have learned here applies with more force, because an agent has more power to do harm and more ways to be tricked. The first course in Stage 3 is **Agents fundamentals**.
+
+## Resources
+
+<Resource kind="docs" title="AI RMF Playbook" href="https://airc.nist.gov/airmf-resources/playbook/" source="NIST">
+  A source of concrete actions to include in your risk and governance sections.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  A checklist for your red-team and risk sections.
+</Resource>
+
+<Resource kind="paper" title="Model Cards for Model Reporting" href="https://arxiv.org/abs/1810.03993" source="Mitchell et al., arXiv">
+  A model for the transparency part of your system card.
+</Resource>
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Anthropic">
+  Guidance on building the evaluation at the center of the package.
+</Resource>

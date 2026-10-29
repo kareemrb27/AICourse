@@ -1,0 +1,239 @@
+At some point someone has to say "yes, release it" or "not yet". That decision should rest on evidence, written down in advance, with a person who can be held to it. This lesson turns everything in the course into a release process: a risk register, a launch gate you can run as code, a staged rollout with a kill switch, monitoring after launch, and the honest conditions under which the right answer is **not to ship**.
+
+## Watch
+
+<Video id="4QXtObc61Lw" title="Security & AI Governance: Reducing Risks in AI Systems" channel="IBM Technology" minutes={15}>
+  A 15-minute look at how security and governance fit together when you put an AI system into production.
+</Video>
+
+<Video id="-E-jfcoR2W0" title="Risk and How to use a Risk Matrix" channel="Let's Learn Public Health" minutes={5}>
+  A short, general explanation of risk matrices, the tool behind the risk register below. It is not about AI specifically, but the method is the same.
+</Video>
+
+## Start with a risk register
+
+A **risk register** lists what could go wrong, how likely and how bad, what you are doing about it and who owns it. Scoring is simple: rate likelihood and impact from 1 (low) to 5 (high), and multiply.
+
+```python
+import pandas as pd
+
+RISKS = [
+    {"risk": "Assistant gives a wrong policy answer", "likelihood": 4, "impact": 3, "mitigation": "Citations, decline rule, sampled review", "owner": "product"},
+    {"risk": "Personal data sent to the model provider", "likelihood": 3, "impact": 5, "mitigation": "Redaction, approved plan, retention limits", "owner": "privacy"},
+    {"risk": "Prompt injection via an uploaded document", "likelihood": 3, "impact": 4, "mitigation": "No tools, delimiting, output checks", "owner": "security"},
+    {"risk": "Worse accuracy for non-English users", "likelihood": 4, "impact": 3, "mitigation": "Slice evaluation, language fallback", "owner": "engineering"},
+    {"risk": "Cost runaway from a loop or abuse", "likelihood": 2, "impact": 3, "mitigation": "Budget cap, rate limits, alerts", "owner": "engineering"},
+    {"risk": "Model update changes behavior", "likelihood": 3, "impact": 3, "mitigation": "Pinned model, regression eval before upgrade", "owner": "engineering"},
+]
+
+register = pd.DataFrame(RISKS)
+register["score"] = register["likelihood"] * register["impact"]
+register["rating"] = pd.cut(register["score"], [0, 5, 11, 16, 25], labels=["low", "medium", "high", "critical"])
+print(register.sort_values("score", ascending=False)[["risk", "likelihood", "impact", "score", "rating", "owner"]].to_string(index=False))
+```
+
+Use it to decide where to spend effort. For each risk choose to **reduce** it (a control), **avoid** it (do not build that part), **transfer** it (insurance, a contract) or **accept** it, and write down who accepted it. Revisit the register at every release, because new features create new risks.
+
+## A launch gate you can run
+
+The rules for shipping should be written **before** you see the results (lesson 1), and checked by code so nobody can quietly relax them. Each rule says: this measure's **lower bound** must be at least this value.
+
+```python
+import math
+
+
+def wilson_interval(successes, n, z=1.96):
+    if n == 0:
+        return (0.0, 1.0)
+    p = successes / n
+    d = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / d
+    margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / d
+    return centre - margin, centre + margin
+
+
+def release_gate(results, rules):
+    """
+    results: {measure: (successes, total)} for 'higher is better' measures,
+             and {measure: (failures, total)} for measures listed in rules as 'lower_is_better'.
+    rules:   {measure: {"min_lower_bound": x}} or {"max_upper_bound": x}
+    """
+    rows, passed = [], True
+    for measure, rule in rules.items():
+        count, total = results[measure]
+        low, high = wilson_interval(count, total)
+        if "min_lower_bound" in rule:
+            ok = low >= rule["min_lower_bound"]
+            target = f"lower bound >= {rule['min_lower_bound']:.0%}"
+        else:
+            ok = high <= rule["max_upper_bound"]
+            target = f"upper bound <= {rule['max_upper_bound']:.0%}"
+        passed &= ok
+        rows.append((measure, f"{count}/{total}", f"{low:.0%} to {high:.0%}", target, "PASS" if ok else "FAIL"))
+    return passed, rows
+
+
+RULES = {
+    "answers correct": {"min_lower_bound": 0.85},
+    "answers supported by sources": {"min_lower_bound": 0.90},
+    "correct declines (unanswerable)": {"min_lower_bound": 0.70},
+    "correct on weakest slice": {"min_lower_bound": 0.75},
+    "attacks that succeeded": {"max_upper_bound": 0.10},
+    "unsafe or biased outputs": {"max_upper_bound": 0.02},
+}
+
+RESULTS = {
+    "answers correct": (412, 450),
+    "answers supported by sources": (437, 450),
+    "correct declines (unanswerable)": (34, 40),
+    "correct on weakest slice": (44, 55),
+    "attacks that succeeded": (2, 120),
+    "unsafe or biased outputs": (3, 450),
+}
+
+passed, rows = release_gate(RESULTS, RULES)
+for measure, counts, interval, target, verdict in rows:
+    print(f"{verdict:4s} {measure:34s} {counts:8s} {interval:11s} needs {target}")
+print("\nDECISION:", "ready to ship" if passed else "NOT ready: fix the failing measures or change the scope")
+```
+
+Look at what the gate does. The headline measures pass comfortably, with about 92 percent of answers correct, yet the verdict is **not ready**, because the weakest slice has a lower bound of 68 percent against a rule of 75. That slice has only 55 questions, so the evidence is thin and the true rate could be well below the average. Two other measures, correct declines and unsafe outputs, pass only narrowly, which is worth noting in the decision. The gate forces the conversation: **improve that slice, collect more evidence or narrow what the system is used for.** It does not let a good average carry a weak group.
+
+Tips:
+
+- Agree the rules with the product owner and risk owner **before** testing.
+- Include the **weakest slice**, the **attack success rate** and the **harm measures**, not just the headline accuracy.
+- Re-run the gate in your build pipeline, so it protects every change, including a new model version.
+- Allow an **explicit, recorded override** by a named person for rare cases, rather than silent exceptions.
+
+## Release in stages
+
+Do not switch on everyone at once. A **staged rollout** limits harm while you learn:
+
+1. **Internal**: staff only, with feedback encouraged.
+2. **Small group**: a few percent of users, closely watched.
+3. **Wider**: increase step by step while the measures stay healthy.
+4. **Everyone**, with monitoring continuing.
+
+Choose who is in the group **consistently**, so a person does not flip in and out. Hashing the user ID does that:
+
+```python
+import hashlib
+
+
+def in_rollout(user_id, percent, feature="assistant-v2"):
+    bucket = int(hashlib.sha256(f"{feature}:{user_id}".encode()).hexdigest(), 16) % 100
+    return bucket < percent
+
+
+users = [f"user-{i}" for i in range(10_000)]
+for percent in (1, 10, 50):
+    share = sum(in_rollout(u, percent) for u in users) / len(users)
+    print(f"target {percent:2d}%  actual {share:.1%}")
+
+print("same answer every time:", all(in_rollout("user-42", 10) == in_rollout("user-42", 10) for _ in range(5)))
+print("a user in the 10% group stays in at 50%:",
+      all(in_rollout(u, 50) for u in users if in_rollout(u, 10)))
+```
+
+## A kill switch
+
+You must be able to turn the feature off in seconds, without a deployment, and everyone on the team should know how. The simplest form is a flag read on every request:
+
+```python
+import os
+
+
+def assistant_enabled():
+    return os.environ.get("ASSISTANT_ENABLED", "1") == "1"
+
+
+def handle_request(question):
+    if not assistant_enabled():
+        return "The assistant is temporarily unavailable. A person will help you: call extension 4100."
+    return f"(the assistant would answer: {question})"
+
+
+print(handle_request("How long does a VPN session last?"))
+os.environ["ASSISTANT_ENABLED"] = "0"
+print(handle_request("How long does a VPN session last?"))
+```
+
+In production, use a feature flag service or a configuration value that does not need a restart. Test the switch regularly, and make sure the **fallback** (a human route, a plain search, a clear message) works.
+
+## Monitor after launch
+
+Launching is the start of the evaluation, not the end. Watch:
+
+| Area | What to watch |
+| --- | --- |
+| **Quality** | Sampled review scores, thumbs up or down, complaints, share of "could not find it" |
+| **Safety** | Attack attempts, blocked outputs, guardrail triggers, refusals |
+| **Fairness** | The slice metrics, by language and group, over time |
+| **Privacy** | Personal data detected in logs or prompts, deletion requests handled |
+| **Reliability** | Errors, latency, timeouts |
+| **Cost** | Spend per request and per user, budget alerts |
+| **Drift** | Changes in what people ask, in the documents, or in the model provider's behavior |
+| **Reviewers** | Agreement and override rates |
+
+Set **alert thresholds** and name who responds. Re-run your full test set on a schedule, and always before changing the model, the prompt, the data or the tools. When a model version is retired, treat the move to the next one as a new release.
+
+## When the right answer is not to ship
+
+Saying no is part of the job. Do not ship, or ship a smaller version, when:
+
+- The **gate fails** and you cannot fix it or narrow the use.
+- A **serious harm** is plausible and the controls are weak: decisions about people's rights, safety, health or livelihood without meaningful human review.
+- You **cannot explain or audit** decisions that you are required to.
+- The **data rights are unclear**: you do not know if you may use the data, or where it goes.
+- There is **no owner**, no kill switch or no plan for incidents.
+- The system is **not better than the simple alternative** (a rule, a form, a search box) by enough to justify its risk and cost.
+- The **test set is too small or unrepresentative** to tell, and you cannot get more evidence yet.
+- Users **cannot tell** they are dealing with AI and the context needs them to.
+
+A narrower launch is often the best outcome: fewer topics, a lower-stakes use, human review of every answer at first, or an internal tool before a public one.
+
+## The decision memo
+
+Finish with a one-page record that someone can read in five minutes:
+
+```text
+DECISION: ship / ship with conditions / do not ship          Date: <date>   Decider: <name>
+
+What: <one sentence>        Who is affected: <users and others>
+Evidence: gate result, headline numbers WITH intervals, weakest slice, red-team result
+Risks: top three from the register, with the controls in place and who owns each
+Conditions: staged rollout plan, monitoring, review cadence, kill switch tested on <date>
+Not covered: what this approval does not allow
+Review date: <date>
+```
+
+<Callout title="The test of a good process">
+  If you would be comfortable explaining the decision, the evidence and the
+  plan to the people affected by it, and to a regulator, you have probably done
+  enough. If not, you know what is missing.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="AI RMF Playbook" href="https://airc.nist.gov/airmf-resources/playbook/" source="NIST">
+  Suggested actions for mapping, measuring and managing risk across the AI lifecycle.
+</Resource>
+
+<Resource kind="docs" title="AI Incident Database" href="https://incidentdatabase.ai/" source="Responsible AI Collaborative">
+  Real incidents to learn from, and to test your risk register against.
+</Resource>
+
+<Resource kind="paper" title="Model Cards for Model Reporting" href="https://arxiv.org/abs/1810.03993" source="Mitchell et al., arXiv">
+  A concise format for what to report before release.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  A checklist for the security part of your launch review.
+</Resource>
+
+## Check yourself
+
+1. Build a risk register of eight risks for a feature you know, with owners. Which one scores highest, and is that the one that worries you most?
+2. Write the gate rules for a feature, before testing. Which measure would be hardest to meet, and why?
+3. Describe a situation where you would recommend not shipping. What evidence would change your mind?

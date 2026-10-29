@@ -1,0 +1,271 @@
+"The new version scores 85 percent and the old one scores 80 percent, so we ship it." Sentences like that drive real decisions, and they are often wrong. An evaluation score is a **measurement with noise**, like any other. This lesson shows how big that noise is, how to put an honest margin around a score, how to tell a real improvement from luck, and how to look beyond a single average. These skills are what separate "we tested it" from "we know how well it works".
+
+## Watch
+
+<Video id="Xz0x-8-cgaQ" title="Bootstrapping Main Ideas!!!" channel="StatQuest with Josh Starmer" minutes={9}>
+  A nine-minute explanation of bootstrapping, the simple resampling trick this lesson uses to put error bars on any score.
+</Video>
+
+<Video id="TqOeMYtOc1w" title="Confidence Intervals, Clearly Explained!!!" channel="StatQuest with Josh Starmer" minutes={7}>
+  What a confidence interval is and how to read one, with bootstrapping again as the engine.
+</Video>
+
+## A score is a sample
+
+When you test an AI feature on 40 questions, you are not measuring how good it is. You are measuring how it did on **those 40 questions**, on **that run**. Ask a different 40, or run it again, and you get a different number. The question is how different. This code simulates two systems, A with a true success rate of 80 percent and B with 85 percent, evaluated on 40 questions each time:
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(1)
+QUESTIONS = 40
+
+
+def run_eval(true_rate):
+    """One evaluation: did the system get each of the 40 questions right?"""
+    return rng.random(QUESTIONS) < true_rate
+
+
+for run in range(1, 7):
+    a, b = run_eval(0.80).mean(), run_eval(0.85).mean()
+    note = "  <- B looks worse!" if b < a else ""
+    print(f"run {run}: system A {a:.0%}   system B {b:.0%}{note}")
+```
+
+B is genuinely better by five points, yet in some runs it scores lower. If you evaluated once and picked the higher number, you would sometimes pick the wrong system. Real evaluations of language models add a second source of noise: the model's answers vary from run to run.
+
+## Put error bars on every score
+
+Never report a bare percentage. Report it with an **interval**. Two simple tools:
+
+**The Wilson interval** works for a pass or fail rate and needs only the counts:
+
+```python
+import math
+
+
+def wilson_interval(successes, n, z=1.96):
+    """95% interval for a success rate. Better behaved than the textbook formula for small n."""
+    if n == 0:
+        return (0.0, 1.0)
+    p = successes / n
+    denominator = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / denominator
+    margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denominator
+    return (centre - margin, centre + margin)
+
+
+for successes, n in [(34, 40), (340, 400), (3400, 4000)]:
+    low, high = wilson_interval(successes, n)
+    print(f"{successes}/{n} = {successes / n:.0%}  ->  between {low:.0%} and {high:.0%}")
+```
+
+The same 85 percent is "somewhere between about 71 and 93 percent" on 40 questions and "between 84 and 86 percent" on 4,000. The interval tells you how much to trust the number, and a wide one is itself a finding: you need more questions.
+
+**The bootstrap** works for any score, not just pass or fail rates. Resample your results with replacement many times and see how the average moves:
+
+```python
+import numpy as np
+
+
+def bootstrap_ci(scores, n_boot=5000, level=0.95, seed=0):
+    """Interval for the mean of any list of per-question scores."""
+    rng = np.random.default_rng(seed)
+    scores = np.asarray(scores, dtype=float)
+    means = [rng.choice(scores, size=len(scores), replace=True).mean() for _ in range(n_boot)]
+    tail = (1 - level) / 2 * 100
+    return float(np.percentile(means, tail)), float(np.percentile(means, 100 - tail))
+
+
+ratings = [4, 5, 3, 4, 4, 2, 5, 4, 3, 4, 5, 4, 3, 4, 4, 5, 2, 4, 4, 3]   # 1 to 5 quality ratings
+low, high = bootstrap_ci(ratings)
+print(f"mean rating {np.mean(ratings):.2f}, 95% interval {low:.2f} to {high:.2f}")
+```
+
+## How many questions do you need?
+
+A rough rule for a pass or fail rate: to estimate it within plus or minus a margin, you need about `1.96² × p × (1 − p) ÷ margin²` questions.
+
+```python
+import math
+
+
+def questions_needed(rate=0.8, margin=0.05):
+    return math.ceil(1.96**2 * rate * (1 - rate) / margin**2)
+
+
+for margin in (0.10, 0.05, 0.03, 0.02):
+    print(f"to be within +/-{margin:.0%} at a rate near 80%: about {questions_needed(0.8, margin)} questions")
+```
+
+Measuring a rate to within five points takes a few hundred questions, not a few dozen. That does not mean a small test set is useless, only that you must not over-read it. Forty well-chosen questions will catch a feature that is badly broken, but they cannot tell you whether version B is two points better than version A.
+
+## Is B really better than A? Compare on the same questions
+
+When you compare two versions, run both on **the same** questions and look at the question-by-question differences. That removes the noise of easy and hard questions, and it is far more sensitive. Bootstrap the difference:
+
+```python
+import numpy as np
+
+
+def paired_difference_ci(a, b, n_boot=5000, level=0.95, seed=0):
+    """Interval for (B minus A), using the same questions for both."""
+    rng = np.random.default_rng(seed)
+    diff = np.asarray(b, dtype=float) - np.asarray(a, dtype=float)
+    means = [rng.choice(diff, size=len(diff), replace=True).mean() for _ in range(n_boot)]
+    tail = (1 - level) / 2 * 100
+    return float(diff.mean()), float(np.percentile(means, tail)), float(np.percentile(means, 100 - tail))
+
+
+def simulate(n, seed):
+    """Per-question results for two systems. B fixes about 10% of A's failures and breaks almost nothing."""
+    rng = np.random.default_rng(seed)
+    easy = rng.random(n)
+    a = (easy < 0.80).astype(int)
+    b = a.copy()
+    fixed = (a == 0) & (rng.random(n) < 0.25)
+    b[fixed] = 1
+    return a, b
+
+
+for n in (40, 400):
+    a, b = simulate(n, seed=4)
+    mean_diff, low, high = paired_difference_ci(a, b)
+    verdict = "real improvement" if low > 0 else "cannot tell"
+    print(f"{n:3d} questions: A {a.mean():.0%}, B {b.mean():.0%}, difference {mean_diff:+.1%} (95% interval {low:+.1%} to {high:+.1%}) -> {verdict}")
+```
+
+If the interval for the difference includes zero, **you cannot tell the versions apart**. That is not a failure, it is an honest result, and the right response is more questions, not a coin flip.
+
+## Language models vary from run to run
+
+Even on identical input, a model's answers change. So run each question several times and look at the **consistency**, not just the average:
+
+```python
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(7)
+RUNS = 5
+true_rates = rng.choice([0.05, 0.5, 0.95], size=20, p=[0.15, 0.25, 0.60])     # 20 questions of varying difficulty
+passes = rng.binomial(RUNS, true_rates)
+
+table = pd.DataFrame({"question": [f"q{i + 1:02d}" for i in range(20)], "passes_out_of_5": passes})
+table["status"] = np.select(
+    [table.passes_out_of_5 == RUNS, table.passes_out_of_5 == 0],
+    ["always right", "always wrong"],
+    default="flaky",
+)
+print(table["status"].value_counts().to_string())
+print(f"\naverage over all runs: {passes.sum() / (20 * RUNS):.0%}")
+print("flaky questions:", ", ".join(table.loc[table.status == "flaky", "question"]))
+```
+
+Three kinds of question tell you different things. **Always wrong** ones point to a missing capability or a bad test. **Always right** ones add little. **Flaky** ones are where changes to the prompt or settings matter, and where users will see inconsistent behavior. For anything where an occasional wrong answer is costly, report the share of questions that were right on **every** run, not only the average.
+
+## Look inside the average: slices
+
+An overall score can hide a group that is doing badly. **Slice** your results by anything that might matter: question type, language, customer type, document source, length. Show the count with each, because a slice with five questions tells you almost nothing:
+
+```python
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(11)
+categories = rng.choice(["billing", "technical", "account", "other"], size=300, p=[0.35, 0.40, 0.20, 0.05])
+rates = {"billing": 0.90, "technical": 0.84, "account": 0.78, "other": 0.60}
+correct = np.array([rng.random() < rates[c] for c in categories])
+results = pd.DataFrame({"category": categories, "correct": correct})
+
+
+def wilson(successes, n, z=1.96):
+    p = successes / n
+    d = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / d
+    margin = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / d
+    return centre - margin, centre + margin
+
+
+rows = []
+for category, group in results.groupby("category"):
+    low, high = wilson(group.correct.sum(), len(group))
+    rows.append({"category": category, "questions": len(group), "accuracy": round(group.correct.mean(), 2),
+                 "interval": f"{low:.2f} to {high:.2f}"})
+print(f"overall accuracy: {results.correct.mean():.0%}")
+print(pd.DataFrame(rows).sort_values("accuracy").to_string(index=False))
+```
+
+The overall figure looks fine, yet the weakest slice is clearly worse and has the widest interval. Slicing is how you find the group you are failing, and it leads straight into the next lesson on fairness.
+
+## Can you trust your grader?
+
+When a language model grades answers (the judge from the RAG course), its agreement with people is itself something to measure. Have a person label a sample, run the judge on the same sample, and compute how often they agree, **corrected for agreement by chance**. A common measure is Cohen's kappa:
+
+```python
+import numpy as np
+from sklearn.metrics import cohen_kappa_score, confusion_matrix
+
+rng = np.random.default_rng(5)
+human = (rng.random(60) < 0.75).astype(int)                  # 1 = answer was acceptable
+judge = human.copy()
+flip = rng.random(60) < 0.12                                 # the judge disagrees about 12% of the time
+judge[flip] = 1 - judge[flip]
+
+agreement = (human == judge).mean()
+kappa = cohen_kappa_score(human, judge)
+print(f"raw agreement {agreement:.0%}, kappa {kappa:.2f}")
+print("rows = human, columns = judge (0 = bad, 1 = good)")
+print(confusion_matrix(human, judge))
+```
+
+Agreement can look high just because most answers are good, which is what kappa corrects for. As a rough guide, a kappa above about 0.6 is substantial and above 0.8 is very strong. Also look at the **kinds** of disagreement: a judge that is too lenient hides problems, and one that is too strict wastes your time.
+
+## Other ways a score can mislead
+
+- **Leakage.** If test questions or answers appeared in your prompt, your examples or your documents, scores are inflated. Keep a held-out set you never tune against.
+- **Tuning to the test.** Every time you adjust the system after seeing test results, the test becomes a little less independent. Keep a final **untouched** set for the decision.
+- **Unrepresentative questions.** A tidy test set written by the builders is easier than real traffic. Sample real questions, including awkward ones.
+- **A metric that is not the goal.** A high "faithfulness" score does not mean the answers helped anyone.
+- **Averaging away the tail.** One harmful answer in a thousand may matter more than a one-point drop in the mean. Track the worst cases separately.
+- **Stale tests.** The world, your documents and the model change. Re-run and refresh.
+
+## A rule for ship decisions
+
+Decide the rule **before** you look at the results, and write it down:
+
+- Which measures matter, and the **minimum acceptable** value for each.
+- Which slices must not fall below a floor.
+- How much worse than the current version you will tolerate, if anything.
+- How the **interval**, not just the average, is used, for example "the lower end of the interval must be at least 85 percent".
+
+Lesson 6 turns this into a release gate in code.
+
+<Callout title="The habit to keep">
+  Every number you report should come with its sample size and an interval, and
+  every comparison should say whether it could be noise. It takes a few lines
+  of code and prevents the most common evaluation mistake.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Anthropic">
+  How to choose measures and build tests, with graders of different kinds.
+</Resource>
+
+<Resource kind="docs" title="Wilson score interval" href="https://en.wikipedia.org/wiki/Wilson_score_interval" source="Wikipedia">
+  The interval used above, with the formula and why it is preferred for proportions.
+</Resource>
+
+<Resource kind="docs" title="cohen_kappa_score" href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.cohen_kappa_score.html" source="scikit-learn">
+  Reference for the agreement measure, including how to interpret it.
+</Resource>
+
+<Resource kind="course" title="StatQuest" href="https://statquest.org/" source="Josh Starmer">
+  Clear visual explanations of the statistics used here and much more.
+</Resource>
+
+## Check yourself
+
+1. Take an evaluation you have run, such as the RAG test set. Compute the Wilson interval for its main score. What does the width tell you?
+2. Compare two prompts on the same 40 questions with the paired bootstrap. Can you tell them apart? How many questions would you need?
+3. Slice your results three ways. Which slice is worst, and how many questions does it have?

@@ -104,6 +104,13 @@ import L101 from "./chat-with-your-documents/better-retrieval.mdx";
 import L102 from "./chat-with-your-documents/generating-answers.mdx";
 import L103 from "./chat-with-your-documents/evaluating-rag.mdx";
 import L104 from "./chat-with-your-documents/capstone.mdx";
+import L105 from "./evaluate-and-use-ai-responsibly/evals-you-can-trust.mdx";
+import L106 from "./evaluate-and-use-ai-responsibly/fairness-and-bias.mdx";
+import L107 from "./evaluate-and-use-ai-responsibly/privacy-and-data.mdx";
+import L108 from "./evaluate-and-use-ai-responsibly/safety-and-red-teaming.mdx";
+import L109 from "./evaluate-and-use-ai-responsibly/oversight-and-governance.mdx";
+import L110 from "./evaluate-and-use-ai-responsibly/deciding-to-ship.mdx";
+import L111 from "./evaluate-and-use-ai-responsibly/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -213,4 +220,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "chat-with-your-documents/generating-answers": L102,
   "chat-with-your-documents/evaluating-rag": L103,
   "chat-with-your-documents/capstone": L104,
+  "evaluate-and-use-ai-responsibly/evals-you-can-trust": L105,
+  "evaluate-and-use-ai-responsibly/fairness-and-bias": L106,
+  "evaluate-and-use-ai-responsibly/privacy-and-data": L107,
+  "evaluate-and-use-ai-responsibly/safety-and-red-teaming": L108,
+  "evaluate-and-use-ai-responsibly/oversight-and-governance": L109,
+  "evaluate-and-use-ai-responsibly/deciding-to-ship": L110,
+  "evaluate-and-use-ai-responsibly/capstone": L111,
 };

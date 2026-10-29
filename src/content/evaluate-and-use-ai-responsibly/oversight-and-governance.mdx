@@ -1,0 +1,242 @@
+Testing finds problems. **Governance** decides who is responsible for fixing them, who can say yes or no, what gets written down, and what happens when something goes wrong. For a small tool it can be a page of notes and a clear owner. For a system that affects people's lives, it is a program with documentation, review and law behind it. This lesson covers human oversight, transparency, documentation, accountability and the main frameworks and regulations, scaled to how much is at stake. It is not legal advice.
+
+## Watch
+
+<Video id="zRMAvMSSSII" title="Human in the Loop Is Not a Governance Strategy for Agentic AI" channel="IBM Technology" minutes={4}>
+  A four-minute argument that putting a person in the loop is not enough unless that person can understand, question and override the system.
+</Video>
+
+<Video id="oWHCyLfUgUw" title="EU AI Act Explained: Everything You Must Know" channel="Deloitte Nederland" minutes={11}>
+  An 11-minute overview of how the EU AI Act sorts systems by risk. The Act's timeline has been amended since this video, so check the dates below and on the official page.
+</Video>
+
+## Human oversight that actually works
+
+"A human reviews it" sounds reassuring and often means nothing. People rubber-stamp what they are shown, especially when volume is high, the AI is usually right and the interface makes approval one click. Oversight works only if the person **can**, **knows how to** and **is expected to** disagree.
+
+Design choices:
+
+| Pattern | How it works | Good for |
+| --- | --- | --- |
+| **Human in the loop** | A person approves each decision before it takes effect | High stakes, low volume |
+| **Human on the loop** | The system acts, and a person monitors and can intervene | Medium stakes, higher volume |
+| **Sampling review** | A person reviews a random slice and the risky cases | Large volume with limited impact each |
+| **Escalation** | The system hands off when unsure or when the case is sensitive | Support, triage, advice |
+| **Appeal** | Affected people can ask for a human decision | Anything that affects people's rights or money |
+
+What makes a reviewer effective:
+
+- They see **the evidence**, not just the answer: the sources, the reasoning, the confidence, what the system did not know.
+- They have **time and authority** to say no, without being punished for slowing things down.
+- They are **trained** on how the system fails.
+- You **measure their agreement rate**. A reviewer who approves 99.9 percent of cases is probably not reviewing.
+- The system can be **overridden** and the override is logged and used to improve it.
+
+## Routing decisions to a person
+
+Rules decide which results need review. Always send the risky ones, and sample some of the rest so you can estimate the error rate you are not seeing:
+
+```python
+import random
+
+
+def review_reasons(decision, sample_rate=0.05, draw=random.random):
+    """Why a person should look at this decision. An empty list means it can go through."""
+    reasons = []
+    if decision["confidence"] < 0.70:
+        reasons.append("low confidence")
+    if decision["amount"] > 500:
+        reasons.append("high value")
+    if decision["category"] in {"complaint", "legal", "safety"}:
+        reasons.append("sensitive category")
+    if decision.get("customer_vulnerable"):
+        reasons.append("vulnerable customer")
+    if not reasons and draw() < sample_rate:
+        reasons.append("random quality sample")
+    return reasons
+
+
+decisions = [
+    {"id": 1, "confidence": 0.95, "amount": 40, "category": "billing"},
+    {"id": 2, "confidence": 0.55, "amount": 40, "category": "billing"},
+    {"id": 3, "confidence": 0.92, "amount": 900, "category": "billing"},
+    {"id": 4, "confidence": 0.90, "amount": 10, "category": "legal"},
+    {"id": 5, "confidence": 0.91, "amount": 20, "category": "technical", "customer_vulnerable": True},
+]
+rng = random.Random(3)
+for d in decisions:
+    reasons = review_reasons(d, draw=rng.random)
+    print(f"decision {d['id']}: {'REVIEW: ' + ', '.join(reasons) if reasons else 'automatic'}")
+
+sampled = sum(1 for _ in range(10_000) if review_reasons({"confidence": 0.95, "amount": 10, "category": "billing"}))
+print(f"clean cases sent for sampling review: {sampled / 10_000:.1%}")
+```
+
+## Keep a record you can audit
+
+When someone asks "why did it do that?" a year later, you need to be able to answer. Log each consequential decision with enough to reconstruct it, while respecting the privacy rules from lesson 3:
+
+```python
+import json
+import time
+
+
+def log_decision(path, *, decision_id, model, prompt_version, inputs_summary, output, sources, reviewer=None, overridden=False):
+    record = {
+        "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "decision_id": decision_id,
+        "model": model,
+        "prompt_version": prompt_version,
+        "inputs_summary": inputs_summary,          # a redacted summary, not the raw personal data
+        "output": output,
+        "sources": sources,
+        "reviewer": reviewer,
+        "overridden": overridden,
+    }
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+
+log_decision("decisions.jsonl", decision_id=1042, model="claude-opus-5-5", prompt_version="triage-v7",
+             inputs_summary="refund request, order <ORDER_1>", output="escalate to billing team",
+             sources=["billing#2"], reviewer="a.khan", overridden=False)
+print(open("decisions.jsonl", encoding="utf-8").read())
+```
+
+Record the **model version and prompt version**, because behavior changes when either does. Decide how long records are kept and who may read them.
+
+## Be transparent
+
+People have a right to know when they are dealing with a machine and what it can get wrong:
+
+- **Say it is AI**, in plain words, where people would otherwise assume it is a person.
+- **Show sources** and, where useful, the reasoning, so answers can be checked.
+- **State the limits**: what it is for, what it is not for, where it is unreliable.
+- **Explain consequential decisions** to the people they affect, in terms they can act on.
+- **Offer a human route** and a way to complain or appeal.
+- **Label AI-generated content** where the context or the law requires it.
+
+## Who is responsible?
+
+AI does not remove accountability, it makes it easier to lose. Name people, not teams:
+
+| Role | Responsible for |
+| --- | --- |
+| **Product owner** | The purpose, the risk decision and the final yes or no |
+| **Engineering lead** | The build, the tests, the monitoring |
+| **Data or model owner** | Data quality, model choices and their documentation |
+| **Security and privacy** | Threat model, data protection assessment, incident handling |
+| **Legal and compliance** | Which laws apply and whether the evidence meets them |
+| **Domain expert** | Whether the outputs are right in context |
+| **Reviewers** | Day-to-day oversight of decisions |
+
+When something goes wrong, "the model did it" is not an answer. A named owner is.
+
+## Document what you built
+
+Documentation is how you show your work, and how the next person understands what they inherit. A short **system card** for each AI feature, kept up to date, covers the essentials. Use this as a template:
+
+```text
+SYSTEM CARD: <name>, version <x>, owner <person>, date <date>
+
+Purpose        What it is for. What it is NOT for.
+Users          Who uses it, and who is affected by it.
+How it works   Model and version, prompts, data sources, tools, human review.
+Data           What it reads, what it stores, retention, where it goes.
+Evaluation     Test sets, results with intervals, results by slice.
+Fairness       Groups checked, metric chosen and why, results.
+Safety         Red-team results, defenses, known weaknesses.
+Privacy        Data-flow summary, assessment status, retention.
+Oversight      Who reviews what, how people appeal, how to switch it off.
+Limits         Known failures and situations where it should not be trusted.
+Risks          Top risks, ratings and mitigations (see the risk register).
+Changes        Date and reason for each significant change.
+Sign-off       Who approved it, and what conditions they set.
+```
+
+Related ideas you will see in the literature: **model cards** for models and **datasheets** for datasets, which document how they were made and how they perform.
+
+## Frameworks and rules
+
+You do not have to invent a program from scratch. Several widely used frameworks and laws give you structure:
+
+| Source | What it is | Use it for |
+| --- | --- | --- |
+| **NIST AI Risk Management Framework** | A voluntary framework with four functions: **Govern**, **Map**, **Measure**, **Manage**. A Generative AI Profile adds risks specific to models like the ones you use | A structure for identifying and managing AI risk |
+| **ISO/IEC 42001** | An international standard for an AI management system, published in 2023. It is a paid standard, and organizations can be certified against it | A formal management system, and an audit trail |
+| **OWASP Top 10 for LLM Applications** | A list of the main security risks for LLM applications | Security reviews (lesson 4) |
+| **EU AI Act** | A regulation that sorts AI systems by risk and sets obligations accordingly | Legal compliance if you serve people in the EU |
+| **Data protection law** (GDPR and others) | Rules on personal data, including limits on solely automated decisions | Anything touching personal data |
+
+### The EU AI Act in brief
+
+The Act takes a **risk-based approach**:
+
+- **Prohibited practices** are banned outright, such as certain manipulation, social scoring and some biometric uses. These have applied since February 2025.
+- **High-risk systems** are those used in sensitive areas such as employment, education, essential services, law enforcement and critical infrastructure. They face requirements on risk management, data quality, documentation, logging, human oversight, accuracy and security.
+- **Transparency obligations** apply to systems like chatbots, which must tell people they are dealing with AI, and to AI-generated content, which must be identifiable. These rules apply from August 2026.
+- **General-purpose AI models** have their own obligations for their providers, which have applied since August 2025.
+- **Minimal-risk** systems, such as spam filters, have no specific obligations.
+
+The **timeline has changed**: an amendment that entered into force in July 2026 postponed the application of the high-risk obligations for the sensitive-area uses to December 2027, and for AI built into regulated products to August 2028. Dates like these move, so as of late October 2026 treat this paragraph as a map and **check the European Commission's page for the current timeline** and take advice for your case. If you build on a general-purpose model, your obligations as a **deployer** or provider of a product differ from the model provider's.
+
+## Scale governance to the stakes
+
+A proportionate approach saves effort and still protects people:
+
+| Stakes | Example | Minimum |
+| --- | --- | --- |
+| **Low** | A tool that drafts internal meeting summaries | Owner, a short card, basic privacy check, easy way to report problems |
+| **Medium** | A support assistant that answers customers | Full evaluation, red team, privacy review, monitoring, escalation, system card |
+| **High** | Decisions about hiring, credit, health, benefits or safety | All of the above plus fairness testing, impact assessment, independent review, human decision-making, appeal, legal sign-off, and often a decision not to automate |
+
+Ask early: **if this goes wrong, who is hurt, how badly, and can it be undone?** The answer sets the level.
+
+## When something goes wrong
+
+Plan the response before you need it:
+
+1. **Detect**: monitoring, user reports and staff who feel able to raise concerns.
+2. **Contain**: a kill switch (lesson 6) to stop or limit the system quickly.
+3. **Assess**: who was affected, what data was involved, whether the law requires you to notify anyone and by when.
+4. **Fix and verify**: find the cause, repair it, add a test so it cannot return.
+5. **Learn**: a blameless review, shared widely, with written actions and owners.
+6. **Report**: tell affected people and regulators where required.
+
+<Callout title="Governance is a habit, not a document">
+  A system card nobody updates, or a review nobody can say no in, protects no
+  one. Keep it short, keep it current, and make sure someone with authority
+  reads it before every release.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  The framework's overview page, with the core document and related resources.
+</Resource>
+
+<Resource kind="docs" title="AI RMF Playbook" href="https://airc.nist.gov/airmf-resources/playbook/" source="NIST">
+  Suggested actions for each part of the framework, searchable and practical.
+</Resource>
+
+<Resource kind="docs" title="Generative AI Profile (NIST AI 600-1)" href="https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence" source="NIST">
+  How the framework applies to generative AI, with risks and actions specific to language models.
+</Resource>
+
+<Resource kind="docs" title="ISO/IEC 42001:2023" href="https://www.iso.org/standard/42001" source="ISO">
+  The AI management system standard. It is sold by ISO, but the summary page explains its scope.
+</Resource>
+
+<Resource kind="docs" title="AI Act: regulatory framework for AI" href="https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai" source="European Commission">
+  The official overview, risk categories and current application timeline.
+</Resource>
+
+<Resource kind="paper" title="Datasheets for Datasets" href="https://arxiv.org/abs/1803.09010" source="Gebru et al., arXiv">
+  A proposal for documenting how datasets were made, what they contain and how they should be used.
+</Resource>
+
+## Check yourself
+
+1. For an AI feature you know, say which oversight pattern fits, and write three review rules like the ones above.
+2. Fill in a system card for it. Which sections can you not complete yet, and what does that tell you?
+3. Pick the stakes level for the feature. What would move it up a level?

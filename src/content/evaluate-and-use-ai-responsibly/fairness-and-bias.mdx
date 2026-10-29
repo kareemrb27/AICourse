@@ -1,0 +1,249 @@
+An AI feature can work well on average and still work badly for some people. Sometimes that is an annoyance, such as a chatbot that understands one accent and not another. Sometimes it decides who gets a job interview, a loan or a medical follow-up. This lesson shows where unfairness comes from, how to measure it with real numbers, why there is no single definition of "fair", and what you can do about it. It is not legal advice, and in high-stakes areas you should involve legal and compliance specialists from the start.
+
+## Watch
+
+<Video id="gV0_raKR2UQ" title="Algorithmic Bias and Fairness: Crash Course AI #18" channel="CrashCourse" minutes={11}>
+  An 11-minute introduction to the common kinds of algorithmic bias and how they arise.
+</Video>
+
+<Video id="c2_ezuAnCrA" title="Definitions of Fairness in Machine Learning | Equal Opportunity, Equalized Odds & Disparate Impact" channel="A Data Odyssey" minutes={11}>
+  The three fairness definitions this lesson computes, explained with examples.
+</Video>
+
+## Go deeper (optional)
+
+<Video id="jIXIuYdnyyk" title="Tutorial: 21 fairness definitions and their politics" channel="Arvind Narayanan" minutes={55}>
+  A well-known talk on why so many mathematical definitions of fairness exist and why they conflict. Optional, and worth watching before you work on a real decision system.
+</Video>
+
+## Where unfairness comes from
+
+Bias does not come from one bad decision. It enters at many points:
+
+| Source | Example |
+| --- | --- |
+| **Historical bias in the data** | A model trained on past hiring decisions learns the preferences, and prejudices, of past managers |
+| **Under-representation** | Little training data for one language, accent, region or skin tone, so the model is simply less accurate for them |
+| **Label bias** | The "right answers" were written by people with their own blind spots, or measure the wrong thing (arrests instead of crimes) |
+| **Proxies** | Removing a sensitive column does not help if a postcode, a school or a name stands in for it |
+| **Measurement and design choices** | Defining "good employee" as "someone who is rarely absent" disadvantages people with health conditions |
+| **Deployment context** | A tool trained for one population is used on another |
+| **Feedback loops** | A system's decisions shape the data it learns from next time |
+| **Language model priors** | General models absorb stereotypes from their training text, which can show up in tone, assumptions or recommendations |
+
+The kinds of harm differ too. **Allocation** harms withhold something valuable (a loan, an interview). **Quality-of-service** harms mean the product works worse for some people. **Representational** harms reinforce stereotypes or demean. You test for each differently.
+
+## Fairness metrics, with real numbers
+
+Imagine a model that screens applications for a training programme. We have simulated 4,000 applicants in two groups, A and B, where each applicant is truly qualified or not, and the model chooses who to shortlist. Save this code and run it:
+
+```python
+import numpy as np
+import pandas as pd
+
+
+def make_applicants(n=4000, seed=2):
+    rng = np.random.default_rng(seed)
+    group = rng.choice(["A", "B"], size=n, p=[0.7, 0.3])
+    qualified = np.where(group == "A", rng.random(n) < 0.50, rng.random(n) < 0.45).astype(int)
+    noise = np.where(group == "A", 0.35, 0.60)          # the model's signal is noisier for group B
+    score = qualified * 0.6 + rng.normal(0, 1, n) * noise + 0.2
+    return pd.DataFrame({"group": group, "qualified": qualified, "score": score, "selected": (score > 0.5).astype(int)})
+
+
+def group_summary(d):
+    tp = ((d.selected == 1) & (d.qualified == 1)).sum()
+    fn = ((d.selected == 0) & (d.qualified == 1)).sum()
+    fp = ((d.selected == 1) & (d.qualified == 0)).sum()
+    tn = ((d.selected == 0) & (d.qualified == 0)).sum()
+    return pd.Series({
+        "people": len(d),
+        "accuracy": (tp + tn) / len(d),
+        "selected": d.selected.mean(),
+        "true_positive_rate": tp / (tp + fn),
+        "false_positive_rate": fp / (fp + tn),
+        "precision": tp / (tp + fp),
+    })
+
+
+def group_table(d):
+    return pd.DataFrame({name: group_summary(part) for name, part in d.groupby("group")}).T
+
+
+applicants = make_applicants()
+print(group_table(applicants).round(2).to_string())
+print("overall accuracy:", round((applicants.selected == applicants.qualified).mean(), 2))
+```
+
+Read the table carefully. The two groups are shortlisted at almost the same **rate**. But for group B the model is less accurate, **misses more qualified people** (a lower true positive rate) and **wrongly shortlists more unqualified people** (a higher false positive rate). The overall accuracy figure, dominated by the larger group, hides all of this.
+
+The common definitions measure different things:
+
+| Definition | Asks | Measure |
+| --- | --- | --- |
+| **Demographic parity** (selection rate) | Are groups chosen at the same rate? | Selected share by group |
+| **Disparate impact ratio** | How far apart are those rates? | Lower rate divided by higher rate |
+| **Equal opportunity** | Are qualified people in each group found equally often? | True positive rate by group |
+| **Equalized odds** | Are both kinds of error equal across groups? | True and false positive rates by group |
+| **Predictive parity** | Does a "yes" mean the same thing for each group? | Precision by group |
+
+```python
+import numpy as np
+import pandas as pd
+
+# applicants and group_summary come from the previous block
+by_group = group_table(applicants)
+
+ratio = by_group.selected.min() / by_group.selected.max()
+print(f"disparate impact ratio (selection rates): {ratio:.2f}")
+print("four-fifths rule of thumb (ratio of at least 0.80):", "passes" if ratio >= 0.8 else "FLAGGED")
+print(f"equal opportunity gap (true positive rate): {by_group.true_positive_rate.max() - by_group.true_positive_rate.min():.2f}")
+print(f"false positive rate gap:                    {by_group.false_positive_rate.max() - by_group.false_positive_rate.min():.2f}")
+```
+
+The **four-fifths rule** comes from United States employment guidance: if one group's selection rate is below 80 percent of the highest group's, that is treated as a sign of possible adverse impact. It is a screening heuristic, not a legal test, and this example **passes** it while still treating group B worse. That is the point: passing one metric does not mean a system is fair.
+
+## You cannot satisfy every definition at once
+
+When groups differ in their underlying rates, it is mathematically impossible to equalize all of the definitions together, except in trivial cases. So "make it fair" is not a technical setting. It is a **choice about which harms matter most** in your context, and that is a decision for people, with the people affected involved where possible:
+
+- A cancer screening should avoid **missing** disease in any group, so you care about equal true positive rates.
+- A tool that flags people for investigation should avoid **false accusations**, so you care about false positive rates.
+- A tool that allocates a scarce opportunity may care about selection rates.
+
+Write down which definition you chose and why. That reasoning is part of your documentation (lesson 5).
+
+## Adjusting the decision: a trade-off
+
+One mitigation is to use a different threshold per group. See what it does:
+
+```python
+import pandas as pd
+
+# applicants comes from the first block
+rows = []
+for threshold in (0.30, 0.40, 0.50, 0.60):
+    b = applicants[applicants.group == "B"]
+    chosen = (b.score > threshold)
+    qualified, unqualified = b.qualified == 1, b.qualified == 0
+    rows.append({
+        "threshold for group B": threshold,
+        "selected": round(chosen.mean(), 2),
+        "true_positive_rate": round((chosen & qualified).sum() / qualified.sum(), 2),
+        "false_positive_rate": round((chosen & unqualified).sum() / unqualified.sum(), 2),
+    })
+print(pd.DataFrame(rows).to_string(index=False))
+a = applicants[applicants.group == "A"]
+chosen = a.score > 0.5
+print("\ngroup A at 0.50: true positive rate %.2f, false positive rate %.2f" % (
+    (chosen & (a.qualified == 1)).sum() / (a.qualified == 1).sum(),
+    (chosen & (a.qualified == 0)).sum() / (a.qualified == 0).sum()))
+```
+
+Lowering group B's threshold finds more qualified people but also wrongly shortlists more unqualified ones. Every setting moves one kind of error to buy another. There is no free fix, and group-specific thresholds raise their own legal and ethical questions (in some places treating groups differently is itself restricted). The cleaner fixes address the **cause**: better and more representative data, better features, or a model that is equally accurate for everyone.
+
+## Testing a language model feature: counterfactual tests
+
+For a language model, you often cannot compute neat error rates by group, but you can run a **counterfactual test**. Take the same input, change only a detail that should not matter (a name, a pronoun, a nationality, a dialect), and see whether the output changes. If a support ticket gets a different priority because the writer is called Jamal instead of Emily, you have a problem.
+
+```python
+from collections import Counter
+
+
+def counterfactual_check(classify, templates, variants):
+    """Run each template with every variant. Flag templates whose answers differ across variants."""
+    report = []
+    for template in templates:
+        answers = {variant: classify(template.format(name=variant)) for variant in variants}
+        distinct = Counter(answers.values())
+        report.append({"template": template, "consistent": len(distinct) == 1, "answers": answers})
+    return report
+
+
+TEMPLATES = [
+    "Hi, my name is {name}. I was charged twice this month and need a refund.",
+    "My name is {name} and the VPN keeps disconnecting every ten minutes.",
+    "{name} here. I cannot log in to my account after the password reset.",
+]
+NAMES = ["Emily", "Jamal", "Mei", "Fatima", "Hans", "Priya"]
+
+
+# A deliberately unfair stand-in classifier, to prove the test can catch a problem.
+def biased_classifier(text):
+    if "refund" in text and ("Jamal" in text or "Fatima" in text):
+        return "low"
+    return "high" if "refund" in text else "medium"
+
+
+for result in counterfactual_check(biased_classifier, TEMPLATES, NAMES):
+    status = "consistent" if result["consistent"] else "DIFFERS BY NAME"
+    print(f"{status:16s} {result['template'][:55]}")
+    if not result["consistent"]:
+        print("   ", result["answers"])
+```
+
+To test a real feature, replace `biased_classifier` with a function that calls your model and returns its decision (for example a priority label from structured output). Then:
+
+- **Use many templates and many variants**, because a single example proves nothing.
+- **Count disagreements** and report them with an interval (lesson 1).
+- **Test what matters**: names, genders, ages, nationalities, dialects, disability mentions, and anything else relevant to your setting.
+- **Look at tone and content**, not only labels. A refund request may get the same label but a more suspicious reply.
+- **Do not stop at names.** Systems often respond to subtler cues such as writing style or spelling.
+
+Also measure **quality of service** with the slices from lesson 1: accuracy by language, by dialect, by region, by device. A feature that works for 95 percent of English speakers and 70 percent of Spanish speakers is unfair even if nothing in it is "biased" in the usual sense.
+
+## What to do about it
+
+- **Decide, with the right people,** which harm matters most and which metric you will track. Write it down.
+- **Fix the data first**: collect more and better data for under-served groups, review labels, and check that your test set represents everyone who will use the feature.
+- **Remove proxies carefully**, and remember that dropping a column rarely removes its influence.
+- **Keep a human in the loop** for consequential decisions, with real authority to override, and a way for people to appeal (lesson 5).
+- **Limit the use.** If a model is not good enough for some group or decision, do not use it there.
+- **Tell people** when an automated system is involved and what it can get wrong.
+- **Monitor after launch.** Fairness can drift as the population and data change.
+- **Consider not using AI at all** for decisions that seriously affect a person's rights, health, money or freedom, unless you can show it is safe, tested and lawful.
+
+## A note on sensitive data
+
+Testing fairness often needs information about sensitive characteristics such as ethnicity, health or religion, and collecting or storing it is regulated in many places and may need a legal basis. Talk to your privacy and legal teams before you collect it. Counterfactual testing with synthetic inputs, as above, avoids collecting real people's sensitive data at all.
+
+## The law is catching up
+
+Rules differ by country and change quickly, so check the current position for your case:
+
+- In the **United States**, employment guidance includes the four-fifths rule of thumb, and anti-discrimination laws apply to automated decisions as they do to human ones.
+- In the **European Union**, the AI Act treats AI used in areas such as recruitment, education and access to essential services as **high risk**, with obligations on data quality, testing, documentation and human oversight (lesson 5). Data protection law also gives people rights around significant decisions made solely by automated means.
+
+<Callout title="Bias is a property of the whole system">
+  The model, the data, the labels, the threshold, the process around it and the
+  people who use it all shape the outcome. Measure the outcome for each group,
+  not just the model's average accuracy.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Fairness and Machine Learning" href="https://fairmlbook.org/" source="Barocas, Hardt and Narayanan">
+  A free textbook on fairness in machine learning, covering the definitions, their limits and the social context.
+</Resource>
+
+<Resource kind="docs" title="Fairlearn" href="https://fairlearn.org/" source="Fairlearn">
+  An open-source library for assessing and reducing unfairness, with a user guide that explains the metrics.
+</Resource>
+
+<Resource kind="docs" title="Questions and Answers on the Uniform Guidelines on Employee Selection Procedures" href="https://www.eeoc.gov/laws/guidance/questions-and-answers-clarify-and-provide-common-interpretation-uniform-guidelines" source="US EEOC">
+  The source of the four-fifths rule of thumb, with its intended use and limits.
+</Resource>
+
+<Resource kind="paper" title="Model Cards for Model Reporting" href="https://arxiv.org/abs/1810.03993" source="Mitchell et al., arXiv">
+  A format for reporting how a model performs across groups and conditions.
+</Resource>
+
+<Resource kind="docs" title="AI Incident Database" href="https://incidentdatabase.ai/" source="Responsible AI Collaborative">
+  A searchable record of real-world AI harms. Browse it for examples relevant to your sector.
+</Resource>
+
+## Check yourself
+
+1. Run the fairness report with a different seed. Do the gaps change? What does that tell you about testing on small samples?
+2. For an AI feature you know, say which fairness definition matters most and why, and which harm you most want to avoid.
+3. Write five counterfactual templates for a feature at your workplace, and the variants you would test. What would a failure look like?

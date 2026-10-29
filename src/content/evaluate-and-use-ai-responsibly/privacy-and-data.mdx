@@ -1,0 +1,208 @@
+Every AI feature moves data: your users' questions, your documents, logs, examples and results. Where that data goes, who can see it and how long it lives are decisions you make, and a mistake can expose people's personal information, breach a contract or break the law. This lesson gives you a practical way to map data flows, collect less, remove personal details with code you can test, check whether a dataset can be traced back to individuals, and manage retention. It is not legal advice. For anything involving personal data in a regulated setting, involve your privacy or legal team early.
+
+## Watch
+
+<Video id="oYJD_fE8a1U" title="Everything You Need to Know About LLMs and Data Privacy in 6 Minutes" channel="Johannes Jolkkonen | Funktio AI" minutes={6}>
+  A six-minute overview of where privacy risks arise when you use language models, and the main ways of managing them.
+</Video>
+
+<Video id="Q0DNOIGUzMc" title="k-anonymity explained" channel="Security and Privacy Academy" minutes={4}>
+  A four-minute explanation of k-anonymity, the idea behind the dataset check in this lesson.
+</Video>
+
+## Map where the data goes
+
+You cannot protect data you have not traced. For your feature, draw the path of the data from the person to every place it ends up, and fill in a table:
+
+| Stage | Questions to answer |
+| --- | --- |
+| **Collection** | What do users type or upload? Might it contain personal, confidential or regulated data? Were they told? |
+| **Processing** | Does it go to a model provider? Which one, in which region, under what terms? Is it used for training? |
+| **Storage** | Are prompts, answers, embeddings or logs stored? Where, for how long, who can read them? |
+| **Third parties** | Which libraries, vendors, analytics or monitoring tools see it? |
+| **Output** | Could the answer reveal someone else's data? Where is it displayed or sent? |
+| **Deletion** | Can you delete one person's data everywhere, including logs and backups? |
+
+For each model provider, read the **data terms** that apply to the plan you actually use: whether inputs are retained, for how long, whether they are used to improve models, and what controls you have. Consumer plans, business plans and API access often differ. Record your findings and the date, because terms change.
+
+## Collect and send less
+
+**Data minimization** is the most effective privacy control, because data you never collect cannot leak.
+
+- Send the model only what the task needs. To classify a ticket, you rarely need the customer's full name, address and card number.
+- **Remove or replace** personal details before text leaves your system, and restore them afterwards if you must.
+- Keep **identifiers out of prompts** when an internal ID would do.
+- Do not put secrets (keys, passwords) in prompts, documents or logs.
+- Decide how long you keep each kind of data, and delete it on schedule.
+- Prefer **processing on your own systems** for the most sensitive data, if that is feasible.
+
+## Redact personal details with code
+
+A small redaction function strips the obvious personal data and replaces it with labeled placeholders, so the text stays readable and you can restore it afterwards. Here is a tested starting point:
+
+```python
+import re
+
+PATTERNS = [
+    ("KEY", re.compile(r"sk-[A-Za-z0-9_\-]{16,}")),
+    ("EMAIL", re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")),
+    ("CARD", re.compile(r"\b(?:\d[ -]?){12,18}\d\b")),
+    ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
+    ("PHONE", re.compile(r"(?<![\w-])\+?\d[\d ()-]{7,}\d(?![\w-])")),
+]
+
+
+def luhn_ok(digits):
+    """Checksum used by payment cards, so random long numbers are not mistaken for cards."""
+    total, flip = 0, False
+    for char in reversed(digits):
+        d = int(char)
+        if flip:
+            d = d * 2 - 9 if d * 2 > 9 else d * 2
+        total += d
+        flip = not flip
+    return total % 10 == 0
+
+
+def redact(text):
+    """Return (clean text, mapping from placeholder to original value)."""
+    mapping = {}
+
+    def replacement(kind):
+        def swap(match):
+            value = match.group(0)
+            if kind == "CARD" and not luhn_ok(re.sub(r"\D", "", value)):
+                return value
+            for placeholder, original in mapping.items():
+                if original == value:
+                    return placeholder
+            placeholder = f"<{kind}_{sum(1 for p in mapping if p.startswith('<' + kind)) + 1}>"
+            mapping[placeholder] = value
+            return placeholder
+        return swap
+
+    for kind, pattern in PATTERNS:
+        text = pattern.sub(replacement(kind), text)
+    return text, mapping
+
+
+def restore(text, mapping):
+    for placeholder, original in mapping.items():
+        text = text.replace(placeholder, original)
+    return text
+
+
+sample = ("Hi, I'm Jane Doe (jane.doe@example.com, +44 20 7946 0958). "
+          "Card 4111 1111 1111 1111 was charged twice, order 4821733. My SSN is 123-45-6789. "
+          "Please reply to jane.doe@example.com.")
+clean, mapping = redact(sample)
+print(clean)
+print(mapping)
+print("restored correctly:", restore(clean, mapping) == sample)
+```
+
+Look at what it does **not** catch: the name "Jane Doe" is still there, and so is anything that does not match a pattern, such as a street address or a medical detail. Patterns find structured identifiers. Names, addresses and free-text details need other tools, such as named-entity recognition (the open-source Presidio library is a common starting point) plus review. Treat redaction as one layer that **reduces** exposure, never as proof that text is clean. Test your redactor on realistic samples, keep a list of what it misses, and run it before data is logged or stored as well as before it is sent.
+
+## Can a dataset be traced back to a person?
+
+Removing names does not make a dataset anonymous. A combination of ordinary details, such as department, age and office, can single out one person. Those details are called **quasi-identifiers**. A dataset is **k-anonymous** if every combination of them is shared by at least k people. This code checks a simulated staff dataset:
+
+```python
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(4)
+n = 300
+staff = pd.DataFrame({
+    "department": rng.choice(["Engineering", "Support", "Sales", "Finance", "Legal", "Facilities"], n, p=[0.35, 0.25, 0.2, 0.1, 0.05, 0.05]),
+    "age": rng.integers(22, 65, n),
+    "site": rng.choice(["Berlin", "Lisbon", "Dublin", "Oslo"], n),
+    "salary_band": rng.choice(["A", "B", "C", "D"], n),          # the sensitive value
+})
+
+
+def smallest_group(df, columns):
+    """Size of the smallest group, and the share of people in a group smaller than 5."""
+    sizes = df.groupby(columns)[columns[0]].transform("size")
+    return int(sizes.min()), float((sizes < 5).mean())
+
+
+columns = ["department", "age", "site"]
+k, risky = smallest_group(staff, columns)
+print(f"raw data:            smallest group {k:2d}; {risky:4.0%} of people in a group smaller than 5")
+
+step1 = staff.copy()
+step1["age"] = (step1["age"] // 10 * 10).astype(str) + "s"                                   # exact age -> decade
+step1["site"] = step1["site"].map({"Berlin": "EU-Central", "Oslo": "EU-North", "Lisbon": "EU-South", "Dublin": "EU-West"})
+k, risky = smallest_group(step1, columns)
+print(f"age decades, regions: smallest group {k:2d}; {risky:4.0%} of people in a group smaller than 5")
+
+step2 = staff.copy()
+step2["age"] = pd.cut(step2["age"], [0, 34, 49, 100], labels=["under 35", "35-49", "50+"]).astype(str)
+step2["department"] = step2["department"].where(step2["department"].isin(["Engineering", "Support", "Sales"]), "Other")
+step2["site"] = step2["site"].map({"Berlin": "Central", "Oslo": "North", "Lisbon": "South", "Dublin": "North"})
+k, risky = smallest_group(step2, columns)
+print(f"wider bands, merged:  smallest group {k:2d}; {risky:4.0%} of people in a group smaller than 5")
+
+step3 = step2.drop(columns=["site"])
+k, risky = smallest_group(step3, ["department", "age"])
+print(f"site removed:         smallest group {k:2d}; {risky:4.0%} of people in a group smaller than 5")
+```
+
+A group of size one means a person can be identified by their department, age and site, and then their salary band is revealed. **Generalizing** (age to a decade, offices to regions, small departments merged, wider age bands) enlarges the groups, but notice how much it takes: even after two rounds some people are still in small groups, and it took **removing a column** to reach a safe size. Each step costs detail, so the aim is to keep just enough for the purpose. Two cautions: k-anonymity does not protect against everyone in a group sharing the same sensitive value, and combining your dataset with others can re-identify people. For anything truly sensitive, ask specialists about stronger methods.
+
+## Privacy risks specific to AI systems
+
+- **Memorization and leakage.** Models can reproduce text from their training data, and a system that retrieves documents can surface personal data to someone who should not see it. Apply access control before retrieval (RAG course).
+- **Prompt and log retention.** Prompts often contain more personal data than anyone intended, and logs outlive the conversation. Redact before logging and set an expiry.
+- **Inference.** A model can guess things people did not tell it, such as health or location, from innocent details.
+- **Memory features.** An assistant that remembers users across sessions stores personal data. Tell users, let them view and delete it, and scope it per user.
+- **Embeddings are not anonymous.** A stored vector can sometimes be partly reversed, and it still belongs to a person's data when it is derived from it. Treat the vector store like the source documents.
+- **Training on user data.** Using customer data to train or tune a model needs a clear basis and often consent. Do not do it casually.
+
+## Principles to apply, and the law
+
+Privacy laws differ, but most share a core. The EU's General Data Protection Regulation, for instance, rests on principles such as **lawfulness, fairness and transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity and confidentiality, and accountability**. It also gives people rights to access, correct and delete their data, requires a **data protection impact assessment** for high-risk processing, and restricts decisions based solely on automated processing that significantly affect people. Other regions have their own rules.
+
+Practical consequences for an AI feature:
+
+- Know your **legal basis** for processing each kind of personal data.
+- Use data **only for the purpose** you told people about.
+- Be able to **find and delete** a person's data, including in logs and any datasets derived from it.
+- Do an **impact assessment** before launching anything that touches sensitive data or affects people significantly.
+- Have a **breach plan**: who decides, who is told and how fast.
+- Keep **records** of what you process and why.
+
+<Callout title="A good default">
+  Assume everything a user types could be personal, send the least you can,
+  redact before storing, keep it for the shortest useful time, and be able to
+  delete it.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Guidance on AI and data protection" href="https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/" source="UK Information Commissioner's Office">
+  Practical regulator guidance on applying data protection principles to AI systems.
+</Resource>
+
+<Resource kind="docs" title="General Data Protection Regulation" href="https://gdpr-info.eu/" source="gdpr-info.eu">
+  A searchable copy of the regulation's articles and recitals.
+</Resource>
+
+<Resource kind="docs" title="Presidio" href="https://microsoft.github.io/presidio/" source="Microsoft">
+  An open-source toolkit for detecting and anonymizing personal data in text.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  Includes sensitive information disclosure, a key risk for AI features.
+</Resource>
+
+<Resource kind="docs" title="Anthropic Usage Policy" href="https://www.anthropic.com/legal/aup" source="Anthropic">
+  What a model provider allows you to build and send. Read the terms for any provider you use.
+</Resource>
+
+## Check yourself
+
+1. Draw the data-flow table for an AI feature you know. Where does personal data go, and which row worries you most?
+2. Run `redact` on ten realistic messages from your own work (with real details removed first). What does it miss?
+3. Check a dataset you work with for k-anonymity on three quasi-identifiers. What is the smallest group, and how would you enlarge it?

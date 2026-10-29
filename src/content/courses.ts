@@ -199,6 +199,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "evaluate-and-use-ai-responsibly",
+    title: "Evaluate and Use AI Responsibly",
+    track: "Stage 2 · Build",
+    level: "Intermediate",
+    summary:
+      "Test an AI feature honestly and decide whether to ship it. Put intervals on evaluation scores, test for unfairness, protect personal data, red-team for attacks, design human oversight and governance, and make a documented ship or no-ship decision.",
+    prerequisites: [
+      "Comfortable with Python and pandas, and with the evaluation ideas from Build with LLM APIs",
+      "Recommended: Chat with Your Documents, whose assistant is a good system to review",
+      "Everything runs locally with free libraries. Calls to the Claude API are optional",
+    ],
+    outcomes: [
+      "Report evaluation results with confidence intervals, compare versions fairly and find weak slices",
+      "Measure fairness with several definitions and run counterfactual tests on language model features",
+      "Map data flows, redact personal data with tested code and check a dataset for re-identification risk",
+      "Build a repeatable red-team suite and measure attack success with intervals",
+      "Design human oversight, documentation and accountability, and know the main frameworks and rules",
+      "Write launch gates, run a staged rollout with a kill switch, and decide when not to ship",
+    ],
+    lessons: [
+      { slug: "evals-you-can-trust", title: "Evaluation you can trust", summary: "Intervals, run-to-run noise, paired comparisons, slices and judge agreement.", minutes: 90 },
+      { slug: "fairness-and-bias", title: "Fairness and bias", summary: "Where bias comes from, fairness metrics with real numbers and counterfactual tests.", minutes: 90 },
+      { slug: "privacy-and-data", title: "Privacy and data protection", summary: "Data-flow maps, redaction, re-identification risk and retention.", minutes: 90 },
+      { slug: "safety-and-red-teaming", title: "Safety and red teaming", summary: "Threat models, a re-runnable attack suite, defenses and measuring them.", minutes: 90 },
+      { slug: "oversight-and-governance", title: "Oversight and governance", summary: "Human oversight, audit records, system cards, frameworks and the EU AI Act.", minutes: 90 },
+      { slug: "deciding-to-ship", title: "Deciding to ship", summary: "Risk registers, launch gates, staged rollout, kill switches and when not to ship.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: a responsible AI review", summary: "Review a system end to end and defend a ship or no-ship decision.", minutes: 240 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

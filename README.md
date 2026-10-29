@@ -25,6 +25,7 @@ Live site: https://iaicourses.com
 | Explore Meta-Harness Architectures for AI Agents | Expert | 7 lessons, first draft |
 | Architect Agentic Systems for Financial Workflows | Beginner | 7 lessons, first draft |
 | Analyze AI-Generated Code for Quality and Security | Intermediate | 7 lessons, first draft |
+| Evaluate and Use AI Responsibly | Intermediate | 7 lessons, first draft |
 
 ## Learning path
 
