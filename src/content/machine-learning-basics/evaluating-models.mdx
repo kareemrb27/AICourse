@@ -1,0 +1,252 @@
+A model that is "80 percent accurate" sounds good until you learn that a model which never predicts a failure scores 75 percent on the same data. Evaluation is how you tell a useful model from a lucky or useless one, and it is the skill that most separates careful practitioners from careless ones.
+
+## Watch
+
+<Video id="Kdsp6soqA7o" title="Machine Learning Fundamentals: The Confusion Matrix" channel="StatQuest with Josh Starmer" minutes={7}>
+  The clearest short explanation of the confusion matrix, which underlies precision, recall and most classification measures.
+</Video>
+
+<Video id="fSytzGwwBVw" title="Machine Learning Fundamentals: Cross Validation" channel="StatQuest with Josh Starmer" minutes={6}>
+  Why one train and test split can mislead, and how cross-validation gives a steadier estimate.
+</Video>
+
+## The accuracy trap
+
+```python
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+baseline = DummyClassifier(strategy="most_frequent").fit(X_train, y_train)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X_train, y_train)
+
+print("baseline accuracy:", round(baseline.score(X_test, y_test), 3))
+print("model accuracy:   ", round(model.score(X_test, y_test), 3))
+```
+
+When one outcome is rare, accuracy hides the thing you care about. A server-failure model that never raises an alarm is "75 percent accurate" and worthless. You need measures that look at the rare class directly.
+
+## The confusion matrix
+
+For a yes or no prediction, there are four possible outcomes:
+
+| | Predicted: will fail | Predicted: will not fail |
+| --- | --- | --- |
+| **Actually failed** | True positive (caught it) | False negative (missed it) |
+| **Actually fine** | False positive (false alarm) | True negative (correctly quiet) |
+
+```python
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X_train, y_train)
+
+pred = model.predict(X_test)
+tn, fp, fn, tp = confusion_matrix(y_test, pred).ravel()
+print(f"caught {tp}, missed {fn}, false alarms {fp}, correctly quiet {tn}")
+print(classification_report(y_test, pred, target_names=["fine", "failed"]))
+```
+
+## Precision, recall and F1
+
+- **Precision**: of the servers the model flagged, what share really failed? Low precision means many false alarms and an annoyed on-call team.
+- **Recall**: of the servers that really failed, what share did the model catch? Low recall means missed outages.
+- **F1**: a single number balancing the two. Useful for comparing models, but it hides which kind of error you are making.
+
+Neither is "the" right measure. **Which mistake is more expensive decides the target.** Missing a failing database is worse than a false alarm, so you favor recall. Paging someone at 3 a.m. for nothing is costly too, so you cannot ignore precision.
+
+## Turning the dial: thresholds
+
+Most classifiers produce a probability, and `predict` uses 0.5 as the cut-off. You can move it:
+
+```python
+import numpy as np
+from sklearn.metrics import precision_score, recall_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X_train, y_train)
+
+proba = model.predict_proba(X_test)[:, 1]
+for threshold in [0.2, 0.35, 0.5, 0.65]:
+    pred = (proba >= threshold).astype(int)
+    p = precision_score(y_test, pred)
+    r = recall_score(y_test, pred)
+    print(f"threshold {threshold:.2f}: flagged {pred.sum():3d} servers, precision {p:.2f}, recall {r:.2f}")
+```
+
+Lower the threshold and you catch more failures but raise more false alarms. This is the real decision: not "which model", but "what trade-off does the business want".
+
+## Put a price on mistakes
+
+Make the trade-off explicit with rough costs:
+
+```python
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X_train, y_train)
+proba = model.predict_proba(X_test)[:, 1]
+
+COST_MISSED_FAILURE = 5     # an outage we did not prevent
+COST_FALSE_ALARM = 1        # an unnecessary check
+
+best = None
+for threshold in np.arange(0.05, 0.96, 0.05):
+    pred = proba >= threshold
+    fn = int(((~pred) & (y_test == 1)).sum())
+    fp = int((pred & (y_test == 0)).sum())
+    cost = COST_MISSED_FAILURE * fn + COST_FALSE_ALARM * fp
+    if best is None or cost < best[1]:
+        best = (threshold, cost, fn, fp)
+
+print(f"cheapest threshold {best[0]:.2f}: cost {best[1]} ({best[2]} missed, {best[3]} false alarms)")
+print("cost of never raising an alarm:", COST_MISSED_FAILURE * int(y_test.sum()))
+print("cost of flagging every server:", COST_FALSE_ALARM * int((y_test == 0).sum()))
+```
+
+The costs here are made up. In real work, ask the people who run the service for honest numbers, because the best threshold depends on them.
+
+## A threshold-free measure: ROC AUC
+
+```python
+from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)).fit(X_train, y_train)
+
+print("ROC AUC:", round(roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]), 3))
+```
+
+ROC AUC measures how well the model ranks risky servers above safe ones, whatever threshold you choose. A value of 0.5 is chance and 1.0 is perfect. It is good for comparing models, and then you still pick a threshold using costs.
+
+## Measuring numbers (regression)
+
+```python
+import numpy as np
+from sklearn.dummy import DummyRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+X, y = df[["cpu_avg", "memory_avg", "error_rate"]], df["response_ms"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+mean_model = DummyRegressor(strategy="mean").fit(X_train, y_train)
+reg = LinearRegression().fit(X_train, y_train)
+
+for name, m in [("always guess the average", mean_model), ("linear regression", reg)]:
+    pred = m.predict(X_test)
+    mae = mean_absolute_error(y_test, pred)
+    rmse = np.sqrt(mean_squared_error(y_test, pred))
+    print(f"{name:26s} MAE {mae:5.1f} ms, RMSE {rmse:5.1f} ms, R2 {r2_score(y_test, pred):.2f}")
+```
+
+- **MAE**: the average size of the error, in the units of the answer. Easy to explain.
+- **RMSE**: like MAE but punishes large errors more.
+- **R squared**: how much better than guessing the average. Again, always compare with a baseline.
+
+## Cross-validation: a steadier estimate
+
+One split can be lucky or unlucky. **Cross-validation** splits the data into folds (for example five), trains on four and tests on the fifth, rotates, and averages.
+
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+scores = cross_val_score(model, X, y, cv=cv, scoring="roc_auc")
+print("scores per fold:", scores.round(3))
+print(f"mean {scores.mean():.3f}, spread (std) {scores.std():.3f}")
+```
+
+Report the mean **and** the spread. If the spread is large, differences between models smaller than that spread mean nothing. Using a pipeline inside cross-validation keeps scaling inside each fold, which prevents leakage.
+
+## A checklist before you trust a number
+
+- Is there a **baseline**, and does the model clearly beat it?
+- Was the **test set** touched only once, at the end?
+- Are the measures **matched to the cost** of each kind of mistake?
+- Did you check **both** precision and recall, not just accuracy?
+- Is the result **stable** across folds?
+- Could any feature be **leaking** the answer?
+- Will the data in real use look like the data you tested on?
+
+<Callout title="Say what the number means">
+  "The model catches 7 out of 10 failures, and for every real failure it
+  raises about two false alarms" is a result a manager can act on. "It is 80
+  percent accurate" is not.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Metrics and scoring" href="https://scikit-learn.org/stable/modules/model_evaluation.html" source="scikit-learn">
+  Reference for every metric in this lesson, with guidance on choosing one.
+</Resource>
+
+<Resource kind="docs" title="Cross-validation" href="https://scikit-learn.org/stable/modules/cross_validation.html" source="scikit-learn">
+  How cross-validation works and the variants for time series and grouped data.
+</Resource>
+
+<Resource kind="course" title="Machine Learning Crash Course: Classification" href="https://developers.google.com/machine-learning/crash-course" source="Google for Developers">
+  Free lessons on accuracy, precision, recall and thresholds, with interactive exercises.
+</Resource>
+
+<Resource kind="docs" title="Rules of Machine Learning" href="https://developers.google.com/machine-learning/guides/rules-of-ml" source="Google for Developers">
+  Practical advice from experienced engineers, including starting simple and measuring the right thing.
+</Resource>
+
+## Check yourself
+
+1. Compute precision and recall by hand from a confusion matrix of your own, and check them against scikit-learn.
+2. Choose costs for missed failures and false alarms that fit a service you know. Where does the best threshold land?
+3. Explain to a non-technical colleague why a model that is 75 percent accurate can be useless.

@@ -1,0 +1,190 @@
+The central difficulty in machine learning is that a model can get very good at the examples it has seen and bad at everything else. This lesson explains that failure, how to detect it, and the practical tools for building models that generalize.
+
+## Watch
+
+<Video id="EuBBz3bI-aA" title="Machine Learning Fundamentals: Bias and Variance" channel="StatQuest with Josh Starmer" minutes={7}>
+  A seven-minute explanation of overfitting and underfitting through bias and variance, from the same channel as the earlier videos.
+</Video>
+
+## Underfitting and overfitting
+
+- **Underfitting**: the model is too simple to capture the pattern. It does poorly on training data and on new data. Fix: a richer model, better features.
+- **Overfitting**: the model is so flexible that it memorizes quirks and noise in the training data. It does very well on training data and noticeably worse on new data. Fix: simplify, constrain, or get more data.
+
+In statistics terms, an underfit model has high **bias** (it is systematically wrong), and an overfit model has high **variance** (it changes a lot with small changes in the training data). Good models balance the two.
+
+## See it happen
+
+A decision tree can keep splitting until every training example has its own leaf. Watch what happens as you allow deeper trees:
+
+```python
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+print("depth  train  test")
+for depth in [1, 2, 3, 5, 8, 12, None]:
+    tree = DecisionTreeClassifier(max_depth=depth, random_state=0).fit(X_train, y_train)
+    print(f"{str(depth):5s}  {tree.score(X_train, y_train):.3f}  {tree.score(X_test, y_test):.3f}")
+```
+
+Read the table from top to bottom. Training accuracy keeps climbing toward 1.0, while test accuracy peaks early and then drops or stalls. **The gap between training and test performance is the sign of overfitting.** Always report both.
+
+## How to fight overfitting
+
+| Technique | Idea |
+| --- | --- |
+| **More data** | The most reliable cure: harder to memorize a larger, more varied set |
+| **Simpler model** | Fewer parameters or shallower trees |
+| **Regularization** | Penalize complexity so the model prefers simple explanations |
+| **Fewer, better features** | Remove noisy or irrelevant columns |
+| **Early stopping** | Stop training when validation performance stops improving |
+| **Ensembles** | Average many models so their individual quirks cancel out |
+| **Cross-validation** | Choose settings on held-out data, not training data |
+
+## Regularization
+
+Logistic regression has a setting `C`: smaller values mean stronger regularization, which keeps the weights small.
+
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+for C in [0.001, 0.01, 0.1, 1, 100]:
+    m = make_pipeline(StandardScaler(), LogisticRegression(C=C, max_iter=1000)).fit(X_train, y_train)
+    print(f"C={C:<7} train {m.score(X_train, y_train):.3f}  test {m.score(X_test, y_test):.3f}")
+```
+
+## Tuning settings the honest way
+
+Settings you choose before training, such as tree depth or `C`, are called **hyperparameters**. Choose them with cross-validation on the training data, never by peeking at the test set.
+
+```python
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+search = GridSearchCV(
+    DecisionTreeClassifier(random_state=0),
+    param_grid={"max_depth": [2, 3, 4, 5, 6, 8], "min_samples_leaf": [1, 5, 20]},
+    cv=5,
+    scoring="roc_auc",
+)
+search.fit(X_train, y_train)          # only the training data is used to choose
+
+print("best settings:", search.best_params_)
+print("cross-validated AUC:", round(search.best_score_, 3))
+print("final check on the untouched test set (AUC):", round(search.score(X_test, y_test), 3))
+```
+
+The final line is the only time the test set is used. If you tune repeatedly against the test set, it quietly becomes part of training and your estimate becomes optimistic.
+
+## Ensembles: many weak models, one strong one
+
+A **random forest** trains many different trees on random samples of the data and averages their votes. **Gradient boosting** builds trees one after another, each correcting the previous ones' mistakes. On tables of data, these are often the most accurate models you can get with little tuning.
+
+```python
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+models = {
+    "logistic regression": make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000)),
+    "single deep tree": DecisionTreeClassifier(random_state=0),
+    "random forest": RandomForestClassifier(n_estimators=200, min_samples_leaf=5, random_state=0),
+    "gradient boosting": GradientBoostingClassifier(random_state=0),
+}
+for name, m in models.items():
+    m.fit(X_train, y_train)
+    auc = roc_auc_score(y_test, m.predict_proba(X_test)[:, 1])
+    print(f"{name:20s} test AUC {auc:.3f}")
+```
+
+Do not expect the fancy model to win. Here plain logistic regression comes out on top, and that is no accident: we generated this data from a logistic-style rule, so the simple model matches it exactly. On messy real data, forests and boosting often win. Either way, the lesson is the same: **try a simple model and a tree ensemble, and compare them on held-out data.** The single deep tree is the loser, a clear example of overfitting.
+
+## What did the model learn?
+
+```python
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import permutation_importance
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+forest = RandomForestClassifier(n_estimators=200, min_samples_leaf=5, random_state=0).fit(X_train, y_train)
+result = permutation_importance(forest, X_test, y_test, n_repeats=10, random_state=0, scoring="roc_auc")
+print(pd.Series(result.importances_mean, index=features).sort_values(ascending=False).round(3))
+```
+
+Permutation importance shuffles one feature at a time and measures how much performance drops. The top three here, errors, patch age and disk use, match the strongest parts of the rule we built in. CPU had only a small effect, and `memory_avg` and `uptime_days`, which had none, come out near zero. Importance tells you what the model *uses*, not what *causes* failures. Treat it as a clue and check it with someone who knows the system.
+
+## Habits that prevent overfitting in practice
+
+- Keep a **test set** you do not touch until the end.
+- Compare **training and validation scores** every time.
+- Start with a **simple model** and add complexity only when it earns its place.
+- Change **one thing at a time**, and write down what you tried.
+- **Be suspicious** of any result that is much better than expected.
+
+<Callout title="The same idea scales up">
+  Large language models are also trained to avoid overfitting: they are
+  evaluated on text they were not trained on. The held-out test is the
+  foundation of every honest claim about AI performance.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Underfitting vs. overfitting" href="https://scikit-learn.org/stable/auto_examples/model_selection/plot_underfitting_overfitting.html" source="scikit-learn">
+  A worked example with plots showing a model that is too simple, about right, and too flexible.
+</Resource>
+
+<Resource kind="docs" title="Ensemble methods" href="https://scikit-learn.org/stable/modules/ensemble.html" source="scikit-learn">
+  Reference for random forests and gradient boosting, including their main settings.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Intro to Machine Learning" href="https://www.kaggle.com/learn/intro-to-machine-learning" source="Kaggle">
+  Its underfitting and overfitting lesson is a hands-on companion to this one.
+</Resource>
+
+<Resource kind="docs" title="Machine Learning Glossary" href="https://developers.google.com/machine-learning/glossary" source="Google for Developers">
+  Definitions of overfitting, regularization, hyperparameters and other terms from this lesson.
+</Resource>
+
+## Check yourself
+
+1. Run the depth table with a different `random_state` in the split. Does the best depth move? What does that say about trusting one split?
+2. Explain overfitting to a colleague using an analogy that has nothing to do with computers.
+3. Why is it wrong to pick the best hyperparameters by looking at test-set scores?

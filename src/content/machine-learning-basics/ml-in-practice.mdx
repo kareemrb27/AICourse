@@ -1,0 +1,146 @@
+Machine learning is the part of AI that learns patterns from examples instead of following rules you wrote by hand. Most of the AI products you use, from spam filters to fraud alerts to the language models in stage 2, rest on the same ideas you will meet here. This course teaches those ideas with small, honest experiments, using the Python and pandas skills you already have.
+
+## Watch
+
+<Video id="W01tIRP_Rqs" title="Supervised vs. Unsupervised Learning" channel="IBM Technology" minutes={7}>
+  A seven-minute explanation of the two main families of machine learning. Watch it before the lesson, then compare it with the table below.
+</Video>
+
+## What "learning from examples" means
+
+A traditional program is rules plus data in, answers out. A machine learning program flips that: you give it **data with the answers** and it works out the rules.
+
+- **Rules approach**: "If disk use is over 90 percent and the error rate is above 3, raise an alert." You wrote the rule and you must keep it up to date.
+- **Learning approach**: you show the system thousands of past servers and whether each one failed. It finds which patterns predict failure, including combinations you did not think of.
+
+The learned rules live in a **model**: a set of numbers produced by training that you can use to make predictions on new data.
+
+## The main kinds of learning
+
+| Kind | You provide | The model learns to | Example |
+| --- | --- | --- | --- |
+| **Supervised** | Inputs and the correct answers (labels) | Predict the answer for new inputs | Will this server fail? Is this ticket urgent? |
+| **Unsupervised** | Inputs only | Find structure on its own | Group similar servers, spot odd behavior |
+| **Reinforcement** | A goal and feedback (rewards) | Choose actions that earn reward over time | A game player, a robot, part of how chat models are tuned |
+
+Most business machine learning is supervised, and that is where this course spends most of its time. Within supervised learning, there are two kinds of answer:
+
+- **Classification**: the answer is a category (failed or not, spam or not spam, which team should get this ticket).
+- **Regression**: the answer is a number (response time, disk space needed next month, ticket count).
+
+## Problems IT teams actually solve
+
+| Problem | Type | Data needed |
+| --- | --- | --- |
+| Predict which servers will fail soon | Classification | Past metrics and outage history |
+| Route a ticket to the right team | Classification | Past tickets with the team that resolved them |
+| Forecast storage or traffic | Regression | History over time |
+| Estimate how long an incident will take | Regression | Past incidents |
+| Find unusual logins or traffic | Anomaly detection (unsupervised) | Normal behavior over time |
+| Group users or services by behavior | Clustering (unsupervised) | Usage data |
+
+## The workflow
+
+Almost every project follows the same loop, and most of the effort goes into steps 1 to 3 and 6, not the model itself:
+
+1. **Frame the problem.** What exactly will you predict, and what will someone do with the prediction?
+2. **Get and understand the data.** Where it comes from, what each column means, what is missing.
+3. **Build a simple baseline.** A rule of thumb or a trivial model that any real model must beat.
+4. **Train a model** on part of the data.
+5. **Evaluate** it on data it has not seen, with measures that match the cost of mistakes.
+6. **Deploy and monitor**, because the world changes and models go stale.
+
+You will practice steps 1 to 5 in this course.
+
+## When not to use machine learning
+
+- **A clear rule works.** If you can write the rule, write it. It is cheaper, exact and explainable.
+- **You have no reliable labeled data**, or too little of it.
+- **Mistakes are very costly** and you cannot review the output.
+- **You need to explain every decision** and a simple rule table would do.
+- **The thing you want to predict is not in the data you have.**
+
+A good habit: always ask "what would a clever person with a spreadsheet and an hour do?" That is your baseline.
+
+## Classic machine learning and language models
+
+You now know language models. They are one kind of machine learning, trained on text at huge scale. Classic machine learning is still often the better tool when:
+
+- Your data is **tables of numbers and categories** (metrics, transactions, sensor readings).
+- You need **fast, cheap, private predictions** on your own servers.
+- You have **plenty of labeled examples** of the exact question you care about.
+- You want **measurable, repeatable accuracy**.
+
+Language models are the better tool when the input is **free text, images or documents**, when you have **few or no labeled examples**, or when you need flexible language output. Many real systems use both.
+
+## Your first model in ten lines
+
+```python
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+X, y = load_iris(return_X_y=True)          # flower measurements and species
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=0
+)
+
+model = DecisionTreeClassifier(max_depth=3, random_state=0)
+model.fit(X_train, y_train)                # learn from the training examples
+print("accuracy on unseen data:", round(model.score(X_test, y_test), 2))
+print("prediction for one flower:", model.predict(X_test[:1]))
+```
+
+Install the library first with `pip install scikit-learn`. The pattern is the same for almost every model in this course:
+
+1. Load data into **X** (the inputs, also called features) and **y** (the answers, also called labels).
+2. **Split** it, so you can test on examples the model never saw.
+3. **Fit** the model on the training part.
+4. **Predict** and **score** on the held-out part.
+
+## Vocabulary
+
+| Term | Meaning |
+| --- | --- |
+| Feature | One input column the model uses |
+| Label or target | The answer you want to predict |
+| Training data | Examples used to learn |
+| Test data | Examples held back to check the result |
+| Model | The learned pattern |
+| Fit or train | Learn from data |
+| Predict or infer | Use the model on new data |
+| Overfitting | Memorizing training data instead of learning the pattern |
+
+<Callout title="The idea that carries the whole course">
+  A model is only useful if it works on data it has not seen. Everything in
+  the next lessons, from splitting data to measuring errors, is about
+  protecting that honest test.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Getting started with scikit-learn" href="https://scikit-learn.org/stable/getting_started.html" source="scikit-learn">
+  The official quick tour of fitting, predicting, pipelines and model selection.
+</Resource>
+
+<Resource kind="course" title="Machine Learning Crash Course" href="https://developers.google.com/machine-learning/crash-course" source="Google for Developers">
+  A free, self-paced course with videos, readings and exercises. Use it as a second voice alongside this one.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Intro to Machine Learning" href="https://www.kaggle.com/learn/intro-to-machine-learning" source="Kaggle">
+  Short free lessons with exercises that run in your browser.
+</Resource>
+
+<Resource kind="repo" title="Machine Learning for Beginners" href="https://github.com/microsoft/ML-For-Beginners" source="Microsoft on GitHub">
+  A free 12-week curriculum with lessons, quizzes and projects.
+</Resource>
+
+<Resource kind="docs" title="Machine Learning Glossary" href="https://developers.google.com/machine-learning/glossary" source="Google for Developers">
+  Precise definitions for the terms you will keep meeting.
+</Resource>
+
+## Check yourself
+
+1. Name three problems from your own workplace. For each, say whether it is classification, regression, clustering or anomaly detection.
+2. For one of them, describe the baseline: what would a clever person with a spreadsheet do?
+3. Run the ten-line example. Change `max_depth` to 1 and then to 10. What happens to the accuracy, and what do you think is going on?

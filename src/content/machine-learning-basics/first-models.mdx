@@ -1,0 +1,185 @@
+Now the interesting part. In this lesson you train four classic models, each of which you will meet again in real projects: linear regression, logistic regression, decision trees and nearest neighbors. You will also learn the single most useful habit in machine learning: always compare against a baseline.
+
+## Watch
+
+<Video id="_L39rN6gz7Y" title="Decision and Classification Trees, Clearly Explained!!!" channel="StatQuest with Josh Starmer" minutes={18}>
+  A clear, visual explanation of how a decision tree decides where to split. The same channel's logistic regression and linear regression videos are good companions.
+</Video>
+
+## The standard pattern
+
+Every scikit-learn model follows the same steps, which is why they are easy to swap:
+
+```text
+model = SomeModel(settings)
+model.fit(X_train, y_train)          # learn
+model.predict(X_new)                 # predict
+model.score(X_test, y_test)          # a default measure of quality
+```
+
+## Always start with a baseline
+
+A baseline is the dumbest sensible approach. If your model cannot beat it, the model is not worth deploying.
+
+```python
+from sklearn.dummy import DummyClassifier
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+baseline = DummyClassifier(strategy="most_frequent").fit(X_train, y_train)
+print("baseline accuracy:", round(baseline.score(X_test, y_test), 3))
+```
+
+The baseline always predicts the most common answer, "did not fail". Its accuracy equals the share of healthy servers, and it catches **no failures at all**. Remember that: lesson 4 shows why accuracy alone is a trap.
+
+## Regression: predict a number
+
+Predict response time from the other metrics with **linear regression**, which finds the best straight-line relationship:
+
+```python
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "error_rate"]
+X, y = df[features], df["response_ms"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+reg = LinearRegression().fit(X_train, y_train)
+print("R squared on test data:", round(reg.score(X_test, y_test), 3))
+for name, weight in zip(features, reg.coef_):
+    print(f"  each extra unit of {name} adds about {weight:.1f} ms")
+print("starting point (intercept):", round(reg.intercept_, 1))
+```
+
+The weights (coefficients) are readable: they show how much each feature moves the answer. Our generator used 3.2, 1.1 and 25, and the model recovered values close to them. That is learning from data. `R squared` says how much of the variation the model explains: 1 is perfect, 0 is no better than guessing the average.
+
+## Classification: logistic regression
+
+Despite the name, **logistic regression** classifies. It outputs a probability between 0 and 1 for each class.
+
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+clf = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+clf.fit(X_train, y_train)
+
+print("accuracy:", round(clf.score(X_test, y_test), 3))
+print("chance of failure for the first 3 test servers:")
+print(clf.predict_proba(X_test[:3])[:, 1].round(2))
+
+weights = clf.named_steps["logisticregression"].coef_[0]
+for name, w in sorted(zip(features, weights), key=lambda p: -abs(p[1])):
+    print(f"  {name:15s} {w:+.2f}")
+```
+
+Two things to notice:
+
+- A **pipeline** chains steps, here scaling then the model. It guarantees the scaler is fitted on training data only, which prevents leakage.
+- The weights show which features push the risk up (positive) or down. Because the features were scaled, the weights are comparable.
+
+## Decision trees
+
+A **decision tree** asks a series of yes or no questions about the features, like a flowchart the computer builds for you.
+
+```python
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+tree = DecisionTreeClassifier(max_depth=3, random_state=0).fit(X_train, y_train)
+print("accuracy:", round(tree.score(X_test, y_test), 3))
+print(export_text(tree, feature_names=features))
+```
+
+The printed text is the actual set of rules the model learned, which you can read, question and explain to a colleague. Trees need no scaling and handle mixed kinds of data, but a single deep tree tends to memorize its training data (lesson 5).
+
+## Nearest neighbors
+
+**k-nearest neighbors** predicts by finding the `k` most similar training examples and letting them vote. There is no real "training": the model keeps the data.
+
+```python
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+knn = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=15))
+knn.fit(X_train, y_train)
+print("accuracy:", round(knn.score(X_test, y_test), 3))
+```
+
+It is simple and intuitive. It needs scaling, because it measures distances, and it gets slow with large datasets.
+
+## Choosing between them
+
+| Model | Strengths | Watch out for |
+| --- | --- | --- |
+| Linear and logistic regression | Fast, readable weights, strong baseline | Only captures straight-line effects unless you add features |
+| Decision tree | Readable rules, no scaling | Overfits easily |
+| Nearest neighbors | Simple idea, no training | Needs scaling, slow on big data |
+| Forests and boosting (lesson 5) | Often the most accurate on tables | Harder to explain |
+
+**A sound default:** start with logistic or linear regression as a baseline, then try a tree-based model. Stop when extra complexity stops paying off.
+
+<Callout title="Accuracy is not the whole story">
+  On this data the baseline already scores high, simply because most servers
+  do not fail. Do not be impressed by a number until you know what a
+  do-nothing model scores. Lesson 4 gives you better measures.
+</Callout>
+
+## Go deeper (optional)
+
+<Video id="7eh4d6sabA0" title="Python Machine Learning Tutorial (Data Science)" channel="Programming with Mosh" minutes={50}>
+  A 50-minute hands-on project that builds a model with scikit-learn from a real dataset. Optional, but a good way to see the whole workflow once end to end.
+</Video>
+
+## Resources
+
+<Resource kind="docs" title="Linear models" href="https://scikit-learn.org/stable/modules/linear_model.html" source="scikit-learn">
+  Reference for linear and logistic regression.
+</Resource>
+
+<Resource kind="docs" title="Decision trees" href="https://scikit-learn.org/stable/modules/tree.html" source="scikit-learn">
+  How trees work, their strengths and their limits.
+</Resource>
+
+<Resource kind="course" title="StatQuest" href="https://statquest.org/" source="Josh Starmer">
+  Clear visual explanations of machine learning methods, with videos and study guides.
+</Resource>
+
+<Resource kind="repo" title="Hands-On Machine Learning notebooks" href="https://github.com/ageron/handson-ml3" source="Aurélien Géron on GitHub">
+  Free notebooks that accompany a well-known book. Use them for code to read and run.
+</Resource>
+
+## Check yourself
+
+1. Train all four models on the same split and write a table of their accuracy next to the baseline. Which beat the baseline, and by how much?
+2. Change the tree's `max_depth` from 3 to 10. Print the training and test accuracy. What do you notice?
+3. Read the tree rules aloud as sentences. Would you trust them as a monitoring rule? Why or why not?

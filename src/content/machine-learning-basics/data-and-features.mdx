@@ -1,0 +1,225 @@
+Experienced practitioners say most machine learning work is data work, and they are right. A mediocre model on good data beats a clever model on bad data. In this lesson you build a small dataset you will reuse for the rest of the course, and learn the habits that keep your results honest.
+
+## Watch
+
+<Video id="dSCFk168vmo" title="Why do we split data into train test and validation sets?" channel="Mısra Turp" minutes={2}>
+  A two-minute answer to the question every beginner has: what are the training, validation and test sets for?
+</Video>
+
+<Video id="n9jz7G68pVg" title="What is Data Leakage In Machine Learning?" channel="Krish Naik" minutes={11}>
+  An explanation of data leakage, one of the most common ways a model looks great in testing and fails in real use. The video is a few years old, the problem is not.
+</Video>
+
+## A practice dataset: servers
+
+Real data has privacy limits and licenses, so for learning we will generate a pretend monitoring dataset. It has the same shape as the real thing. Save this as `servers.py` in your course folder:
+
+```python
+# servers.py
+import numpy as np
+import pandas as pd
+
+
+def make_servers(n=1000, seed=42):
+    """Pretend monitoring data for n servers.
+
+    'failed' says whether the server had an outage in the next 30 days.
+    'response_ms' is its average response time.
+    """
+    rng = np.random.default_rng(seed)
+    df = pd.DataFrame(
+        {
+            "cpu_avg": rng.normal(45, 15, n).clip(2, 99),
+            "memory_avg": rng.normal(60, 15, n).clip(5, 99),
+            "disk_used": rng.normal(65, 18, n).clip(5, 99),
+            "error_rate": rng.gamma(2.0, 0.8, n),
+            "uptime_days": rng.integers(1, 400, n),
+            "patch_age_days": rng.integers(0, 365, n),
+        }
+    )
+    risk = (
+        0.9 * (df["error_rate"] - 1.6)
+        + 0.04 * (df["disk_used"] - 65)
+        + 0.008 * (df["patch_age_days"] - 180)
+        + 0.02 * (df["cpu_avg"] - 45)
+    )
+    prob = 1 / (1 + np.exp(-(risk - 1.6)))
+    df["failed"] = (rng.random(n) < prob).astype(int)
+    df["response_ms"] = (
+        80
+        + 3.2 * df["cpu_avg"]
+        + 1.1 * df["memory_avg"]
+        + 25 * df["error_rate"]
+        + rng.normal(0, 30, n)
+    ).round(1)
+    return df
+```
+
+Because we wrote the generator, we know the true rule: errors, full disks, old patches and high CPU raise the chance of failure. A model's job is to rediscover that from the data. On real data, nobody tells you the rule.
+
+## Look before you model
+
+```python
+from servers import make_servers
+
+df = make_servers()
+print(df.shape)
+print(df.head())
+print(df.describe().round(1))
+print("failure rate:", round(df["failed"].mean(), 3))
+```
+
+Always check:
+
+- **Size**: how many rows? Hundreds is small, thousands is usable, millions is rich.
+- **Ranges and units**: do the numbers look possible?
+- **Balance**: here only a minority of servers fail. This is called **class imbalance** and it affects how you measure results (lesson 4).
+- **Missing values**: gaps must be handled on purpose.
+
+## Features and labels
+
+Split the table into the inputs and the answer:
+
+```python
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X = df[features]       # inputs
+y = df["failed"]       # the answer to predict
+print(X.shape, y.shape)
+```
+
+**Features** are the columns the model learns from. Good features are things you would know *at the time you want to make the prediction*. That last phrase matters, and the section on leakage below explains why.
+
+## Train, validation and test sets
+
+If you test a model on the same data it learned from, it can look perfect by memorizing. So hold data back:
+
+| Set | Used for | Rule |
+| --- | --- | --- |
+| **Training** | Fitting the model | The model sees this |
+| **Validation** | Choosing between models and settings | You look at this while building |
+| **Test** | One final honest check | Touch it **once**, at the end |
+
+```python
+from sklearn.model_selection import train_test_split
+from servers import make_servers
+
+df = make_servers()
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=0, stratify=y
+)
+print(len(X_train), len(X_test))
+print("failure rate in train:", round(y_train.mean(), 3), "| in test:", round(y_test.mean(), 3))
+```
+
+- `random_state` makes the split repeatable.
+- `stratify=y` keeps the same share of failures in both parts, which matters when one class is rare.
+- If your data is **time-ordered**, split by time (train on the past, test on the future) instead of randomly. A random split lets the model peek at the future.
+
+In lesson 4 you will meet cross-validation, which gives a steadier estimate than one split.
+
+## Data leakage: the silent killer
+
+**Leakage** is when information the model should not have sneaks into its inputs, so it looks brilliant in testing and fails in real life. Here is a deliberate example:
+
+```python
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from servers import make_servers
+
+df = make_servers()
+# A "feature" recorded AFTER the outage: someone opened a ticket about it
+df["outage_ticket_opened"] = df["failed"]
+
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "outage_ticket_opened"]
+X_train, X_test, y_train, y_test = train_test_split(
+    df[features], df["failed"], test_size=0.2, random_state=0, stratify=df["failed"]
+)
+model = DecisionTreeClassifier(max_depth=3, random_state=0).fit(X_train, y_train)
+print("accuracy with the leaky feature:", round(model.score(X_test, y_test), 3))
+```
+
+A perfect score is a red flag, not a triumph. The ticket exists only because the server already failed, so it would not be available when you need to predict failure. Common sources of leakage:
+
+- A feature created **after** the event you predict.
+- **Duplicate rows** that land in both training and test sets.
+- Preparing data (scaling, filling gaps) using the **whole dataset** before splitting. Always fit those steps on the training set only.
+- Using the future to predict the past in time-based data.
+
+**If a result looks too good, assume leakage until you have proved otherwise.**
+
+## Cleaning: missing values, scales and categories
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from servers import make_servers
+
+df = make_servers(200)
+df.loc[df.sample(frac=0.05, random_state=1).index, "memory_avg"] = np.nan    # make some gaps
+df["os"] = np.random.default_rng(0).choice(["linux", "windows", "bsd"], len(df))
+
+print("missing memory values:", df["memory_avg"].isna().sum())
+
+# Categories become 0/1 columns. Text cannot go into most models directly.
+encoded = pd.get_dummies(df, columns=["os"])
+print([c for c in encoded.columns if c.startswith("os_")])
+
+# Fill gaps with the median, then put numbers on a similar scale.
+numbers = df[["cpu_avg", "memory_avg", "disk_used"]]
+filled = SimpleImputer(strategy="median").fit_transform(numbers)
+scaled = StandardScaler().fit_transform(filled)
+print(scaled.mean(axis=0).round(2), scaled.std(axis=0).round(2))
+```
+
+- **Missing values**: fill them (median is a safe default), or drop rows, but decide on purpose and note it.
+- **Categories**: use one-hot encoding (`get_dummies` or `OneHotEncoder`).
+- **Scaling**: models based on distances or gradients, such as k-nearest neighbors and logistic regression, work better when numbers are on similar scales. Tree-based models do not need it.
+
+This example fits the imputer and scaler on all the data to keep it short. In real work, fit them on the training set only, ideally inside a **pipeline**, which you will use from lesson 3.
+
+## Feature ideas for IT data
+
+Good features often come from your own domain knowledge:
+
+- Rates and ratios: errors per thousand requests, not raw error counts.
+- Trends: change in disk use over the last week.
+- Time parts: hour of day, day of week, days since last patch.
+- Counts in a window: failed logins in the last hour.
+
+<Callout title="Garbage in, garbage out, honestly">
+  Check where the labels came from. If "failed" was recorded inconsistently,
+  or only for servers someone cared about, the model will learn those quirks
+  and not the real pattern.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Common pitfalls and recommended practices" href="https://scikit-learn.org/stable/common_pitfalls.html" source="scikit-learn">
+  A short, practical guide to leakage, preprocessing and pipelines, written by the library's maintainers.
+</Resource>
+
+<Resource kind="docs" title="Preprocessing data" href="https://scikit-learn.org/stable/modules/preprocessing.html" source="scikit-learn">
+  Reference for scaling, encoding and other cleaning steps.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Intermediate Machine Learning" href="https://www.kaggle.com/learn/intermediate-machine-learning" source="Kaggle">
+  Covers missing values, categorical variables, pipelines, cross-validation and data leakage with exercises.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Data Cleaning" href="https://www.kaggle.com/learn/data-cleaning" source="Kaggle">
+  Practical lessons on missing values, scaling, dates and inconsistent text.
+</Resource>
+
+## Check yourself
+
+1. Generate the data with a different `seed` and compare the failure rate. Why might two samples differ?
+2. Name two features you would add to this dataset from your own monitoring tools, and say when each would be known.
+3. Describe a leakage trap that could happen with your own work data. How would you spot it?

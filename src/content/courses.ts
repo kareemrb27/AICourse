@@ -109,6 +109,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "machine-learning-basics",
+    title: "Machine Learning Basics",
+    track: "Stage 1 · Understand",
+    level: "Beginner",
+    summary:
+      "Learn how machine learning models are built, tested and judged. Frame a problem, prepare data, train classic models with scikit-learn, evaluate them honestly, avoid overfitting and leakage, and know when to use clustering, anomaly detection, a rule or a language model.",
+    prerequisites: [
+      "Comfortable with Python and pandas, as taught in Python and Data Essentials",
+      "No advanced maths is required, only comfort with percentages and averages",
+      "Recommended: AI Foundations for IT Professionals first",
+    ],
+    outcomes: [
+      "Frame a business problem as classification, regression, clustering or anomaly detection",
+      "Prepare data, split it properly and spot data leakage",
+      "Train and compare linear, tree-based and nearest-neighbor models against a baseline",
+      "Evaluate with confusion matrices, precision, recall, thresholds, costs and cross-validation",
+      "Recognize and reduce overfitting, and tune settings without peeking at the test set",
+      "Choose between machine learning, simple rules and language models, and monitor a model for drift",
+    ],
+    lessons: [
+      { slug: "ml-in-practice", title: "Machine learning in practice", summary: "Kinds of learning, the workflow, and when machine learning is the right tool.", minutes: 60 },
+      { slug: "data-and-features", title: "Data, features and honest splits", summary: "Features and labels, train and test sets, leakage and cleaning.", minutes: 90 },
+      { slug: "first-models", title: "Your first models", summary: "Baselines, regression, logistic regression, trees and nearest neighbors.", minutes: 120 },
+      { slug: "evaluating-models", title: "Evaluating models", summary: "The confusion matrix, precision, recall, thresholds, costs and cross-validation.", minutes: 90 },
+      { slug: "overfitting-and-improvement", title: "Overfitting and improvement", summary: "Spotting overfitting, regularization, tuning and ensembles.", minutes: 90 },
+      { slug: "clustering-and-anomalies", title: "Clustering, anomalies and choosing tools", summary: "Unsupervised learning, drift, responsible use and rules versus models versus LLMs.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: a server failure early warning", summary: "Build, evaluate and write up a complete model, with its limits.", minutes: 180 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

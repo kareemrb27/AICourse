@@ -1,0 +1,159 @@
+So far every model had the answers to learn from. Often you do not. This lesson covers the **unsupervised** side: finding groups and spotting oddities in unlabeled data. It then steps back to ask when machine learning, a simple rule, or a language model is the right tool, and what keeps a deployed model trustworthy.
+
+## Watch
+
+<Video id="4b5d3muPQmA" title="StatQuest: K-means clustering" channel="StatQuest with Josh Starmer" minutes={9}>
+  A nine-minute explanation of how k-means finds groups, including how to choose the number of clusters.
+</Video>
+
+<Video id="Y1x51i1936M" title="Isolation Forests: Identify Outliers in Data" channel="Elder Research, a MANTECH company" minutes={5}>
+  A short walkthrough of isolation forests, a popular method for finding unusual data points.
+</Video>
+
+## Clustering: find the groups
+
+**Clustering** sorts data into groups of similar items, with no labels. It answers "what natural groups exist here?". Here is a fleet of 450 servers whose roles we do not know, measured by CPU, memory and disk use:
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
+rng = np.random.default_rng(0)
+web = rng.normal([60, 40, 30], [8, 6, 5], (150, 3))      # busy, little memory, small disk
+database = rng.normal([30, 85, 80], [8, 6, 6], (150, 3))  # memory and disk heavy
+batch = rng.normal([85, 50, 40], [6, 8, 6], (150, 3))     # CPU heavy
+fleet = pd.DataFrame(np.vstack([web, database, batch]), columns=["cpu", "memory", "disk"])
+
+X = StandardScaler().fit_transform(fleet)      # k-means uses distances, so scale first
+
+for k in range(2, 7):
+    km = KMeans(n_clusters=k, n_init=10, random_state=0).fit(X)
+    print(f"k={k}: silhouette {silhouette_score(X, km.labels_):.2f}")
+
+km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(X)
+fleet["group"] = km.labels_
+print(fleet.groupby("group").mean().round(0))
+print(fleet["group"].value_counts().sort_index().to_dict())
+```
+
+The **silhouette score** measures how well separated the clusters are (closer to 1 is better). Notice that it is highest at two clusters, because two of our three server types sit closer to each other than to the third, and it falls as you add more. Yet three groups is the answer that means something: the averages per group show three recognizable profiles, busy front ends, memory-heavy databases and CPU-heavy batch machines. A score alone did not choose the right number. Someone who knows the systems did. Clusters are suggestions, not truth:
+
+- You must **choose the number of groups**. Try several and check that the result makes sense to a person who knows the systems.
+- **Scale your features**, or the one with the largest numbers dominates.
+- **Name the clusters yourself** by looking at their averages. The algorithm only gives them numbers.
+- Real data rarely separates this cleanly. Treat a clustering as a way to explore, not a finding.
+
+Uses in IT: grouping servers for capacity planning, segmenting users by behavior, finding duplicate or related tickets, and creating a starting set of categories to label.
+
+## Anomaly detection: find the odd ones out
+
+**Anomaly detection** looks for items that do not fit the normal pattern. It is useful when failures are rare, new, or unlabeled: unusual logins, strange traffic, a server behaving differently from its peers.
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from servers import make_servers
+
+normal = make_servers(500, seed=3)[["cpu_avg", "memory_avg", "error_rate"]]
+
+# Add 10 odd servers: maxed CPU and a very high error rate
+odd = pd.DataFrame({"cpu_avg": [98] * 10, "memory_avg": [95] * 10, "error_rate": np.linspace(9, 14, 10)})
+data = pd.concat([normal, odd], ignore_index=True)
+is_odd = np.array([False] * len(normal) + [True] * len(odd))
+
+detector = IsolationForest(contamination=0.03, random_state=0).fit(data)
+flagged = detector.predict(data) == -1
+scores = detector.score_samples(data)          # lower means more unusual
+
+print("flagged servers:", flagged.sum())
+print("planted oddities caught:", int((flagged & is_odd).sum()), "of", int(is_odd.sum()))
+print("normal servers flagged:", int((flagged & ~is_odd).sum()))
+print("most unusual rows:", np.argsort(scores)[:5].tolist())
+```
+
+An **isolation forest** works by trying to separate each point with random cuts. Unusual points are easy to isolate in a few cuts, normal points need many. Notes for real use:
+
+- `contamination` is your guess at the share of anomalies. It decides how many get flagged, so it is a business choice as much as a technical one.
+- With no labels you cannot compute accuracy. **Review a sample of the flagged items** with someone who knows the system, and feed what you learn back into your settings.
+- "Unusual" is not the same as "bad". A busy launch day is unusual and fine.
+- Alerts need an owner and a response. A detector no one reads is noise.
+
+## Is a model still working? Drift
+
+Models are trained on yesterday's data. When the world changes, accuracy decays quietly. This is called **drift**. A cheap first defense is to compare the data a model sees now with the data it was trained on:
+
+```python
+from scipy.stats import ks_2samp
+from servers import make_servers
+
+trained_on = make_servers(1000, seed=1)
+today = make_servers(1000, seed=2)
+today["error_rate"] = today["error_rate"] * 1.4        # simulate a software change
+
+for col in ["cpu_avg", "disk_used", "error_rate", "patch_age_days"]:
+    result = ks_2samp(trained_on[col], today[col])
+    status = "DRIFT" if result.pvalue < 0.01 else "ok"
+    print(f"{col:15s} difference {result.statistic:.3f}  {status}")
+```
+
+Only the changed column is flagged. In production, run checks like this on a schedule, and track the model's real-world results once true outcomes are known. Plan a retraining routine before you need it.
+
+## Choosing the right tool
+
+| Situation | Reach for |
+| --- | --- |
+| A clear rule exists | A rule, or a lookup table |
+| Tabular data, a labeled outcome, many examples | Classic supervised learning (this course) |
+| Unlabeled data, you want groups or oddities | Clustering or anomaly detection |
+| Free text, documents, images, little labeled data | A language model, perhaps with retrieval |
+| Free text and plenty of labeled examples, simple categories | A small classifier on text features can beat an LLM on cost and speed |
+| You need an exact calculation | Ordinary code, never a model |
+
+Start with the simplest thing that could work, measure it, and move up only when the measurements demand it.
+
+## Responsible use
+
+- **Bias.** A model learns whatever pattern is in the data, including unfair ones. A ticket router trained on past decisions may inherit past favoritism. Check performance **separately for different groups** (teams, regions, customer types), not only overall.
+- **Proxies.** Removing a sensitive column does not remove its influence if other columns stand in for it.
+- **Explainability.** Prefer models you can explain when decisions affect people. Keep a human review path.
+- **Documentation.** Write a short **model card**: what it is for, what data trained it, how it was tested, its known limits, and who owns it.
+- **Ownership.** Models need monitoring, retraining and an owner, like any other production system. The effort of keeping a model healthy often exceeds the effort of building it.
+
+<Callout title="From this course to the next">
+  You now understand how models are trained, tested and judged. In stage 2 you
+  will use language models that someone else trained, and you will need the
+  same instincts: a baseline, an honest test set, error costs, and a watch for
+  drift.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Clustering" href="https://scikit-learn.org/stable/modules/clustering.html" source="scikit-learn">
+  Reference and comparison of clustering methods, with guidance on when each fits.
+</Resource>
+
+<Resource kind="docs" title="Novelty and outlier detection" href="https://scikit-learn.org/stable/modules/outlier_detection.html" source="scikit-learn">
+  Isolation forests and other anomaly detection methods, with examples.
+</Resource>
+
+<Resource kind="paper" title="Model Cards for Model Reporting" href="https://arxiv.org/abs/1810.03993" source="Mitchell et al., arXiv">
+  The paper that proposed short, standard documentation for models. Read the abstract and the example card.
+</Resource>
+
+<Resource kind="paper" title="Hidden Technical Debt in Machine Learning Systems" href="https://papers.nips.cc/paper_files/paper/2015/hash/86df7dcfd896fcaf2674f757a2463eba-Abstract.html" source="Sculley et al., NeurIPS">
+  A classic on why production machine learning is mostly about the system around the model.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  A framework for thinking about the risks of AI systems, including fairness and monitoring.
+</Resource>
+
+## Check yourself
+
+1. Run the clustering example, then change the group means so two server types overlap. What happens to the silhouette scores?
+2. Think of one situation at work where an anomaly detector would raise many false alarms. What would you do about it?
+3. Pick a model you might build. Write three lines of a model card for it: its purpose, its main limit, and its owner.

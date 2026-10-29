@@ -83,6 +83,13 @@ import L80 from "./python-and-data-essentials/calling-apis.mdx";
 import L81 from "./python-and-data-essentials/data-with-pandas.mdx";
 import L82 from "./python-and-data-essentials/notebooks-and-ai-help.mdx";
 import L83 from "./python-and-data-essentials/capstone.mdx";
+import L84 from "./machine-learning-basics/ml-in-practice.mdx";
+import L85 from "./machine-learning-basics/data-and-features.mdx";
+import L86 from "./machine-learning-basics/first-models.mdx";
+import L87 from "./machine-learning-basics/evaluating-models.mdx";
+import L88 from "./machine-learning-basics/overfitting-and-improvement.mdx";
+import L89 from "./machine-learning-basics/clustering-and-anomalies.mdx";
+import L90 from "./machine-learning-basics/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -171,4 +178,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "python-and-data-essentials/data-with-pandas": L81,
   "python-and-data-essentials/notebooks-and-ai-help": L82,
   "python-and-data-essentials/capstone": L83,
+  "machine-learning-basics/ml-in-practice": L84,
+  "machine-learning-basics/data-and-features": L85,
+  "machine-learning-basics/first-models": L86,
+  "machine-learning-basics/evaluating-models": L87,
+  "machine-learning-basics/overfitting-and-improvement": L88,
+  "machine-learning-basics/clustering-and-anomalies": L89,
+  "machine-learning-basics/capstone": L90,
 };

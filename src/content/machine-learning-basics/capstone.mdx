@@ -1,0 +1,128 @@
+Build a complete, honest machine learning project from a blank file to a short report. It brings together the whole course, and it is the template you will reuse whenever you evaluate a model, whether you trained it or someone else did.
+
+## The project: a server failure early warning
+
+Your team wants a weekly list of servers that are likely to fail in the next 30 days, so they can patch or replace them first. You will build and evaluate the model behind that list using the pretend monitoring data from this course, and then write the one-page brief you would send to the team.
+
+## Requirements
+
+Work in a notebook or a script in its own folder with its own virtual environment. It must include:
+
+1. **A framing paragraph.** What is predicted, who acts on it, and what a missed failure and a false alarm each cost, in rough numbers you can defend.
+2. **Data.** Generate 3000 servers with your own seed, then put gaps into two columns. Explain how you handle them.
+3. **A clean split.** Training and test sets, stratified, with the test set untouched until the end.
+4. **A baseline** and at least **two real models**, one linear and one tree ensemble. Use pipelines, so preprocessing is fitted on training data only.
+5. **Cross-validated comparison** on the training data, reporting the mean and the spread.
+6. **A threshold chosen from your costs**, and the confusion matrix, precision and recall at that threshold on the test set.
+7. **An overfitting and leakage check**: training versus test scores, and a note on every feature saying when its value is known.
+8. **An inspection**: which features matter, and three servers the model got wrong, with your guess at why.
+9. **A one-page brief** covering purpose, data, method, results, limits, risks and how you would monitor it for drift.
+
+## A starting skeleton
+
+This covers the data, the split and the model comparison. Everything after the comparison is yours.
+
+```python
+import numpy as np
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from servers import make_servers
+
+SEED = 7
+df = make_servers(3000, seed=SEED)
+
+# Put gaps in two columns, as real monitoring data would have
+rng = np.random.default_rng(SEED)
+for col in ["memory_avg", "disk_used"]:
+    df.loc[rng.random(len(df)) < 0.05, col] = np.nan
+
+features = ["cpu_avg", "memory_avg", "disk_used", "error_rate", "uptime_days", "patch_age_days"]
+X, y = df[features], df["failed"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=SEED, stratify=y
+)
+print("rows:", len(df), "| failure rate:", round(y.mean(), 3))
+print("missing per column:\n", X_train.isna().sum()[X_train.isna().sum() > 0])
+
+candidates = {
+    "baseline": DummyClassifier(strategy="prior"),
+    "logistic": make_pipeline(
+        SimpleImputer(strategy="median"), StandardScaler(), LogisticRegression(max_iter=1000)
+    ),
+    "forest": make_pipeline(
+        SimpleImputer(strategy="median"),
+        RandomForestClassifier(n_estimators=300, min_samples_leaf=5, random_state=SEED),
+    ),
+}
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
+for name, model in candidates.items():
+    scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="roc_auc")
+    print(f"{name:10s} AUC {scores.mean():.3f} +/- {scores.std():.3f}")
+```
+
+Save `servers.py` from lesson 2 in the same folder. From here you choose the better model, fit it on the full training set, pick a threshold with your cost numbers, and evaluate **once** on the test set.
+
+## Hints
+
+- Fit the chosen pipeline with `model.fit(X_train, y_train)`, then use `model.predict_proba(X_test)[:, 1]` for probabilities.
+- Reuse the cost loop from lesson 4. Choose the threshold using **cross-validated predictions on the training data** (`cross_val_predict` with `method="predict_proba"`) rather than the test set, so the test stays honest.
+- For three errors, collect the test rows where the prediction and `y_test` disagree and read their feature values.
+- For drift, reuse the `ks_2samp` check from lesson 6 on a new batch of generated data.
+
+## How to check your work
+
+- Does the model clearly beat the baseline on a measure that matches the costs?
+- Did you touch the test set only once?
+- Can you explain every number in the brief to a manager in one sentence?
+- Does every feature pass the "known at prediction time" test?
+- Would a colleague be able to rerun your project from scratch and get the same numbers?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Framing | Clear action, real costs for each mistake | "Predict failures" with no context |
+| Data handling | Gaps handled in the pipeline, split first | Preprocessing on the full dataset |
+| Evaluation | Baseline, cross-validation, spread, matching metrics | One accuracy number |
+| Honesty | Test set used once, leakage checked | Tuned on the test set |
+| Decision | Threshold from costs, clear trade-off | Default 0.5 |
+| Communication | One page, plain language, limits stated | Only code and tables |
+
+## Stretch goals
+
+- Calibrate the probabilities with scikit-learn's `CalibratedClassifierCV` and check whether "30 percent risk" really fails about 30 percent of the time.
+- Repeat the project on a real public dataset, such as one from scikit-learn's built-in datasets or OpenML, and compare how it differs from the pretend data.
+- Train a text classifier on ticket-like text with `TfidfVectorizer` and logistic regression, and note what you would expect a language model to do better or worse. You will test that in stage 2.
+- Write a model card for your final model in the style of the paper linked in lesson 6.
+
+## Share it
+
+Put the project in a public repository with a short README, no secrets and no real company data. It is your fourth portfolio piece, and a brief that says what the model cannot do shows more judgment than one that only celebrates accuracy.
+
+## Where to go next
+
+You have finished Stage 1: you can explain AI, work with language models, write Python, and judge a machine learning model honestly. Stage 2 begins with building applications that call language models from code, using everything above: the API skills from the Python course, the prompting from Working with LLMs, and the evaluation habits from this one.
+
+## Resources
+
+<Resource kind="docs" title="Common pitfalls and recommended practices" href="https://scikit-learn.org/stable/common_pitfalls.html" source="scikit-learn">
+  A checklist to run against your own project before you share it.
+</Resource>
+
+<Resource kind="docs" title="Rules of Machine Learning" href="https://developers.google.com/machine-learning/guides/rules-of-ml" source="Google for Developers">
+  Practical advice on planning, building and maintaining machine learning systems.
+</Resource>
+
+<Resource kind="course" title="Kaggle Learn: Intermediate Machine Learning" href="https://www.kaggle.com/learn/intermediate-machine-learning" source="Kaggle">
+  More practice with pipelines, missing values and cross-validation.
+</Resource>
+
+<Resource kind="docs" title="Metrics and scoring" href="https://scikit-learn.org/stable/modules/model_evaluation.html" source="scikit-learn">
+  Reference for every measure in your report.
+</Resource>
