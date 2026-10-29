@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CourseThumb } from "@/components/course-thumb";
 import { courses, formatDuration, totalMinutes } from "@/content/courses";
 
 export default function Home() {
@@ -52,21 +53,27 @@ export default function Home() {
             <Link
               key={course.slug}
               href={`/courses/${course.slug}`}
-              className="group rounded-lg border border-line bg-surface p-6 transition-colors hover:border-accent"
+              className="group flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-accent"
             >
-              <div className="label flex justify-between">
-                <span>{course.track}</span>
-                <span className="text-accent">{course.level}</span>
-              </div>
-              <h3 className="mt-4 text-xl font-semibold tracking-tight">
-                {course.title}
-              </h3>
-              <p className="mt-2 text-[15px] leading-7 text-muted">
-                {course.summary}
-              </p>
-              <div className="label mt-6 flex justify-between">
-                <span>{course.lessons.length} lessons</span>
-                <span>{formatDuration(totalMinutes(course))}</span>
+              <CourseThumb
+                slug={course.slug}
+                className="aspect-[3/2] w-full transition-transform duration-300 group-hover:scale-[1.03]"
+              />
+              <div className="flex flex-1 flex-col p-6">
+                <div className="label flex justify-between">
+                  <span>{course.track}</span>
+                  <span className="text-accent">{course.level}</span>
+                </div>
+                <h3 className="mt-4 text-xl font-semibold tracking-tight">
+                  {course.title}
+                </h3>
+                <p className="mt-2 text-[15px] leading-7 text-muted">
+                  {course.summary}
+                </p>
+                <div className="label mt-auto flex justify-between pt-6">
+                  <span>{course.lessons.length} lessons</span>
+                  <span>{formatDuration(totalMinutes(course))}</span>
+                </div>
               </div>
             </Link>
           ))}

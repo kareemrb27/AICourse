@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CourseShell } from "@/components/course-shell";
+import { CourseThumb } from "@/components/course-thumb";
 import {
   courses,
   formatDuration,
@@ -50,6 +51,10 @@ export default async function CoursePage({
         {course.lessons.length} lessons · {formatDuration(totalMinutes(course))}
         {" "}· Free
       </p>
+      <CourseThumb
+        slug={course.slug}
+        className="mt-8 aspect-[3/2] w-full max-w-md rounded-lg border border-line"
+      />
 
       <div className="mt-12 grid gap-10 md:grid-cols-2">
         <section>
