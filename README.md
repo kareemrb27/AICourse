@@ -4,7 +4,7 @@ Free, open AI engineering courses. Each course is a structured path of lessons t
 
 This is an independent project and is not affiliated with any conference or course provider.
 
-Live site: https://ai-course-six-ecru.vercel.app
+Live site: https://iaicourses.com
 
 ## Courses
 
