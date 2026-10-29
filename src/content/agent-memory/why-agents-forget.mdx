@@ -1,5 +1,11 @@
 By the end of this lesson you can explain why a language model has no memory of its own, what "memory" really means in an agent, and which problems it is meant to solve.
 
+## Watch
+
+<Video id="BwXremQ-i6I" title="Context Engineering for AI Agents: 4 Failure Modes to Avoid" channel="IBM Technology" minutes={10}>
+  IBM walks through four ways the context an agent works from can go wrong, which explains many cases of agents forgetting or getting confused.
+</Video>
+
 ## The model is stateless
 
 A language model call is a pure function: tokens in, tokens out. Nothing from the last call survives unless you put it back into the next prompt. Everything we call "memory" in an agent is **code around the model** that decides what to store, and what to put back into the context window next time.

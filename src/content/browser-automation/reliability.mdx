@@ -1,5 +1,11 @@
 The web is dynamic, slow and inconsistent. Most browser-agent failures are not model failures but timing, state and page-structure failures. This lesson is the engineering that makes runs repeatable.
 
+## Watch
+
+<Video id="CwfohDaRpig" title="3 Reasons for Playwright Flaky Tests (and How To Fix It)" channel="Artem Bondar" minutes={11}>
+  Three common causes of flaky Playwright runs and how to fix them, which maps directly onto making an agent reliable.
+</Video>
+
 ## Wait for conditions, not time
 
 Fixed sleeps are either too short (flaky) or too long (slow). Wait for something observable instead: an element to appear, a response to arrive, a URL to change, text to show up. Playwright's auto-waiting handles most actions, and explicit conditions cover the rest. Give the agent a `wait_for` tool that takes a condition, and cap the wait.

@@ -1,5 +1,15 @@
 Everything an agent depends on will fail eventually: the model API, a tool, the database, your own process. Reliable systems plan for it. The patterns here are classic distributed-systems engineering applied to agents.
 
+## Watch
+
+<Video id="XAccGbtl3Z8" title="Idempotency - What it is and How to Implement it" channel="Alex Hyett" minutes={8}>
+  Alex Hyett on idempotency, the property that makes retries safe.
+</Video>
+
+<Video id="RfPNuaj5Ax0" title="Top 5 Microservices Resilience Patterns" channel="ByteMonk" minutes={7}>
+  A short overview of resilience patterns for services. The same ideas apply to agents.
+</Video>
+
 ## Timeouts everywhere
 
 Every model call and every tool call needs a timeout, plus an overall deadline for the whole task. Without them one stuck request holds resources forever.
