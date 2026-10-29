@@ -1,0 +1,228 @@
+Now that your documents are in chunks, you need a way to find the right ones for a question. Keyword matching alone breaks when the question and the document use different words. **Embeddings** solve that by representing meaning as numbers, so that text with similar meaning ends up close together. This lesson builds a working semantic search from scratch, and shows where it surprises you.
+
+## Watch
+
+<Video id="gl1r1XV0SLw" title="What is a Vector Database? Powering Semantic Search & AI Applications" channel="IBM Technology" minutes={10}>
+  A ten-minute explanation of vectors, similarity search and where vector databases fit.
+</Video>
+
+<Video id="dN0lsF2cvm4" title="Vector Databases simply explained! (Embeddings & Indexes)" channel="AssemblyAI" minutes={4}>
+  A four-minute companion that covers embeddings, indexes and the common options.
+</Video>
+
+## Embeddings in one paragraph
+
+An **embedding model** reads a piece of text and returns a list of numbers, a **vector**, often a few hundred to a few thousand long. The model is trained so that texts with similar meaning get similar vectors. "How long until I can try again?" and "The account is locked for 15 minutes" share almost no words, but their vectors are close, because they are about the same situation.
+
+To compare two vectors you measure how closely they point in the same direction, called **cosine similarity**. It runs from about -1 to 1, and higher means closer in meaning. If the vectors are scaled to length 1 (normalized), cosine similarity is just a dot product, which is very fast.
+
+## Search with vectors
+
+Semantic search is then simple:
+
+1. **Embed every chunk once** and store the vectors.
+2. **Embed the question** with the same model.
+3. **Compare** the question vector with every chunk vector, and return the closest few.
+
+## Choosing an embedding model
+
+Embedding models are **separate from the language model that writes the answer**. Anthropic does not offer its own embedding model; its documentation points to a provider such as Voyage AI, and there are many others, from hosted services to models you run yourself.
+
+| Option | Good for | Trade-off |
+| --- | --- | --- |
+| **A local open model** (this course uses `bge-small-en-v1.5` through the `fastembed` library) | Free, private, works offline, ideal for learning and many real uses | You run it, and quality varies by model |
+| **A hosted embedding API** (for example Voyage AI) | Strong quality, no hardware, models for code, law or finance | Cost, a network call, and your text goes to another provider |
+
+What to check when you choose:
+
+- **Quality on your kind of text.** Public leaderboards such as MTEB are a guide, not a verdict. Test on your own questions.
+- **Language support**, if your documents are not in English.
+- **Maximum input length**, so your chunks fit.
+- **Vector size**, which affects storage and speed.
+- **Some models treat queries and documents differently.** They have separate settings or functions for each, and you should use them.
+
+**Never mix models in one index.** Vectors from different models cannot be compared. If you change the model, re-embed everything.
+
+Install the library with `pip install fastembed numpy`. The first run downloads the model (roughly 100 MB), then it works offline.
+
+## Build the index
+
+Save this as `index.py`:
+
+```python
+# index.py
+import numpy as np
+from fastembed import TextEmbedding
+
+from chunking import with_context
+
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
+
+
+def normalize(vectors):
+    vectors = np.asarray(vectors, dtype=float)
+    return vectors / np.linalg.norm(vectors, axis=-1, keepdims=True)
+
+
+class VectorIndex:
+    def __init__(self, chunks, text_fn=with_context, model_name=MODEL_NAME, model=None):
+        self.model = model or TextEmbedding(model_name)      # pass a fake model in tests
+        self.chunks = chunks
+        texts = [text_fn(chunk) for chunk in chunks]
+        self.vectors = normalize(list(self.model.embed(texts)))
+
+    def search(self, query, k=5, where=None):
+        """Return the k best (chunk, score) pairs. `where` can filter chunks by metadata."""
+        query_vector = normalize(list(self.model.query_embed([query]))[0])
+        scores = self.vectors @ query_vector
+        results = []
+        for i in np.argsort(-scores):
+            if where is not None and not where(self.chunks[i]):
+                continue
+            results.append((self.chunks[i], float(scores[i])))
+            if len(results) == k:
+                break
+        return results
+```
+
+Use it on the handbook:
+
+```python
+from chunking import build_chunks
+from handbook import DOCS
+from index import VectorIndex
+
+chunks = build_chunks(DOCS)
+index = VectorIndex(chunks)
+print(len(chunks), "chunks embedded; each vector has", index.vectors.shape[1], "numbers")
+
+questions = [
+    "I forgot my login and got it wrong a few times. How long until I can try again?",
+    "How do I connect to the VPN from a hotel?",
+    "How long do I have to report a lost phone?",
+]
+for question in questions:
+    print("\nQ:", question)
+    for chunk, score in index.search(question, k=3):
+        print(f"  {score:.2f}  {chunk['id']:12s} {chunk['title']} / {chunk['heading']}")
+```
+
+The first question shares almost no words with the passage about locked accounts, yet that passage comes up first. That is semantic search working. Notice the scores are not probabilities, they are only useful for comparing results within the same search.
+
+## Where embeddings surprise you
+
+Semantic search is powerful and imperfect. Know its weak spots:
+
+- **Scores are relative, not absolute.** Every search returns *something*, even for a question the documents cannot answer. Look at what happens with questions the handbook does not cover:
+
+```python
+from chunking import build_chunks
+from handbook import DOCS, QUESTIONS
+from index import VectorIndex
+
+index = VectorIndex(build_chunks(DOCS))
+
+answerable, unanswerable = [], []
+for question, doc_id in QUESTIONS:
+    chunk, score = index.search(question, k=1)[0]
+    (unanswerable if doc_id is None else answerable).append((score, question))
+
+print("best score for answerable questions:   lowest %.2f, highest %.2f" % (min(answerable)[0], max(answerable)[0]))
+print("best score for unanswerable questions: lowest %.2f, highest %.2f" % (min(unanswerable)[0], max(unanswerable)[0]))
+```
+
+On this small set the two groups barely separate: the weakest real match scores only a couple of hundredths above the strongest non-match. That is far too thin a margin to trust. One oddly phrased question, a different embedding model or a bigger document set will push real questions below a cutoff and non-questions above it. **A similarity cutoff is a fragile way to tell "no answer" from "weak answer".** Do not rely on one alone; lesson 5 covers better ways.
+
+- **Negation, numbers and exact identifiers** are weak spots. "Is VPN required?" and "Is VPN not required?" look very similar, and an order number like A-1002 carries little meaning. Keyword search (lesson 4) handles exact terms well.
+- **Very short or vague queries** give poor results. "Passwords" matches broadly.
+- **The wording of the query matters.** A question phrased like the document matches better, which is why query rewriting (lesson 4) helps.
+- **Similar documents compete.** Our handbook has both a lost laptop (report within one hour) and a lost phone (report within four hours). A sloppy search can return the wrong one.
+
+## Filtering with metadata
+
+Often you know something about the question: which product, which customer, who is asking. Use **metadata filters** to search only the relevant part, before ranking:
+
+```python
+from chunking import build_chunks
+from handbook import DOCS
+from index import VectorIndex
+
+index = VectorIndex(build_chunks(DOCS))
+
+question = "How long does it take?"
+print("without a filter:")
+for chunk, score in index.search(question, k=2):
+    print(f"  {score:.2f}  {chunk['id']}")
+
+print("only the backups document:")
+for chunk, score in index.search(question, k=2, where=lambda c: c["doc_id"] == "backups"):
+    print(f"  {score:.2f}  {chunk['id']}")
+```
+
+The same mechanism enforces **access control**: pass a `where` that only allows chunks the current user may read. Applying the filter before ranking means unauthorized text is never retrieved at all.
+
+## Saving the index
+
+Embedding is the slow, repeated-cost part, so save the vectors instead of recomputing them on every start:
+
+```python
+import json
+import numpy as np
+
+from chunking import build_chunks
+from handbook import DOCS
+from index import VectorIndex
+
+index = VectorIndex(build_chunks(DOCS))
+
+np.save("vectors.npy", index.vectors)
+with open("chunks.json", "w", encoding="utf-8") as f:
+    json.dump(index.chunks, f)
+
+vectors = np.load("vectors.npy")
+print("saved and reloaded:", vectors.shape)
+```
+
+Remember to store which embedding model and chunking settings produced them, so you know when a rebuild is needed.
+
+## Vector databases
+
+A NumPy array like the one above is perfectly fine for up to roughly tens of thousands of chunks. Beyond that, or when you need persistence, concurrent users, filtering at scale or updates, you use a **vector database** or a database extension: for example Chroma, Qdrant, pgvector for PostgreSQL, or a managed service. They add **approximate nearest-neighbor** indexes, which are much faster than comparing against every vector, at a small cost in exactness. The ideas you just built, embed, store, search with a filter, are the same.
+
+<Callout title="Start simple">
+  A list of chunks and a matrix of vectors is a real vector store. Move to a
+  database when you have a reason you can name, such as size, persistence or
+  many users, not because a tutorial did.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Embeddings" href="https://platform.claude.com/docs/en/build-with-claude/embeddings" source="Anthropic">
+  Anthropic's guide: how embeddings work, how to choose a provider, and a worked example with a hosted model.
+</Resource>
+
+<Resource kind="docs" title="FastEmbed" href="https://qdrant.github.io/fastembed/" source="Qdrant">
+  The lightweight library used here, with the list of supported models.
+</Resource>
+
+<Resource kind="docs" title="MTEB leaderboard" href="https://huggingface.co/spaces/mteb/leaderboard" source="Hugging Face">
+  A public comparison of embedding models across many tasks. Use it to shortlist, then test on your own data.
+</Resource>
+
+<Resource kind="docs" title="Sentence Transformers" href="https://www.sbert.net/" source="UKP Lab">
+  A widely used library and model collection for embeddings, if you prefer PyTorch-based tools.
+</Resource>
+
+<Resource kind="docs" title="Chroma" href="https://docs.trychroma.com/" source="Chroma">
+  An open-source vector database that is easy to start with.
+</Resource>
+
+<Resource kind="repo" title="pgvector" href="https://github.com/pgvector/pgvector" source="pgvector on GitHub">
+  Vector search inside PostgreSQL, handy if you already run it.
+</Resource>
+
+## Check yourself
+
+1. Run the search on five questions of your own against the handbook. For each, say whether the top result was the right chunk.
+2. Find a question where the right chunk is *not* first. Why do you think the model ranked another chunk higher?
+3. Write a `where` filter that restricts results to documents a particular role may read, using a field you add to the chunk metadata.

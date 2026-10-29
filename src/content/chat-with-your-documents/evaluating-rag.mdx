@@ -1,0 +1,372 @@
+You cannot improve what you do not measure, and a RAG system is easy to fool yourself about. A demo that works on three hand-picked questions says almost nothing about the hundredth question from a real user. This lesson shows how to build a test set, measure retrieval and answers **separately**, use a model as a grader without trusting it blindly, and find out what is actually going wrong when an answer is bad.
+
+## Watch
+
+<Video id="7_LTU0LA374" title="RAG Evaluation: Precision, Recall, Faithfulness, RAGAS Explained Clearly" channel="Logical Lenses" minutes={12}>
+  A twelve-minute tour of the measures people use for RAG: retrieval quality, faithfulness to the sources and answer relevance.
+</Video>
+
+<Video id="A0K3K4fOvY8" title="Understanding Precision@K and Recall@K Metrics" channel="TechViz - The Data Science Guy" minutes={6}>
+  A six-minute explanation of the ranking measures used to judge search results.
+</Video>
+
+## Evaluate in layers
+
+A bad answer has a cause, and the cause is in one of three places. Measure each separately, or you will fix the wrong thing:
+
+| Layer | Question | Measure |
+| --- | --- | --- |
+| **Retrieval** | Did the right text reach the model? | Hit rate, recall, whether the retrieved text contains the answer |
+| **Generation** | Given that text, was the answer right and grounded? | Correctness, faithfulness to the sources, citations |
+| **Behavior** | Does it decline when it should, and only then? | Correct declines, wrong declines |
+
+Retrieval is cheap to measure (no model calls) and usually where the problems are, so start there.
+
+## Build the test set
+
+Your test set is the most valuable asset in the project. Build it from the questions people **really** ask: the service desk's ticket history, search logs, a chat channel, interviews. For each question, record:
+
+- the **question**, in the user's own words (typos and all),
+- the **document that answers it**, and a short **fact** that a correct answer must contain,
+- a **reference answer** for the questions you will grade with a model,
+- whether the question is **unanswerable** from your documents (include some).
+
+Aim for at least 30 to 50 to start, and keep growing it with every real failure you find. You can speed up drafting with a model, but **review everything it writes**, because generated questions are tidier and easier than real ones:
+
+```python
+import anthropic
+from pydantic import BaseModel, Field
+
+from handbook import DOCS
+
+MODEL = "claude-opus-5-5"
+
+
+class GeneratedQuestion(BaseModel):
+    question: str = Field(description="A question a staff member might really ask, in casual wording")
+    answer_fact: str = Field(description="A short exact phrase copied from the document that answers it")
+
+
+class GeneratedSet(BaseModel):
+    items: list[GeneratedQuestion]
+
+
+def draft_questions(client, doc, n=3):
+    response = client.messages.parse(
+        model=MODEL,
+        max_tokens=2048,
+        system="You write test questions for a document-based assistant. Use casual wording and avoid copying the document's exact phrases.",
+        messages=[{"role": "user", "content": f"Write {n} questions that this document answers.\n\n{doc['text']}"}],
+        output_format=GeneratedSet,
+    )
+    return response.parsed_output.items
+
+
+client = anthropic.Anthropic()
+for item in draft_questions(client, DOCS[0]):
+    print(item.question, "->", item.answer_fact)
+```
+
+## Measure retrieval
+
+Document-level hit rate (lesson 4) is a start, but a stricter and more useful question is: **does the text the model will see actually contain the answer?** For that, each answerable question needs a short fact the right passage must include. Here they are for our handbook. Save this as `facts.py`:
+
+```python
+# facts.py
+FACTS = {
+    "How long does my password have to be?": "14 characters",
+    "Do I have to change my password every few months?": "not rotated",
+    "I forgot my login and got it wrong a few times. How long until I can try again?": "15 minutes",
+    "How do I connect to the VPN from a hotel?": "network you do not control",
+    "How long does a VPN session last?": "12 hours",
+    "When will my laptop be replaced?": "every four years",
+    "I lost my laptop on a train. What do I do?": "within one hour",
+    "Who has to approve a second monitor?": "second monitor needs your manager",
+    "How quickly must the on-call engineer respond to a critical outage?": "within 15 minutes",
+    "When does the post-incident review happen?": "within five business days",
+    "How often are backups taken and how long are they kept?": "35 days",
+    "How quickly can a production database be restored?": "four hours",
+    "Can I install software myself?": "administrator rights",
+    "Can I paste customer data into an AI chatbot?": "do not paste customer data",
+    "How do I report a suspicious email?": "report phishing button",
+    "What should I do on my first day?": "enroll in multi-factor",
+    "How long do I have to report a lost phone?": "within four hours",
+    "How long are emails kept?": "seven years",
+    "What is the largest attachment I can send?": "25 mb",
+    "What happens to my access when I leave the company?": "disabled at the end",
+    "When is the change freeze over the holidays?": "15 december and 5 january",
+    "How fast must on-call acknowledge a page?": "within five minutes",
+    "How long are video meeting recordings kept?": "90 days",
+    "Can a visitor use our Wi-Fi?": "guest network",
+    "How do I print in colour?": "manager's approval",
+}
+
+
+def normalize(text):
+    return " ".join(text.lower().split())
+
+
+def fact_recall(search, questions, k=3):
+    """Share of answerable questions where the top-k retrieved text contains the key fact."""
+    answerable = [question for question, doc_id in questions if doc_id is not None]
+    found = 0
+    for question in answerable:
+        retrieved = normalize(" ".join(chunk["text"] for chunk, _score in search(question)[:k]))
+        if FACTS[question] in retrieved:
+            found += 1
+    return round(found / len(answerable), 2)
+```
+
+Now run an experiment: change the chunking and watch both measures.
+
+```python
+from functools import partial
+
+from chunking import build_chunks, split_by_headings, split_fixed
+from evaluate import retrieval_report
+from facts import fact_recall
+from handbook import DOCS, QUESTIONS
+from index import VectorIndex
+
+splitters = {
+    "by heading": split_by_headings,
+    "fixed 700 characters": partial(split_fixed, size=700, overlap=100),
+    "fixed 300 characters": partial(split_fixed, size=300, overlap=50),
+}
+
+print(f"{'chunking':22s} {'chunks':>6s}  right doc first  answer in top 1  answer in top 3")
+for name, splitter in splitters.items():
+    chunks = build_chunks(DOCS, splitter)
+    index = VectorIndex(chunks)
+    search = lambda q: index.search(q, k=10)
+    doc_hit = retrieval_report(search, QUESTIONS)["hit@1"]
+    print(f"{name:22s} {len(chunks):6d}  {doc_hit:15.2f}  {fact_recall(search, QUESTIONS, 1):15.2f}  {fact_recall(search, QUESTIONS, 3):15.2f}")
+```
+
+Compare the columns. Finding the **right document** first is equally easy for all three chunk sizes, so that measure cannot tell them apart. But whether the **top chunk actually contains the answer** differs: the medium chunks do best, the very small ones scatter the answer across pieces, and the heading chunks sit between. With the top three chunks, every setting contains the answer. That is the kind of insight the simpler metric hides, and it points to a practical conclusion: **give the model three or so chunks**, so a slightly imperfect split still lands the answer in front of it.
+
+Two cautions when you read results like this:
+
+- **Small test sets are noisy.** With 25 questions, one question is four points. Do not act on a gap of one or two questions, and look for differences that hold up when you add more questions.
+- **Change one thing at a time**, and write down what you changed and what the numbers did. Otherwise you cannot tell which change helped.
+
+## Measure the answers
+
+For answers, two kinds of check exist:
+
+- **Exact checks**, written as code: the answer contains the key fact, the cited source ids all exist, the answer does not contain a forbidden phrase, the length is within bounds. These are cheap, repeatable and trustworthy. Use them wherever you can.
+- **Judgment checks**, which need a reader: is the answer correct, is every claim supported by the sources, did it decline when it should? For these you can use a language model as a **judge**.
+
+The qualities worth grading:
+
+| Quality | Meaning |
+| --- | --- |
+| **Correct** | The facts match the reference answer, with nothing important missing or wrong |
+| **Faithful (supported)** | Every claim in the answer appears in the sources it was given |
+| **Cited correctly** | The cited passages really contain what the answer says |
+| **Declines correctly** | When the documents lack the answer, it says so |
+| **Does not wrongly decline** | When they have it, it answers |
+| **Useful** | Direct, short, and with a next step where needed |
+
+## A model as a judge
+
+A judge is a model call that reads the question, the reference, the sources and the assistant's answer, and returns a structured verdict. Save this as `judge.py`:
+
+```python
+# judge.py
+from pydantic import BaseModel, Field
+
+MODEL = "claude-opus-5-5"
+
+
+class Verdict(BaseModel):
+    correct: bool = Field(description="True if the answer gives the same facts as the reference, with nothing important missing or wrong")
+    supported: bool = Field(description="True if every claim in the answer appears in the sources")
+    declined: bool = Field(description="True if the answer says the information could not be found")
+    note: str = Field(description="One short sentence explaining the verdict")
+
+
+JUDGE_SYSTEM = """You grade answers from a document-based assistant. Be strict and literal.
+Compare the assistant's answer with the reference answer and the sources. Do not use outside knowledge."""
+
+
+def judge_answer(client, question, answer, sources_text, reference):
+    prompt = (
+        f"Question: {question}\n\nReference answer: {reference}\n\n"
+        f"Sources:\n{sources_text}\n\nAssistant's answer: {answer}"
+    )
+    response = client.messages.parse(
+        model=MODEL,
+        max_tokens=1024,
+        system=JUDGE_SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+        output_format=Verdict,
+    )
+    return response.parsed_output
+
+
+def evaluate_answers(client, ask_fn, cases):
+    """cases is a list of (question, reference answer or None). ask_fn(question) returns the dict from answer.ask."""
+    no_answer = "The handbook does not contain the answer. The assistant should say it could not find it."
+    rows = []
+    for question, reference in cases:
+        result = ask_fn(question)
+        sources_text = "\n".join(f"[{s['source']}] {s['quote']}" for s in result["sources"]) or "(none cited)"
+        verdict = judge_answer(client, question, result["answer"], sources_text, reference or no_answer)
+        rows.append({"question": question, "reference": reference, "answer": result["answer"], "verdict": verdict})
+    answerable = [r for r in rows if r["reference"]]
+    unanswerable = [r for r in rows if not r["reference"]]
+    return {
+        "correct": sum(r["verdict"].correct for r in answerable) / max(len(answerable), 1),
+        "supported": sum(r["verdict"].supported for r in rows) / max(len(rows), 1),
+        "wrongly_declined": sum(r["verdict"].declined for r in answerable) / max(len(answerable), 1),
+        "correctly_declined": sum(r["verdict"].declined for r in unanswerable) / max(len(unanswerable), 1),
+        "rows": rows,
+    }
+```
+
+Run it over a small set that includes questions the handbook cannot answer:
+
+```python
+import anthropic
+
+from answer import ask
+from chunking import build_chunks
+from handbook import DOCS
+from index import VectorIndex
+from judge import evaluate_answers
+
+CASES = [
+    ("How long does a VPN session last?", "12 hours, then you sign in again."),
+    ("How long does my password have to be?", "At least 14 characters."),
+    ("I lost my laptop on a train. What do I do?", "Report it to security@northwind.example within one hour."),
+    ("How long are emails kept?", "Seven years."),
+    ("How do I print in colour?", "Colour printing needs a reason and your manager's approval."),
+    ("What is the company's parental leave policy?", None),
+    ("What time does the cafeteria open?", None),
+]
+
+index = VectorIndex(build_chunks(DOCS))
+client = anthropic.Anthropic()
+report = evaluate_answers(client, lambda q: ask(client, lambda query, k: index.search(query, k=k), q), CASES)
+
+for name in ("correct", "supported", "wrongly_declined", "correctly_declined"):
+    print(f"{name:20s} {report[name]:.0%}")
+for row in report["rows"]:
+    print("-", row["question"][:50], "|", row["verdict"].note)
+```
+
+A judge is useful and **fallible**. Treat it carefully:
+
+- **Check the judge against people.** Grade 20 answers yourself, then compare. If you disagree often, tighten the grading instructions or the verdict definitions.
+- **Be strict in the prompt**, and give the judge the sources, so it can check support instead of guessing.
+- **Beware bias.** Judges tend to favor longer, more confident answers, and sometimes their own model's style.
+- **Use exact checks first.** A judge is for what code cannot check.
+- **Keep judge calls cheap and repeatable**, and record which judge and prompt produced which scores.
+- **Read samples of the actual answers.** Scores summarize, and reading explains.
+
+## Test the machinery without models
+
+Your pipeline has many ordinary-code parts: chunking, filtering, citation handling, ID validation. Test them with **fakes**, as in the API course, so tests run instantly with no network and no model download. Here is a tiny fake embedder that stands in for the real one:
+
+```python
+import unittest
+
+import numpy as np
+
+from chunking import build_chunks
+from handbook import DOCS
+from index import VectorIndex
+
+
+class FakeEmbedder:
+    """Counts a few chosen words, so tests need no model download."""
+
+    def __init__(self, vocabulary):
+        self.vocabulary = vocabulary
+
+    def _vector(self, text):
+        words = text.lower().replace(".", " ").split()
+        return np.array([words.count(w) for w in self.vocabulary], dtype=float) + 1e-6
+
+    def embed(self, texts):
+        return (self._vector(t) for t in texts)
+
+    def query_embed(self, texts):
+        return (self._vector(t) for t in texts)
+
+
+class SearchTests(unittest.TestCase):
+    def setUp(self):
+        self.chunks = build_chunks(DOCS)
+        self.index = VectorIndex(self.chunks, model=FakeEmbedder(["vpn", "backups", "password", "laptop"]))
+
+    def test_finds_the_vpn_chunk(self):
+        chunk, _ = self.index.search("vpn", k=1)[0]
+        self.assertEqual(chunk["doc_id"], "vpn")
+
+    def test_filter_limits_the_results(self):
+        results = self.index.search("vpn", k=3, where=lambda c: c["doc_id"] == "backups")
+        self.assertTrue(all(chunk["doc_id"] == "backups" for chunk, _ in results))
+
+
+suite = unittest.defaultTestLoader.loadTestsFromTestCase(SearchTests)
+unittest.TextTestRunner(verbosity=1).run(suite)
+```
+
+## Find out why an answer failed
+
+For each bad answer, work down this list. The first "yes" is your culprit:
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| The right chunk is **not in the corpus** | Missing, outdated or unparsed document | Fix the content or the loader |
+| It is in the corpus but **never retrieved** | Chunking, vocabulary mismatch, weak embeddings | Better chunks, hybrid search, query rewriting, another model |
+| It is retrieved but **ranked low** | Many similar chunks | Reranking, metadata filters, more chunks |
+| It is in the prompt but **ignored** | Too many or noisy chunks, weak instructions | Fewer chunks, clearer rules |
+| The answer **adds facts not in the sources** | The model is guessing | Stricter prompt, "I could not find it" permission, citations |
+| It **declines** although the answer is there | Over-cautious prompt, answer buried | Adjust rules, rank better |
+| It **answers** although the answer is not there | No decline permission, or misleading near-matches | Add the permission, test unanswerable questions |
+| **Two documents disagree** | Conflicting or stale sources | Fix the sources, show dates |
+| It followed **instructions found in a document** | Prompt injection | Defenses from lesson 5 |
+
+Keep a log of failures with the cause. The pattern tells you where to invest.
+
+## Keep measuring after launch
+
+- **Rerun the test set** whenever you change chunking, the embedding model, the prompt or the model version, and before you ship.
+- **Log every question** with what was retrieved, the answer, the sources and the token cost (leave out personal details).
+- **Watch the "could not find it" rate.** A rise can mean new topics users care about that your documents do not cover, or a broken index.
+- **Collect feedback** with a thumbs up or down and a comment, and turn failures into new test cases.
+- **Track freshness**: when each source was last updated, and alert on stale ones.
+- **Watch latency and cost** per question.
+
+<Callout title="Evaluation is the product">
+  A RAG system that is measured can be improved. One that is not will drift,
+  and you will find out from an angry user. Treat the test set as seriously as
+  the code.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Ragas documentation" href="https://docs.ragas.io/" source="Ragas">
+  An open-source toolkit for RAG evaluation, with the standard metrics and how they are computed.
+</Resource>
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Anthropic">
+  General guidance on test sets, graders and what makes an evaluation trustworthy.
+</Resource>
+
+<Resource kind="docs" title="Reduce hallucinations" href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" source="Anthropic">
+  Techniques whose effect you can now measure.
+</Resource>
+
+<Resource kind="article" title="Introducing Contextual Retrieval" href="https://www.anthropic.com/research/contextual-retrieval" source="Anthropic">
+  A good example of how retrieval changes are reported, with failure rates measured at each step.
+</Resource>
+
+## Check yourself
+
+1. Build a test set of 30 questions for documents you know, including five that the documents cannot answer. Run the retrieval measures. Which questions fail?
+2. Have a model judge ten answers, then grade the same ten yourself. Where do you disagree, and why?
+3. Make one change, such as chunk size or the number of chunks. Predict the effect on each measure, then run it. Were you right?

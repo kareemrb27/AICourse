@@ -97,6 +97,13 @@ import L94 from "./build-with-llm-apis/tool-use.mdx";
 import L95 from "./build-with-llm-apis/reliability-and-cost.mdx";
 import L96 from "./build-with-llm-apis/testing-and-safety.mdx";
 import L97 from "./build-with-llm-apis/capstone.mdx";
+import L98 from "./chat-with-your-documents/what-is-rag.mdx";
+import L99 from "./chat-with-your-documents/preparing-documents.mdx";
+import L100 from "./chat-with-your-documents/embeddings-and-search.mdx";
+import L101 from "./chat-with-your-documents/better-retrieval.mdx";
+import L102 from "./chat-with-your-documents/generating-answers.mdx";
+import L103 from "./chat-with-your-documents/evaluating-rag.mdx";
+import L104 from "./chat-with-your-documents/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -199,4 +206,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "build-with-llm-apis/reliability-and-cost": L95,
   "build-with-llm-apis/testing-and-safety": L96,
   "build-with-llm-apis/capstone": L97,
+  "chat-with-your-documents/what-is-rag": L98,
+  "chat-with-your-documents/preparing-documents": L99,
+  "chat-with-your-documents/embeddings-and-search": L100,
+  "chat-with-your-documents/better-retrieval": L101,
+  "chat-with-your-documents/generating-answers": L102,
+  "chat-with-your-documents/evaluating-rag": L103,
+  "chat-with-your-documents/capstone": L104,
 };

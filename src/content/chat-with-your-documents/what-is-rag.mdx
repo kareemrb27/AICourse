@@ -1,0 +1,421 @@
+A language model knows a lot about the world and nothing about your company. It has never read your policies, your tickets, your runbooks or last week's incident report. **Retrieval-augmented generation**, usually shortened to **RAG**, is the standard way to fix that: find the relevant passages in your own documents, hand them to the model with the question, and have it answer from them. It is the technique behind most "chat with your documents" products, and in this course you will build one yourself.
+
+## Watch
+
+<Video id="T-D1OfcDW1M" title="What is Retrieval-Augmented Generation (RAG)?" channel="IBM Technology" minutes={7}>
+  A seven-minute explanation of the idea: why models need outside information and how retrieval supplies it.
+</Video>
+
+<Video id="UabBYexBD4k" title="Is RAG Still Needed? Choosing the Best Approach for LLMs" channel="IBM Technology" minutes={11}>
+  With very large context windows, is retrieval still necessary? This video weighs RAG against simply putting everything in the prompt.
+</Video>
+
+## The problem RAG solves
+
+Models fall short on your documents in three ways:
+
+- **They have not seen them.** Private and recent information is not in the training data.
+- **They guess.** Asked about something they do not know, a model may produce a fluent, confident and wrong answer (a hallucination).
+- **You cannot check them.** A plain answer comes with no source, so you cannot tell whether it is true.
+
+RAG attacks all three. The model gets the right text at question time, is told to answer only from it, and can point to where each fact came from.
+
+## The two phases
+
+RAG has an **ingestion** phase you run once (and again when documents change), and a **query** phase that runs on every question:
+
+```text
+INGESTION (offline)
+  documents -> clean text -> split into chunks -> turn each chunk into a vector -> store
+
+QUERY (every question)
+  question -> find the most relevant chunks -> build a prompt -> model answers -> show answer + sources
+```
+
+Each arrow is a place where things can go wrong, and the lessons ahead take them in order: preparing documents (lesson 2), searching (lessons 3 and 4), generating the answer (lesson 5) and measuring all of it (lesson 6).
+
+## A tiny RAG in 30 lines
+
+Before the proper tools, here is the whole idea in its simplest form. First, the practice documents. Throughout this course you will work with a small, **fictional** IT handbook for a company called Northwind Software: sixteen short documents, plus 27 test questions with known answers. Save this as `handbook.py`:
+
+```python
+# handbook.py: a small fictional IT handbook for Northwind Software, used throughout this course.
+
+DOCS = [
+    {
+        "id": "passwords",
+        "title": "Password and MFA policy",
+        "text": """# Password and MFA policy
+
+## Passwords
+Every Northwind account needs a password of at least 14 characters. Use the company password manager, Vaultly, to create and store passwords. Passwords are not rotated on a schedule. You only need to change one if you suspect it has been exposed, or if the security team asks you to.
+
+## Multi-factor authentication
+Multi-factor authentication (MFA) is required on every account, with no exceptions. Enroll an authenticator app on your first day. Text message codes are not accepted for staff accounts.
+
+## Locked accounts and resets
+After five failed sign-in attempts an account is locked for 15 minutes. To reset a password yourself, use the self-service portal at reset.northwind.example. If you are locked out of the portal as well, call the service desk on extension 4100.
+""",
+    },
+    {
+        "id": "vpn",
+        "title": "Remote access and VPN",
+        "text": """# Remote access and VPN
+
+## Installing the client
+Remote staff connect through the NorthLink VPN client. It is available for Windows 11, macOS 13 or newer, and Ubuntu 22.04 or newer. Install it from the software portal. Do not download VPN clients from other sources.
+
+## Connecting
+Start NorthLink and sign in with your company single sign-on, then approve the MFA prompt. Use the VPN whenever you are on a network you do not control, such as a hotel, cafe or airport Wi-Fi. Split tunneling is disabled, so all traffic goes through the company network while you are connected.
+
+## Sessions and troubleshooting
+A VPN session lasts 12 hours, after which you sign in again. If the client reports error 619 or cannot connect, restart it and check that your clock is correct. If it still fails, open a ticket in the Network category and include the error code.
+""",
+    },
+    {
+        "id": "hardware",
+        "title": "Hardware requests and refresh",
+        "text": """# Hardware requests and refresh
+
+## Laptops
+Every employee gets a company laptop. Laptops are replaced every four years. Staff can choose from the standard models listed in the hardware portal. Anything outside the list needs approval from your manager and the IT lead.
+
+## Extra equipment
+A second monitor, keyboard or headset can be requested in the hardware portal. A second monitor needs your manager's approval. Requests are normally fulfilled within five business days.
+
+## Faults, loss and theft
+If your laptop breaks, raise a ticket and IT will give you a loaner, normally within one business day. If a device is lost or stolen, report it to security@northwind.example within one hour, even outside working hours, so it can be locked and wiped.
+""",
+    },
+    {
+        "id": "incidents",
+        "title": "Incident response",
+        "text": """# Incident response
+
+## Severity levels
+Incidents are rated by customer impact. Severity 1 is a critical outage affecting all customers, and the on-call engineer must respond within 15 minutes. Severity 2 is a major problem affecting some customers, with a response within one hour. Severity 3 is a minor issue with a workaround, handled by the next business day.
+
+## During an incident
+The first responder opens a channel named after the incident in the chat tool and becomes the incident lead. The lead posts an update every 30 minutes for Severity 1 and every two hours for Severity 2. Status page updates are written by the communications owner, not the engineers fixing the problem.
+
+## After an incident
+Every Severity 1 and Severity 2 incident gets a post-incident review within five business days. The review is blameless and ends with written actions, each with an owner and a due date.
+""",
+    },
+    {
+        "id": "backups",
+        "title": "Backups and data retention",
+        "text": """# Backups and data retention
+
+## Schedule and retention
+Production systems are backed up every night at 02:00 UTC. Nightly backups are kept for 35 days. A monthly archive is kept for 12 months. Backups are encrypted and stored in a different region from the system they protect.
+
+## Restoring data
+To restore data, open a ticket in the Restore category and name the system and the point in time you need. The target time to restore a production database is four hours. Restores of individual files from the shared drive are normally done the same day.
+
+## What is not backed up
+Laptops are not backed up. Keep work files in the company cloud drive, not on your local disk. Personal files stored on company laptops are not covered and may be lost when a device is replaced.
+""",
+    },
+    {
+        "id": "software",
+        "title": "Software installation and licenses",
+        "text": """# Software installation and licenses
+
+## Installing software
+Staff do not have administrator rights on their laptops by default. Install approved applications from the software portal. If something you need is missing, request it in the portal. Requests are reviewed within two business days.
+
+## Licenses and open source
+Paid tools such as IDEs and design software are licensed by the company, so never use a personal license for work. Open-source libraries used in company products must be reviewed by the security team before they are added to a project.
+
+## Not allowed
+Personal file-sharing and cloud storage apps are not allowed on company laptops. Remote desktop tools must be approved by security. Using pirated or cracked software is a disciplinary matter.
+""",
+    },
+    {
+        "id": "security",
+        "title": "Phishing and data handling",
+        "text": """# Phishing and data handling
+
+## Reporting phishing
+If you receive a suspicious email, do not click anything. Use the Report Phishing button in your mail client. Security reviews every report and tells you the result. If you already clicked a link or opened an attachment, call the service desk immediately on extension 4100.
+
+## Data classification
+Company data is classified as Public, Internal, Confidential or Restricted. Customer records and source code are Confidential. Restricted data includes credentials, payment details and health information.
+
+## Using AI tools
+Only the approved assistant, Northwind Assistant, may be used with Internal or Confidential data. Restricted data must never be entered into any AI tool, approved or not. Do not paste customer data into public AI services.
+""",
+    },
+    {
+        "id": "onboarding",
+        "title": "New starter IT checklist",
+        "text": """# New starter IT checklist
+
+## Before your first day
+IT creates your accounts and email address before you start. Your laptop is shipped to you or waiting at your desk. You will receive your first-day instructions by personal email.
+
+## Your first day
+Sign in to your laptop, then enroll in multi-factor authentication. Install the password manager and set up the VPN if you work remotely. Join the chat channels for your team.
+
+## Your first two weeks
+Complete the mandatory security awareness training within 14 days of starting. Access to systems is granted through role-based groups, so ask your manager for the groups you need rather than for individual permissions.
+""",
+    },
+    {
+        "id": "mobile",
+        "title": "Mobile devices and BYOD",
+        "text": """# Mobile devices and BYOD
+
+## Company and personal phones
+Company phones are optional and issued to on-call staff and managers. Other staff may use a personal phone for work email and chat, as long as it is enrolled in device management and protected by a six-digit PIN or biometrics.
+
+## Lost or stolen phones
+Report a lost or stolen phone to security@northwind.example within four hours. The security team can remotely wipe the work data on it. Personal photos and apps are not touched on personal phones.
+
+## Leaving the company
+When you leave, the work data on your personal phone is removed automatically. Company phones must be returned to IT.
+""",
+    },
+    {
+        "id": "email",
+        "title": "Email and retention",
+        "text": """# Email and retention
+
+## Mailbox limits
+Each mailbox has a 50 GB limit. The largest attachment you can send is 25 MB. For bigger files, share a link from the company cloud drive instead of attaching the file.
+
+## Retention
+Email is kept for seven years for legal and compliance reasons, even if you delete it from your mailbox. Deleted items can be recovered by yourself for 30 days. After that, ask the service desk.
+
+## Shared mailboxes and out-of-office
+Team mailboxes such as support@ and billing@ are shared mailboxes with no password of their own. Set an out-of-office reply whenever you are away for more than one working day.
+""",
+    },
+    {
+        "id": "access",
+        "title": "Access requests and offboarding",
+        "text": """# Access requests and offboarding
+
+## Requesting access
+Request access to systems in the access portal. Your manager approves most requests. Access to production systems also needs approval from the system owner. Access is granted by role-based groups where possible.
+
+## Access reviews
+Managers review the access of their team every quarter. Access that is no longer needed is removed after the review.
+
+## When someone leaves
+Accounts are disabled at the end of the person's last working day. Their laptop and other equipment must be returned within five business days. Ownership of their shared drive folders is transferred to their manager.
+""",
+    },
+    {
+        "id": "change",
+        "title": "Change management",
+        "text": """# Change management
+
+## Types of change
+Standard changes are low risk and pre-approved, such as adding a user to a group. Normal changes need approval from the Change Advisory Board, which meets on Tuesdays. Emergency changes fix a live incident and may be made first and reviewed afterwards, within two business days.
+
+## Requirements
+Every Normal change needs a description, a test plan and a rollback plan. A change without a rollback plan is rejected.
+
+## Change freeze
+No Normal changes are made between 15 December and 5 January, except for emergency changes.
+""",
+    },
+    {
+        "id": "oncall",
+        "title": "On-call rota",
+        "text": """# On-call rota
+
+## Rota
+The on-call rota changes every Monday at 09:00 with a short handover meeting. Each week has a primary and a secondary engineer.
+
+## Paging rules
+The primary on-call engineer must acknowledge a page within five minutes. If there is no acknowledgement, the page escalates to the secondary after ten minutes. Acknowledging a page is not the same as responding to the incident, and the severity targets in the incident policy still apply.
+
+## Swaps
+Engineers may swap shifts, but the swap must be recorded in the rota tool before it starts.
+""",
+    },
+    {
+        "id": "meetings",
+        "title": "Video meetings and rooms",
+        "text": """# Video meetings and rooms
+
+## Approved tool
+Use Northwind Meet for all video meetings. Do not use personal accounts on other meeting services for company calls.
+
+## Recordings
+Recordings are stored for 90 days and then deleted automatically. Tell participants before you start recording. Recordings of customer calls are Confidential data.
+
+## Guests and rooms
+Guests wait in the lobby until the host admits them. Meeting rooms are booked in the calendar, and a booking is released if nobody checks in within ten minutes.
+""",
+    },
+    {
+        "id": "network",
+        "title": "Guest Wi-Fi and office network",
+        "text": """# Guest Wi-Fi and office network
+
+## Office network
+Company laptops join the office Wi-Fi automatically using a device certificate. Personal devices are not allowed on the office network.
+
+## Guest Wi-Fi
+Visitors and personal devices use the guest network. The guest Wi-Fi password changes every week and is shown at reception. Visitors sign in at reception and wear a visitor badge.
+
+## Wired ports
+Wired network ports in meeting rooms are disabled unless you ask IT to enable one.
+""",
+    },
+    {
+        "id": "printing",
+        "title": "Printing and scanning",
+        "text": """# Printing and scanning
+
+## Printing
+Print to the Follow-Me queue and release the job at any printer by tapping your badge. Jobs not released within 24 hours are deleted. Black and white is the default.
+
+## Colour printing
+Colour printing needs a reason and your manager's approval. Large format printing is done by the facilities team.
+
+## Scanning
+Scanners send documents to your own email address. Do not scan Restricted documents to email.
+""",
+    },
+
+]
+
+# Questions with the document that answers them. A question whose answer is None
+# is NOT covered by the handbook: a good assistant should say it does not know.
+QUESTIONS = [
+    ("How long does my password have to be?", "passwords"),
+    ("Do I have to change my password every few months?", "passwords"),
+    ("I forgot my login and got it wrong a few times. How long until I can try again?", "passwords"),
+    ("How do I connect to the VPN from a hotel?", "vpn"),
+    ("How long does a VPN session last?", "vpn"),
+    ("When will my laptop be replaced?", "hardware"),
+    ("I lost my laptop on a train. What do I do?", "hardware"),
+    ("Who has to approve a second monitor?", "hardware"),
+    ("How quickly must the on-call engineer respond to a critical outage?", "incidents"),
+    ("When does the post-incident review happen?", "incidents"),
+    ("How often are backups taken and how long are they kept?", "backups"),
+    ("How quickly can a production database be restored?", "backups"),
+    ("Can I install software myself?", "software"),
+    ("Can I paste customer data into an AI chatbot?", "security"),
+    ("How do I report a suspicious email?", "security"),
+    ("What should I do on my first day?", "onboarding"),
+    ("How long do I have to report a lost phone?", "mobile"),
+    ("How long are emails kept?", "email"),
+    ("What is the largest attachment I can send?", "email"),
+    ("What happens to my access when I leave the company?", "access"),
+    ("When is the change freeze over the holidays?", "change"),
+    ("How fast must on-call acknowledge a page?", "oncall"),
+    ("How long are video meeting recordings kept?", "meetings"),
+    ("Can a visitor use our Wi-Fi?", "network"),
+    ("How do I print in colour?", "printing"),
+    ("What is the company's parental leave policy?", None),
+    ("What time does the cafeteria open?", None),
+]
+```
+
+The handbook is only about 1,800 words, which would fit into a single prompt with room to spare. We use it because it is small enough to read and to test, **not** because it needs RAG. Real document sets are thousands of times larger, and that is where RAG earns its place (see the decision table below).
+
+Now a minimal pipeline. Retrieval here is crude on purpose: it counts the words a document shares with the question.
+
+```python
+import re
+
+import anthropic
+
+from handbook import DOCS
+
+MODEL = "claude-opus-5-5"
+
+
+def words(text):
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def retrieve(question, docs, k=2):
+    q = words(question)
+    return sorted(docs, key=lambda d: -len(q & words(d["text"])))[:k]
+
+
+def ask(client, question):
+    sources = retrieve(question, DOCS)
+    context = "\n\n".join(f"[{d['id']}] {d['title']}\n{d['text']}" for d in sources)
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2048,
+        system=(
+            "Answer using only the sources provided. If the sources do not contain the answer, "
+            "say that you do not know. Cite the source id in square brackets after each fact."
+        ),
+        messages=[{"role": "user", "content": f"Sources:\n{context}\n\nQuestion: {question}"}],
+    )
+    answer = "".join(b.text for b in response.content if b.type == "text")
+    return answer, [d["id"] for d in sources]
+
+
+client = anthropic.Anthropic()
+for question in ["How long does a VPN session last?", "When will my laptop be replaced?"]:
+    answer, used = ask(client, question)
+    print("Q:", question)
+    print("sources used:", used)
+    print("A:", answer, "\n")
+```
+
+That is a complete RAG system: retrieve, build a prompt from what was found, generate. Everything else in this course is about making each step **better and measurable**, because the version above has obvious problems. Its retrieval ignores meaning (a document about "approval" will not match a question about "permission"), it counts common words like "the" and "my", it returns whole documents instead of the relevant passage, and nothing checks the answer.
+
+## RAG, long context or fine-tuning?
+
+RAG is one of three ways to give a model knowledge, and the right choice depends on the situation:
+
+| Approach | Best when | Watch out for |
+| --- | --- | --- |
+| **Put it all in the prompt** (long context) | The documents fit comfortably in the context window and change rarely | Cost and speed on every call (prompt caching helps), and answer quality can slip with very long inputs |
+| **RAG** | The collection is large, changes often, or needs per-user access control, and answers need sources | More moving parts, and answers are only as good as retrieval |
+| **Fine-tuning** | You need a consistent style, format or skill | It is poor at teaching facts reliably, and it is slow to update |
+| **A search tool** (lesson 4 of the API course, applied) | The model should decide when and what to look up | More tool calls, and the model must search well |
+
+A common mistake is to build RAG when the documents would simply fit in the prompt. A common opposite mistake is to stuff everything into the prompt when the collection has grown to millions of words. Do the arithmetic first: count the tokens in your documents, and compare the cost of sending them every time with the cost of retrieving a few chunks.
+
+## What makes RAG succeed or fail
+
+Most RAG problems are **search problems**. If the right passage is not retrieved, no model can answer correctly, and a stronger model just produces a more convincing wrong answer. So the discipline in this course is:
+
+1. **Retrieve well**, and measure it separately from the answers.
+2. **Instruct the model to stay inside the sources** and to say when they do not contain the answer.
+3. **Show sources**, so a person can verify.
+4. **Test with real questions**, including ones the documents cannot answer.
+
+## Things to decide early
+
+- **Which documents?** Who owns them, and are they current and consistent? RAG will faithfully repeat a wrong policy.
+- **Who may see what?** If different people may read different documents, the access rules must be applied **before** retrieval, not after. A model that has seen a confidential passage can be coaxed into revealing it.
+- **Where does the text go?** Chunks you retrieve are sent to the model provider with each question. Check that your data rules allow it. You can compute embeddings locally, as this course does, so the search step stays on your machine.
+- **What does a wrong answer cost?** A chatbot that gets the cafeteria hours wrong is a nuisance. One that gets a refund policy or a medical instruction wrong is a liability, and needs human review.
+
+## Resources
+
+<Resource kind="paper" title="Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" href="https://arxiv.org/abs/2005.11401" source="Lewis et al., arXiv">
+  The paper that introduced the name. Read the abstract and the introduction.
+</Resource>
+
+<Resource kind="docs" title="Search results" href="https://platform.claude.com/docs/en/build-with-claude/search-results" source="Anthropic">
+  How to give Claude retrieved passages in a form it can cite. You use this in lesson 5.
+</Resource>
+
+<Resource kind="docs" title="Reduce hallucinations" href="https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations" source="Anthropic">
+  Techniques such as allowing "I don't know" and requiring quotes, which RAG prompts rely on.
+</Resource>
+
+<Resource kind="repo" title="Claude Cookbooks" href="https://github.com/anthropics/claude-cookbooks" source="Anthropic on GitHub">
+  Worked notebooks, including retrieval-augmented generation examples.
+</Resource>
+
+## Check yourself
+
+1. Run the tiny RAG on three questions from the handbook. For each, say whether the right document was retrieved, and whether the answer was correct.
+2. Ask it something the handbook does not cover. What does it say?
+3. Describe a collection of documents at your own workplace. Would you use long context, RAG or a search tool for it, and why?

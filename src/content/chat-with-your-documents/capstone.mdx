@@ -1,0 +1,171 @@
+Build a complete "chat with your documents" assistant the way you would ship it: ingest a folder, search it well, answer with checkable citations, decline when the documents do not say, and **prove how good it is** with a test set you can re-run. It combines every lesson in this course and the API skills from the one before.
+
+## The project: an assistant for a document collection
+
+Choose a collection of documents and build an assistant that answers questions about it from a command line. You have two options:
+
+- **The Northwind handbook** from this course. It is ready to use, so you can spend your time on the pipeline and the measuring. You will need to write at least 20 **new** questions of your own, because the 27 in the lessons are already tuned.
+- **Your own documents.** Use public or non-confidential files only, such as open-source project docs, public policies, a book chapter or product manuals. This is the more valuable choice, because real documents are messier.
+
+## Requirements
+
+Work in its own folder and virtual environment, with a `.gitignore` that lists `.venv/`, `.env` and any saved index files. No keys in code. The project must include:
+
+1. **Ingestion**: load a folder of documents, keep metadata (id, title, source), clean them and drop duplicates. Print how many documents and chunks were loaded.
+2. **Chunking** that you chose on evidence: compare at least two chunk settings with the measures from lesson 6, and write down which you picked and why.
+3. **Retrieval** with embeddings, plus **one** extra technique from lesson 4 (keyword search with fusion, a reranker, query rewriting or generated context). Keep it only if your measurements show it helps, and report the numbers either way.
+4. **Answers with citations** using search result blocks, showing a numbered source list with the cited passage for each answer.
+5. **Declining**: a clear "I could not find that" behavior with a helpful next step, tested on unanswerable questions.
+6. **Safety**: access control or filtering by metadata, a prompt that treats sources as data, and one test with a poisoned document.
+7. **A test set** of at least 30 questions (including at least 5 unanswerable and 3 tricky ones), with a key fact for each, and a **report** that prints the retrieval measures and, with a judge, the answer measures. Run the answer evaluation at least twice.
+8. **Unit tests** that need no network and no model download, covering chunking, filtering and citation handling, using fakes.
+9. **A README** explaining how to run it, what it can and cannot answer, what a question costs (from logged token usage) and what the evaluation showed, including the failures you found.
+
+## A starting skeleton
+
+This puts the pipeline together using the modules you built. Save it as `rag_app.py` next to `handbook.py`, `chunking.py`, `index.py`, `retrieval.py`, `evaluate.py`, `facts.py`, `answer.py` and `judge.py`:
+
+```python
+# rag_app.py
+import sys
+from pathlib import Path
+
+import anthropic
+
+from answer import ask
+from chunking import build_chunks, drop_duplicates, split_by_headings
+from index import VectorIndex
+
+
+def load_folder(folder):
+    docs = []
+    for path in sorted(Path(folder).rglob("*")):
+        if path.is_file() and path.suffix.lower() in {".md", ".txt"}:
+            text = path.read_text(encoding="utf-8")
+            title = next((line.lstrip("# ").strip() for line in text.splitlines() if line.startswith("#")), path.stem)
+            docs.append({"id": path.stem, "title": title, "text": text, "source": str(path)})
+    return docs
+
+
+def build_assistant(folder, client=None):
+    client = client or anthropic.Anthropic(timeout=60.0)
+    docs = load_folder(folder)
+    chunks = drop_duplicates(build_chunks(docs, split_by_headings))
+    index = VectorIndex(chunks)
+
+    def search(question, k=4):
+        return index.search(question, k=k)
+
+    def answer(question):
+        return ask(client, search, question)
+
+    print(f"Loaded {len(docs)} documents and {len(chunks)} chunks.")
+    return answer, chunks
+
+
+def main(folder):
+    answer, _ = build_assistant(folder)
+    print("Ask a question, or press Enter on an empty line to quit.")
+    while True:
+        question = input("you> ").strip()
+        if not question:
+            break
+        result = answer(question)
+        print(result["answer"])
+        for number, source in enumerate(result["sources"], 1):
+            print(f"  [{number}] {source['title']}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else "handbook_files")
+```
+
+Try it on the handbook (this writes the folder first, as in lesson 2):
+
+```python
+from pathlib import Path
+
+from handbook import DOCS
+from rag_app import build_assistant
+
+folder = Path("handbook_files")
+folder.mkdir(exist_ok=True)
+for doc in DOCS:
+    (folder / f"{doc['id']}.md").write_text(doc["text"], encoding="utf-8")
+
+answer, chunks = build_assistant(folder)
+result = answer("How long does a VPN session last?")
+print(result["answer"])
+print([s["title"] for s in result["sources"]])
+```
+
+Then run `python rag_app.py handbook_files` to chat with it. The skeleton does the basics only. Everything in the requirements beyond that is yours: choosing the settings on evidence, the extra technique, declining, safety, the test set, the report, the unit tests and the README. Do them in that order, and run the report after each change so you can see what moved.
+
+## Hints
+
+- Build the test set **first**, before you tune anything, and do not look at it while choosing settings more than you must. Otherwise the numbers will look better than the system is.
+- Keep a `results.md` file where you note each change and the numbers before and after. It becomes the heart of your README.
+- For access control, add an `access` field to each document and a `where` function on the search, then test that a user with the wrong access never sees a restricted chunk, even in the sources list.
+- For declining, test the unanswerable questions with and without the "could not find it" rule in the prompt, and compare.
+- A poisoned document is a good unit test: assert that the pipeline still labels it as a source and does not give it special authority, and add an end-to-end check with the real model.
+- Log the token usage of every answer to a file. After 20 questions, compute the average cost.
+
+## How to check your work
+
+- Do the **unit tests pass with no network** and no model files?
+- Can someone **rebuild the index** from scratch and get the same chunks?
+- Does every answer show **sources** a person can read?
+- Does the report separate **retrieval** from **answer** results?
+- Did you find at least **three real failures** and write down their causes?
+- Do the numbers in the README match what the code prints?
+- Would the assistant leak a **restricted** document to the wrong user?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Ingestion | Metadata kept, duplicates removed, chunks inspected | Files read and split blindly |
+| Retrieval | Settings chosen on measured results, extra technique justified | Defaults, or tricks added without evidence |
+| Answers | Citations shown, sources checkable, concise | Plain text with no sources |
+| Declining | Tested on unanswerable questions, with a next step | Never tested |
+| Safety | Access filtering, injection test, sources treated as data | Not addressed |
+| Evaluation | 30+ questions, retrieval and answer measures, repeated runs | A few hand-picked examples |
+| Testing | Fast offline unit tests with fakes | None, or tests that need the network |
+| Honesty | The README lists the failures and limits | Only successes |
+
+## Stretch goals
+
+- Add a **reranker** and a **hybrid** option, and chart how the measures change as the collection grows.
+- Generate **contextual descriptions** for each chunk with prompt caching, and compare against the cheap title-and-heading version.
+- Support **PDFs** with `pypdf`, and look hard at the extracted text.
+- Handle **conversation**: rewrite follow-up questions, and keep a short history.
+- **Stream** the answer, and show the sources afterwards.
+- **Cache** answers to repeated questions, with an expiry.
+- Put it behind a small **web page**, with per-user access and a thumbs up or down that is saved as new test cases.
+- Replace the local embedding model with a hosted one and compare quality, speed and cost.
+
+## Share it
+
+Put the project in a public repository with the README, the test set and the evaluation report, but no keys and nothing confidential. It is your sixth portfolio piece, and one of the strongest, because a measured, honest RAG system is rarer than a demo.
+
+## Where to go next
+
+The next course in the path is **Evaluate and use AI responsibly**. You have just built the habit that matters most there, measuring a system against questions you wrote, and you will extend it to fairness, privacy, safety testing and deciding when not to ship.
+
+## Resources
+
+<Resource kind="docs" title="Search results" href="https://platform.claude.com/docs/en/build-with-claude/search-results" source="Anthropic">
+  A reference for the citation format your answers use.
+</Resource>
+
+<Resource kind="article" title="Introducing Contextual Retrieval" href="https://www.anthropic.com/research/contextual-retrieval" source="Anthropic">
+  The technique behind the generated-context stretch goal.
+</Resource>
+
+<Resource kind="docs" title="Ragas documentation" href="https://docs.ragas.io/" source="Ragas">
+  More metrics and ideas for the evaluation report.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  A checklist for the safety requirements.
+</Resource>

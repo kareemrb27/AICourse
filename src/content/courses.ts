@@ -169,6 +169,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "chat-with-your-documents",
+    title: "Chat with Your Documents (RAG)",
+    track: "Stage 2 · Build",
+    level: "Intermediate",
+    summary:
+      "Build an assistant that answers from your own documents and shows its sources. Prepare and chunk documents, search with embeddings, keyword search and reranking, generate cited answers that decline when the documents do not say, and measure retrieval and answers with a test set you can re-run.",
+    prerequisites: [
+      "Comfortable with Python and the Claude API, as taught in Build with LLM APIs",
+      "Machine Learning Basics is helpful for thinking about evaluation, but not required",
+      "A computer that can download a small embedding model (about 100 MB), and API credit for the answer-generation calls",
+    ],
+    outcomes: [
+      "Explain how RAG works and decide between RAG, long context and other approaches",
+      "Load, clean and chunk documents, keeping the metadata you need for citations and access control",
+      "Build semantic search with embeddings and understand where it fails",
+      "Compare keyword, embedding, hybrid and reranked retrieval using measurements",
+      "Generate answers with citations, decline when the sources do not contain the answer, and defend against injected instructions",
+      "Build a test set, evaluate retrieval and answers separately, and find the cause of a failure",
+    ],
+    lessons: [
+      { slug: "what-is-rag", title: "What RAG is and when to use it", summary: "The problem, the two phases, a tiny RAG, and RAG versus long context.", minutes: 60 },
+      { slug: "preparing-documents", title: "Preparing documents", summary: "Loading, metadata, chunking strategies and keeping an index in sync.", minutes: 90 },
+      { slug: "embeddings-and-search", title: "Embeddings and search", summary: "Embeddings, a vector index from scratch, filters and where search surprises you.", minutes: 90 },
+      { slug: "better-retrieval", title: "Better retrieval", summary: "Keyword search, hybrid search, reranking, query rewriting and context.", minutes: 120 },
+      { slug: "generating-answers", title: "Generating grounded answers", summary: "Citations with search results, declining, follow-ups and injected instructions.", minutes: 90 },
+      { slug: "evaluating-rag", title: "Evaluating RAG", summary: "Test sets, retrieval and answer measures, judges and finding failure causes.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: an assistant for your documents", summary: "Build, test and evaluate a complete cited-answer assistant.", minutes: 240 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

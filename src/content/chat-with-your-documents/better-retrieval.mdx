@@ -1,0 +1,371 @@
+If retrieval returns the wrong chunks, nothing downstream can save the answer. This lesson is about improving search, and about doing it with measurements instead of folklore. You will build keyword search, combine it with embeddings, add a reranker, and try the other common tricks, then see which ones actually helped on your documents. Some of the results will surprise you, and that is the point.
+
+## Watch
+
+<Video id="r0Dciuq0knU" title="Top 3 RAG Retrieval Strategies: Sparse, Dense, & Hybrid Explained" channel="IBM Technology" minutes={8}>
+  An eight-minute explanation of keyword (sparse), embedding (dense) and hybrid retrieval, and when each shines.
+</Video>
+
+<Video id="K1F8BIgcoNk" title="Rerank for better RAG (Explained)" channel="vectorize" minutes={14}>
+  Why a second, more careful ranking pass can improve results, with a worked example. The tools in the video differ from ours, the idea is the same.
+</Video>
+
+## Go deeper (optional)
+
+<Video id="tmiBae2goJM" title="The Best RAG Technique Yet? Anthropic's Contextual Retrieval Explained!" channel="Prompt Engineering" minutes={16}>
+  A walkthrough of contextual retrieval, which combines adding context to chunks with keyword search and reranking.
+</Video>
+
+## Measure first
+
+Never tune retrieval by eye. Pick questions with known answers, run each search method on all of them, and count how often the right document appears. Save this as `evaluate.py`:
+
+```python
+# evaluate.py
+def retrieval_report(search, questions, k=3):
+    """`search(question)` returns a ranked list of (chunk, score). Scores answerable questions only."""
+    hit1 = hitk = answerable = 0
+    reciprocal, misses = 0.0, []
+    for question, doc_id in questions:
+        if doc_id is None:
+            continue                       # nothing to find for unanswerable questions
+        answerable += 1
+        ranked = []
+        for chunk, _score in search(question):
+            if chunk["doc_id"] not in ranked:
+                ranked.append(chunk["doc_id"])
+        if ranked and ranked[0] == doc_id:
+            hit1 += 1
+        else:
+            misses.append((question, doc_id, ranked[0] if ranked else None))
+        if doc_id in ranked[:k]:
+            hitk += 1
+        if doc_id in ranked:
+            reciprocal += 1 / (ranked.index(doc_id) + 1)
+    return {
+        "hit@1": round(hit1 / answerable, 2),
+        f"hit@{k}": round(hitk / answerable, 2),
+        "mrr": round(reciprocal / answerable, 2),
+        "misses": misses,
+    }
+```
+
+The measures, in plain words:
+
+- **hit@1**: how often the right document is the very first result.
+- **hit@k**: how often it appears in the top k results. This is the number that matters most, because the model sees k chunks.
+- **MRR** (mean reciprocal rank): the average of 1 divided by the rank of the right document. 1.0 means always first, 0.5 means typically second.
+
+A **miss** is a question where the right document was not first. Reading the misses teaches you more than the summary numbers.
+
+## Keyword search with BM25
+
+Embeddings match meaning. **Keyword search** matches the actual words, which is better for exact terms: product names, error codes, identifiers, rare words. The classic algorithm is **BM25**. It scores a chunk higher when it contains the query's words, more so for rare words (which say more) and without over-rewarding long chunks.
+
+Save this as `retrieval.py`. It also holds the fusion and reranking code you will use below:
+
+```python
+# retrieval.py
+import math
+import re
+
+import numpy as np
+from fastembed.rerank.cross_encoder import TextCrossEncoder
+
+from chunking import with_context
+
+
+def tokenize(text):
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+class BM25Index:
+    def __init__(self, chunks, text_fn=with_context, k1=1.5, b=0.75):
+        self.chunks, self.k1, self.b = chunks, k1, b
+        self.docs = [tokenize(text_fn(chunk)) for chunk in chunks]
+        self.avg_len = sum(len(doc) for doc in self.docs) / len(self.docs)
+        self.doc_freq = {}
+        for doc in self.docs:
+            for word in set(doc):
+                self.doc_freq[word] = self.doc_freq.get(word, 0) + 1
+
+    def search(self, query, k=5, where=None):
+        n = len(self.docs)
+        scores = []
+        for doc in self.docs:
+            score = 0.0
+            for word in tokenize(query):
+                freq = doc.count(word)
+                if freq == 0:
+                    continue
+                idf = math.log((n - self.doc_freq[word] + 0.5) / (self.doc_freq[word] + 0.5) + 1)
+                norm = freq + self.k1 * (1 - self.b + self.b * len(doc) / self.avg_len)
+                score += idf * freq * (self.k1 + 1) / norm
+            scores.append(score)
+        results = []
+        for i in np.argsort(-np.array(scores)):
+            if where is not None and not where(self.chunks[i]):
+                continue
+            results.append((self.chunks[i], float(scores[i])))
+            if len(results) == k:
+                break
+        return results
+
+
+def reciprocal_rank_fusion(result_lists, k=60, top=5):
+    """Merge several ranked lists. A chunk ranked high in any list scores well."""
+    scores, chunks = {}, {}
+    for results in result_lists:
+        for rank, (chunk, _score) in enumerate(results):
+            scores[chunk["id"]] = scores.get(chunk["id"], 0.0) + 1.0 / (k + rank + 1)
+            chunks[chunk["id"]] = chunk
+    ordered = sorted(scores, key=lambda cid: -scores[cid])[:top]
+    return [(chunks[cid], scores[cid]) for cid in ordered]
+
+
+def hybrid_search(dense, sparse, query, k=5, pool=20):
+    return reciprocal_rank_fusion([dense.search(query, k=pool), sparse.search(query, k=pool)], top=k)
+
+
+class Reranker:
+    """A cross-encoder reads the question and a chunk together, which is slower but more careful."""
+
+    def __init__(self, model_name="Xenova/ms-marco-MiniLM-L-6-v2", text_fn=with_context):
+        self.model = TextCrossEncoder(model_name)
+        self.text_fn = text_fn
+
+    def rerank(self, query, results, top=5):
+        chunks = [chunk for chunk, _ in results]
+        scores = list(self.model.rerank(query, [self.text_fn(chunk) for chunk in chunks]))
+        ordered = sorted(zip(chunks, scores), key=lambda pair: -pair[1])
+        return [(chunk, float(score)) for chunk, score in ordered[:top]]
+```
+
+Now see what keyword search misses:
+
+```python
+from chunking import build_chunks
+from evaluate import retrieval_report
+from handbook import DOCS, QUESTIONS
+from retrieval import BM25Index
+
+chunks = build_chunks(DOCS)
+keyword = BM25Index(chunks, text_fn=lambda c: c["text"])
+
+report = retrieval_report(lambda q: keyword.search(q, k=10), QUESTIONS)
+print({k: v for k, v in report.items() if k != "misses"})
+for question, wanted, got in report["misses"]:
+    print(f"  wanted {wanted:10s} got {got:10s} {question[:60]}")
+```
+
+The misses are the lesson. Keyword search fails when the question and the document use **different words for the same thing**: "try again" against "locked for 15 minutes", "holidays" against "between 15 December and 5 January", "kept" against "retention". It also gets fooled by a common word that happens to appear in the wrong document, such as "laptop", which turns up in the backups policy. What it does well is the opposite problem: an exact word or code that embeddings blur.
+
+## Hybrid search
+
+Because the two methods fail in different ways, the popular idea is to run both and merge the rankings. **Reciprocal rank fusion** is a simple, robust way: each result gets a score of 1 divided by (a constant plus its rank) in each list, and the scores are added. No tuning of incompatible score scales is needed.
+
+## Reranking
+
+Embedding search compares a question and a chunk **separately** (each becomes a vector). A **reranker**, also called a cross-encoder, reads the question and one chunk **together** and scores how well the chunk answers it. That is more accurate and much slower, so you use it on a short list: retrieve the top 10 or 20 cheaply, then rerank them and keep the best few.
+
+## Compare everything on your questions
+
+```python
+from chunking import build_chunks
+from evaluate import retrieval_report
+from handbook import DOCS, QUESTIONS
+from index import VectorIndex
+from retrieval import BM25Index, Reranker, hybrid_search
+
+chunks = build_chunks(DOCS)
+dense = VectorIndex(chunks)
+keyword_plain = BM25Index(chunks, text_fn=lambda c: c["text"])
+keyword_context = BM25Index(chunks)
+reranker = Reranker()
+
+systems = {
+    "keyword, text only": lambda q: keyword_plain.search(q, k=10),
+    "keyword, + title/heading": lambda q: keyword_context.search(q, k=10),
+    "embeddings": lambda q: dense.search(q, k=10),
+    "hybrid (embeddings + keyword)": lambda q: hybrid_search(dense, keyword_context, q, k=10),
+    "keyword + reranker": lambda q: reranker.rerank(q, keyword_plain.search(q, k=10), top=10),
+    "embeddings + reranker": lambda q: reranker.rerank(q, dense.search(q, k=10), top=10),
+}
+
+print(f"{'system':32s} hit@1  hit@3  mrr")
+for name, search in systems.items():
+    r = retrieval_report(search, QUESTIONS)
+    print(f"{name:32s} {r['hit@1']:.2f}   {r['hit@3']:.2f}   {r['mrr']:.2f}")
+```
+
+Read the table honestly. On this small handbook, embeddings alone are very strong, keyword search is clearly weaker, adding the keyword results to embeddings does **not** beat embeddings alone, and the reranker rescues the weak keyword list (from 0.72 to 0.92 at hit@1) but slightly *lowers* the strong embedding result. That is a normal result for a small, clean collection with natural-language questions.
+
+It is also exactly why you measure. Hybrid search and reranking are often presented as always-better, and on a large collection with product codes, abbreviations and messy text they frequently are. On a small, tidy one they can be wasted complexity. With only 25 answerable questions, a difference of one question is 4 points and could be noise, so look for consistent gaps, not single flips.
+
+## Rewriting the question
+
+Users do not write good search queries. A language model can help, in three ways:
+
+- **Make a follow-up standalone.** "What about for phones?" means nothing without the previous turn. Rewrite it using the conversation history: "How long do I have to report a lost phone?"
+- **Expand into several queries.** Ask for two or three different phrasings, search for each, and merge the results.
+- **Draft a hypothetical answer** (called HyDE) and search for text similar to that, which can bridge a vocabulary gap.
+
+```python
+import anthropic
+from pydantic import BaseModel, Field
+
+MODEL = "claude-opus-5-5"
+
+
+class Standalone(BaseModel):
+    question: str = Field(description="The follow-up rewritten as a complete, self-contained question")
+
+
+class Variants(BaseModel):
+    queries: list[str] = Field(description="Two or three different ways to search for the answer")
+
+
+def standalone_question(client, history, followup):
+    transcript = "\n".join(f"{role}: {text}" for role, text in history)
+    response = client.messages.parse(
+        model=MODEL,
+        max_tokens=1024,
+        system="Rewrite the user's last message as a complete question that makes sense without the conversation.",
+        messages=[{"role": "user", "content": f"Conversation:\n{transcript}\n\nLast message: {followup}"}],
+        output_format=Standalone,
+    )
+    return response.parsed_output.question
+
+
+def query_variants(client, question):
+    response = client.messages.parse(
+        model=MODEL,
+        max_tokens=1024,
+        system="Suggest different search queries for finding the answer in an IT handbook. Use different words.",
+        messages=[{"role": "user", "content": question}],
+        output_format=Variants,
+    )
+    return response.parsed_output.queries
+
+
+client = anthropic.Anthropic()
+history = [("user", "How long do I have to report a lost laptop?"), ("assistant", "Within one hour.")]
+print(standalone_question(client, history, "And for phones?"))
+print(query_variants(client, "What happens to my access when I leave?"))
+```
+
+Each rewrite is an extra model call that costs money and time, and a rewrite can drift from what the user meant. Add them when your **measurements show** that vocabulary mismatch or follow-up questions are causing misses, not by default.
+
+## Contextual retrieval
+
+A chunk often loses meaning when it is cut out of its document: "The limit is 25 MB" does not say what the limit applies to. **Contextual retrieval** asks a language model to write one or two sentences placing each chunk in its document, and stores them with the chunk before embedding and keyword indexing. Anthropic reported large drops in failed retrievals with this technique when combined with keyword search and reranking.
+
+You already used the cheap version, `with_context`, which prepends the title and heading. On this handbook it helped keyword search a little and made no difference to embeddings, because the chunks already carry their heading. The generated version matters more for documents **without** good structure.
+
+```python
+import anthropic
+
+from handbook import DOCS
+
+MODEL = "claude-opus-5-5"
+
+
+def describe_chunk(client, doc, chunk_text):
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=[
+            # The whole document is repeated for every chunk, so cache it
+            {"type": "text", "text": f"<document>\n{doc['text']}\n</document>", "cache_control": {"type": "ephemeral"}}
+        ],
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Here is a chunk from the document:\n<chunk>\n{chunk_text}\n</chunk>\n"
+                "Write one or two short sentences that place this chunk within the document, "
+                "to help search find it. Reply with only those sentences."
+            ),
+        }],
+    )
+    return "".join(b.text for b in response.content if b.type == "text")
+
+
+client = anthropic.Anthropic()
+doc = next(d for d in DOCS if d["id"] == "email")
+print(describe_chunk(client, doc, "The largest attachment you can send is 25 MB."))
+```
+
+For thousands of chunks this is a one-time ingestion cost, and prompt caching (from the API course) keeps it affordable because the document part repeats. Add it when your measurements show chunks are being lost for lack of context.
+
+## Other levers
+
+- **Retrieve more, show fewer.** Fetch 20, rerank, give the model the best 3 to 5. More context is not better: irrelevant chunks distract it.
+- **Pull in neighbors.** If the best chunk is "Connecting", the next chunk "Sessions and troubleshooting" may hold the rest of the answer. Add the chunks on either side:
+
+```python
+from chunking import build_chunks
+from handbook import DOCS
+
+
+def add_neighbors(results, all_chunks):
+    position = {chunk["id"]: i for i, chunk in enumerate(all_chunks)}
+    seen, expanded = set(), []
+    for chunk, score in results:
+        i = position[chunk["id"]]
+        for j in (i - 1, i, i + 1):
+            if 0 <= j < len(all_chunks) and all_chunks[j]["doc_id"] == chunk["doc_id"] and all_chunks[j]["id"] not in seen:
+                seen.add(all_chunks[j]["id"])
+                expanded.append((all_chunks[j], score))
+    return expanded
+
+
+chunks = build_chunks(DOCS)
+best = [(chunks[4], 0.9)]
+print([c["id"] for c, _ in add_neighbors(best, chunks)])
+```
+
+- **Filter with metadata**, such as the product, region or access level (lesson 3).
+- **Remove near-duplicates** from the results, so five chunks are not all the same text.
+- **Tune the chunking** (lesson 2). It is often worth more than any retrieval trick.
+
+## A debugging routine for bad retrieval
+
+When an answer is wrong, **look at what was retrieved before you touch the prompt**:
+
+1. Is the right chunk in the corpus at all? If not, it is a content problem.
+2. Is it retrieved anywhere in the top 20? If not, it is a search problem: wording, chunking or the embedding model.
+3. Is it retrieved but ranked low? Try a reranker, or hybrid search.
+4. Is it in the top results but the answer is still wrong? It is a generation problem (lesson 5).
+
+<Callout title="Resist the urge to add machinery">
+  Every extra stage adds cost, latency and ways to fail. Add a stage when the
+  measurements say it helps your questions, and remove it if it does not.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Introducing Contextual Retrieval" href="https://www.anthropic.com/research/contextual-retrieval" source="Anthropic">
+  The technique, with measured results combining context, keyword search and reranking.
+</Resource>
+
+<Resource kind="docs" title="Okapi BM25" href="https://en.wikipedia.org/wiki/Okapi_BM25" source="Wikipedia">
+  The ranking function behind most keyword search engines, with the formula.
+</Resource>
+
+<Resource kind="docs" title="Rerankers for RAG" href="https://www.pinecone.io/learn/series/rag/rerankers/" source="Pinecone">
+  A clear explanation of why and how reranking works.
+</Resource>
+
+<Resource kind="docs" title="FastEmbed: cross-encoder reranking" href="https://qdrant.github.io/fastembed/" source="Qdrant">
+  The library used here, with its list of reranker models.
+</Resource>
+
+<Resource kind="docs" title="Prompt caching" href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching" source="Anthropic">
+  How to cache the repeated document when you generate context for many chunks.
+</Resource>
+
+## Check yourself
+
+1. Run the comparison table on your own documents and questions. Which system wins, and by how much? Would the result change with ten more questions?
+2. Take three misses from keyword search and three from embeddings. For each, say what the question and the document disagree on.
+3. Name one change from this lesson you would try first on your own collection, and the number that would tell you it worked.

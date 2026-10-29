@@ -1,0 +1,257 @@
+Before a question can be answered, your documents have to be turned into pieces that can be searched. This is the **ingestion** half of RAG, and it is where many projects quietly lose quality. If a passage is cut in half, buried in noise or missing its context, retrieval cannot find it, and no clever prompt later can fix that.
+
+## Watch
+
+<Video id="pIGRwMjhMaQ" title="Chunking Strategies in RAG: Optimising Data for Advanced AI Responses" channel="Mervin Praison" minutes={14}>
+  A 14-minute overview of the common ways to split text for retrieval, with their trade-offs. Watch it before the lesson, then compare it with what you measure below.
+</Video>
+
+## Go deeper (optional)
+
+<Video id="8OJC21T2SL4" title="The 5 Levels Of Text Splitting For Retrieval" channel="Greg Kamradt" minutes={69}>
+  A long, thorough tour of splitting methods from simple to semantic, with a tool for visualizing chunks. Optional, and worth keeping for when you work with messy real documents.
+</Video>
+
+## Step 1: get clean text
+
+Documents arrive as Markdown, plain text, HTML, Word files, PDFs, wiki pages and tickets. Whatever the format, you need **clean text plus metadata**.
+
+- **Markdown and text** are easy, and their headings are useful structure.
+- **HTML**: strip menus, footers and scripts, and keep the main content and the headings.
+- **PDFs** are the hardest. The text can come out in the wrong order (columns), full of page headers and footers, or empty if the file is a scan (that needs OCR). Always look at what you extracted.
+- **Tables and images** lose meaning when flattened. Decide whether to convert tables to Markdown, describe them in words, or handle them separately.
+- **Word and slides**: use a library such as `python-docx`, then check the result.
+
+Loading a PDF with the `pypdf` library looks like this (install it with `pip install pypdf`):
+
+```text
+from pypdf import PdfReader
+
+
+def load_pdf(path):
+    reader = PdfReader(path)
+    return [{"page": number + 1, "text": page.extract_text() or ""}
+            for number, page in enumerate(reader.pages)]
+```
+
+Print a few pages before you build on them. An empty page or a page of garbled words means the extraction failed and everything downstream will be wrong.
+
+## Keep metadata with every piece
+
+For each document, record where it came from and what it is:
+
+| Field | Why you need it |
+| --- | --- |
+| **id** and **source** | To cite it, and to update or delete it later |
+| **title** | Shown to users, and helpful context for search |
+| **date or version** | To prefer current content and spot stale documents |
+| **owner** | To know who to ask when it is wrong |
+| **access level** | To make sure people only retrieve what they may read |
+
+Metadata is cheap to keep now and painful to rebuild later.
+
+## Loading a folder
+
+Here is a loader for a folder of Markdown or text files. To try it, the code first writes the practice handbook into a folder, then loads it back, which is exactly what you would do with your own files:
+
+```python
+from pathlib import Path
+
+from handbook import DOCS
+
+
+def load_folder(folder):
+    docs = []
+    for path in sorted(Path(folder).rglob("*")):
+        if path.is_file() and path.suffix.lower() in {".md", ".txt"}:
+            text = path.read_text(encoding="utf-8")
+            title = next((line.lstrip("# ").strip() for line in text.splitlines() if line.startswith("#")), path.stem)
+            docs.append({"id": path.stem, "title": title, "text": text, "source": str(path)})
+    return docs
+
+
+folder = Path("handbook_files")
+folder.mkdir(exist_ok=True)
+for doc in DOCS:
+    (folder / f"{doc['id']}.md").write_text(doc["text"], encoding="utf-8")
+
+loaded = load_folder(folder)
+print(len(loaded), "documents loaded")
+print(loaded[0]["id"], "|", loaded[0]["title"], "|", loaded[0]["source"])
+```
+
+## Step 2: split into chunks
+
+Documents are too long to embed or to hand to a model whole, and a long document that is mostly about something else matches poorly. So you split it into **chunks**: passages of a few sentences to a few paragraphs, each about one thing.
+
+Chunk size is a trade-off:
+
+| | Small chunks | Large chunks |
+| --- | --- | --- |
+| **Precision** | High: each chunk is about one thing | Lower: the point is diluted in other text |
+| **Context** | May lose the surrounding explanation | Keeps context |
+| **Cost per question** | Low | Higher: more tokens go into the prompt |
+| **Risk** | The answer is split across two chunks | Irrelevant text distracts the model |
+
+There is no universal best size. A common starting point is a few hundred words, and the right answer for **your** documents comes from measuring (lesson 6).
+
+## Ways to split
+
+| Strategy | How | Good for |
+| --- | --- | --- |
+| **Fixed size with overlap** | Cut every N characters, repeating the last part of each chunk at the start of the next | Quick start, unstructured text |
+| **By paragraph or sentence** | Cut at natural boundaries, then group to a target size | Prose |
+| **By structure** | Cut at headings, so each chunk is a section | Manuals, policies, wiki pages, documentation |
+| **Semantic** | Cut where the topic changes, using embeddings | Long unstructured text, at extra cost |
+| **Parent and child** | Search small chunks, but give the model the larger section around the match | When precise search needs wide context |
+
+Save this as `chunking.py`. It has the two simplest strategies, so you can compare them:
+
+```python
+# chunking.py
+import hashlib
+
+
+def make_chunk(doc, number, heading, text):
+    return {
+        "id": f"{doc['id']}#{number}",
+        "doc_id": doc["id"],
+        "title": doc["title"],
+        "heading": heading,
+        "text": text,
+    }
+
+
+def split_by_headings(doc):
+    """One chunk per heading section. Each chunk remembers where it came from."""
+    sections, heading, lines = [], None, []
+    for line in doc["text"].splitlines():
+        if line.startswith("#"):
+            if "".join(lines).strip():
+                sections.append((heading, "\n".join(lines).strip()))
+            heading, lines = line.lstrip("#").strip(), []
+        else:
+            lines.append(line)
+    if "".join(lines).strip():
+        sections.append((heading, "\n".join(lines).strip()))
+    return [make_chunk(doc, i, h, t) for i, (h, t) in enumerate(sections)]
+
+
+def split_fixed(doc, size=700, overlap=100):
+    """Cut every `size` characters, repeating `overlap` characters between chunks."""
+    text, chunks, start, number = doc["text"], [], 0, 0
+    while start < len(text):
+        chunks.append(make_chunk(doc, number, None, text[start:start + size]))
+        start += size - overlap
+        number += 1
+    return chunks
+
+
+def build_chunks(docs, splitter=split_by_headings):
+    return [chunk for doc in docs for chunk in splitter(doc)]
+
+
+def with_context(chunk):
+    """The text to embed or search: the chunk plus the title and heading it sits under."""
+    if chunk["heading"]:
+        return f"{chunk['title']} - {chunk['heading']}: {chunk['text']}"
+    return chunk["text"]
+
+
+def drop_duplicates(chunks):
+    seen, kept = set(), []
+    for chunk in chunks:
+        key = hashlib.sha256(" ".join(chunk["text"].split()).lower().encode("utf-8")).hexdigest()
+        if key not in seen:
+            seen.add(key)
+            kept.append(chunk)
+    return kept
+```
+
+Now compare the two on the handbook:
+
+```python
+from chunking import build_chunks, split_by_headings, split_fixed
+from handbook import DOCS
+
+by_heading = build_chunks(DOCS, split_by_headings)
+fixed = build_chunks(DOCS, split_fixed)
+
+for name, chunks in [("by heading", by_heading), ("fixed 700 chars", fixed)]:
+    sizes = [len(c["text"].split()) for c in chunks]
+    print(f"{name:16s} {len(chunks):3d} chunks, {min(sizes)} to {max(sizes)} words, average {sum(sizes) // len(sizes)}")
+
+example = by_heading[3]
+print("\nA heading chunk:")
+print(example["id"], "|", example["title"], "|", example["heading"])
+print(example["text"])
+
+print("\nA fixed chunk that starts mid-sentence:")
+print(repr(fixed[1]["text"][:120]))
+```
+
+Look at the difference. The heading-based chunks are whole thoughts with a meaningful label ("Laptops", "Faults, loss and theft"). The fixed-size chunks can begin or end in the middle of a sentence, which makes them harder to match and harder to read. The price is that heading chunks vary in size and only work when documents have headings.
+
+## Give every chunk its context
+
+A chunk like "Report it within four hours." is useless on its own. Which "it"? Chunks from the same document often share context that the chunk itself lacks: the document title, the section heading, the product name, the date. A cheap, effective habit is to **keep that context with the chunk**. The `with_context` function above prepends the title and heading, and you will use it when embedding in lesson 3 and to improve keyword search in lesson 4.
+
+A more powerful version asks a language model to write a short description of where each chunk fits in its document, and stores that with the chunk. Anthropic calls this *contextual retrieval*, and it is one of the better-documented ways to improve retrieval (lesson 4).
+
+## Keeping the index in sync
+
+A knowledge base is never finished. Plan for change from the start:
+
+- **Stable chunk IDs** based on the document and position, so you can replace a document's chunks when it changes.
+- **Re-ingest** documents when they change, and **delete** the chunks of documents that were removed. Stale chunks answer with outdated policy.
+- **Deduplicate.** Repeated text (headers, boilerplate, copies of the same file) wastes space and crowds out better results. The `drop_duplicates` function above is a simple start.
+- **Version or date** the content, so you can prefer the newest, and tell users how old the source is.
+- **Record the settings** used (chunk size, splitter, embedding model) so that when results change you know why.
+
+```python
+from chunking import build_chunks, drop_duplicates
+from handbook import DOCS
+
+chunks = build_chunks(DOCS)
+doubled = chunks + chunks[:5]                 # pretend five chunks were ingested twice
+print(len(chunks), "chunks;", len(doubled), "with duplicates;", len(drop_duplicates(doubled)), "after cleaning")
+```
+
+## Common preparation mistakes
+
+- **Never looking at the chunks.** Print a sample, every time you change something.
+- **Splitting across a table or list**, so each half means nothing.
+- **Leaving in headers, footers and navigation**, so every chunk matches "Page 3 of 12".
+- **Ignoring document access levels**, so a chunk retrieved for one user belongs to another.
+- **Mixing languages or formats** without checking that the embedding model handles them.
+- **One chunk size for everything**, when policies, tickets and code want different treatment.
+
+<Callout title="Prepare for evaluation now">
+  Keep a list of real questions and which document answers each one. You will
+  need it in lesson 6, and it is also the only honest way to choose a chunk
+  size.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Chunking strategies for LLM applications" href="https://www.pinecone.io/learn/chunking-strategies/" source="Pinecone">
+  A readable guide to fixed, recursive, document-structure and semantic chunking, with advice on size.
+</Resource>
+
+<Resource kind="docs" title="pypdf documentation" href="https://pypdf.readthedocs.io/en/stable/" source="pypdf">
+  Extracting text from PDFs, and what to do when the result is poor.
+</Resource>
+
+<Resource kind="article" title="Introducing Contextual Retrieval" href="https://www.anthropic.com/research/contextual-retrieval" source="Anthropic">
+  How adding a short generated context to each chunk improves retrieval. Read it now and again after lesson 4.
+</Resource>
+
+<Resource kind="docs" title="Embeddings" href="https://platform.claude.com/docs/en/build-with-claude/embeddings" source="Anthropic">
+  Anthropic's guidance on embeddings, which is the next step after chunking.
+</Resource>
+
+## Check yourself
+
+1. Load a folder of your own non-confidential documents with `load_folder`, split them by heading and print five random chunks. Which look useful on their own, and which do not?
+2. Change `size` and `overlap` in `split_fixed`. How does the number and quality of chunks change?
+3. Pick one document type at your workplace. Which splitting strategy would you use for it, and what metadata would you keep?
