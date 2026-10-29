@@ -1,0 +1,301 @@
+An agent that worked once in your terminal has proven almost nothing. It may fail on the next run, succeed by luck, take twenty steps where three would do, or reach the right answer by doing something it should not. Evaluating agents is harder than evaluating single answers, because the thing you are judging is a **sequence of decisions** that ends in a **changed world**. This lesson shows how to build tasks with checkable outcomes, run them repeatedly, measure what matters, and read the results honestly. It builds on the statistics from the responsible-AI course.
+
+## Watch
+
+<Video id="4u64WEuQHYE" title="Evaluating and Debugging Non-Deterministic AI Agents" channel="Google Cloud Tech" minutes={7}>
+  A seven-minute look at why agent results vary from run to run and how that changes testing.
+</Video>
+
+<Video id="_Er8Hao_gmQ" title="AI Evals Explained | How to evaluate AI Agents?" channel="Aishwarya Srinivasan" minutes={23}>
+  A 23-minute walk through the gap between a demo that worked once and a system that works reliably.
+</Video>
+
+## What to measure
+
+| Measure | Question | How |
+| --- | --- | --- |
+| **Outcome** | Did it achieve the goal? | Check the **end state**: the file, the record, the answer |
+| **Consistency** | Does it do so every time? | Run each task several times |
+| **Efficiency** | How many steps, tokens, seconds and dollars did it take? | Read them from the trace |
+| **Process** | Did it get there safely and sensibly? | Check the trajectory: forbidden tools, repeated calls, ignored errors |
+| **Safety** | Does it resist attacks and stay inside limits? | Red-team tasks (responsible-AI course) |
+| **Recovery** | Does it cope with tool errors and bad inputs? | Tasks with deliberate faults |
+
+The most important rule: **grade the outcome, not the story.** An agent that says "I fixed the bug" may not have. Check the file.
+
+## Tasks with checkable end states
+
+A good agent task has three parts: how to set up the world, what to ask, and a **check** that inspects the result. Save this as `agent_eval.py`:
+
+```python
+# agent_eval.py
+import math
+import tempfile
+import time
+from pathlib import Path
+
+
+def wilson_interval(successes, n, z=1.96):
+    if n == 0:
+        return (0.0, 1.0)
+    p = successes / n
+    d = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / d
+    margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / d
+    return centre - margin, centre + margin
+
+
+class Task:
+    """setup(folder) builds the world. check(folder, result) returns (passed, reason) from the END STATE."""
+
+    def __init__(self, name, prompt, setup, check):
+        self.name, self.prompt, self.setup, self.check = name, prompt, setup, check
+
+
+def run_task(make_agent, task, repeats=1):
+    """make_agent(folder) returns a function: prompt -> result dict, as produced by run_agent."""
+    outcomes = []
+    for _ in range(repeats):
+        folder = Path(tempfile.mkdtemp())
+        task.setup(folder)
+        agent = make_agent(folder)
+        started = time.time()
+        result = agent(task.prompt)
+        passed, reason = task.check(folder, result)
+        outcomes.append({
+            "task": task.name, "passed": passed, "reason": reason, "status": result["status"],
+            "turns": result["turns"], "tokens_in": result["tokens_in"], "tokens_out": result["tokens_out"],
+            "seconds": round(time.time() - started, 3),
+            "tools": [call["name"] for step in result["trace"] for call in step["tool_calls"]],
+        })
+    return outcomes
+
+
+def summarize(outcomes, price_in=4.0, price_out=20.0):
+    """Prices are dollars per million tokens. Check current prices before trusting the cost figures."""
+    n = len(outcomes)
+    passed = sum(o["passed"] for o in outcomes)
+    low, high = wilson_interval(passed, n)
+    per_task = {}
+    for o in outcomes:
+        per_task.setdefault(o["task"], []).append(o["passed"])
+    total_cost = sum(o["tokens_in"] * price_in + o["tokens_out"] * price_out for o in outcomes) / 1_000_000
+    return {
+        "runs": n,
+        "pass_rate": round(passed / n, 2),
+        "interval": (round(low, 2), round(high, 2)),
+        "tasks_passing_every_run": f"{sum(all(v) for v in per_task.values())}/{len(per_task)}",
+        "avg_turns": round(sum(o["turns"] for o in outcomes) / n, 1),
+        "cost_per_run_usd": round(total_cost / n, 4),
+        "cost_per_success_usd": round(total_cost / passed, 4) if passed else None,
+        "statuses": {s: sum(o["status"] == s for o in outcomes) for s in sorted({o["status"] for o in outcomes})},
+    }
+```
+
+## A first evaluation
+
+Here are two tasks on a small folder of logs, with checks that look at the **answer and the way it was reached**. To keep this lesson runnable without a model, the "agents" are scripted stand-ins: a careful one that searches before answering, and a sloppy one that guesses. With a real model you would swap in a real agent, and everything else stays the same:
+
+```python
+from agent import run_agent
+from agent_eval import Task, run_task, summarize
+from fakes import ScriptedClient, call, say
+from tools_fs import Sandbox, make_tools
+
+
+def setup_critical(folder):
+    (folder / "web.log").write_text("INFO ok\nWARN slow\n")
+    (folder / "db.log").write_text("INFO ok\nCRITICAL disk full\nINFO retry\n")
+    (folder / "app.log").write_text("INFO ok\n")
+
+
+def setup_count(folder):
+    (folder / "payments.log").write_text("\n".join(["ERROR timeout"] * 7 + ["INFO ok"] * 20))
+
+
+TASKS = [
+    Task("find the critical log", "Which log file contains a CRITICAL line? Answer with the file name.", setup_critical,
+         lambda folder, result: ("db.log" in result["answer"], f"answered {result['answer'][:40]!r}")),
+    Task("count the errors", "How many ERROR lines are in payments.log? Answer with a number.", setup_count,
+         lambda folder, result: ("7" in result["answer"], f"answered {result['answer'][:40]!r}")),
+]
+
+SCRIPTS = {
+    "careful": {
+        "find the critical log": [call("search_files", {"pattern": "CRITICAL"}), say("The CRITICAL line is in db.log.")],
+        "count the errors": [call("search_files", {"pattern": "ERROR", "path": "."}), say("There are 7 ERROR lines.")],
+    },
+    "sloppy": {
+        "find the critical log": [say("It is probably web.log.")],
+        "count the errors": [say("Around 10, I think.")],
+    },
+}
+
+
+def agent_factory(kind, task_name):
+    def make_agent(folder):
+        client = ScriptedClient(list(SCRIPTS[kind][task_name]))
+        tools = make_tools(Sandbox(folder))
+        return lambda prompt: run_agent(client, prompt, tools, max_turns=5)
+    return make_agent
+
+
+for kind in ("careful", "sloppy"):
+    outcomes = []
+    for task in TASKS:
+        outcomes += run_task(agent_factory(kind, task.name), task, repeats=3)
+    report = summarize(outcomes)
+    print(f"{kind:8s} pass rate {report['pass_rate']:.0%} (95% interval {report['interval'][0]:.0%} to {report['interval'][1]:.0%}), "
+          f"every-run passes {report['tasks_passing_every_run']}, avg turns {report['avg_turns']}")
+    failures = {(o["task"], o["reason"]) for o in outcomes if not o["passed"]}
+    for task_name, reason in sorted(failures):
+        print("   failed:", task_name, "-", reason)
+```
+
+The harness separates the two agents instantly and tells you **why** the sloppy one failed. Three runs of two tasks is far too few for real conclusions, which the interval makes plain, but the machinery is what you will reuse.
+
+To run a real agent, replace the factory with one that builds your model client, tools and policy:
+
+```python
+import anthropic
+
+from agent import run_agent
+from policy import Policy, guard
+from tools_fs import Sandbox, make_tools
+
+
+def real_agent_factory(system="You investigate log files. Use the tools, and answer concisely."):
+    client = anthropic.Anthropic(timeout=60.0)
+
+    def make_agent(folder):
+        policy = Policy(allowed={"list_files", "read_file", "search_files"}, max_calls=25)
+        tools = guard(make_tools(Sandbox(folder)), policy, wrap_for={"read_file", "search_files"})
+        return lambda prompt: run_agent(client, prompt, tools, system=system, max_turns=10)
+
+    return make_agent
+
+
+factory = real_agent_factory()
+print("a real agent is built per task folder, with the sandbox and policy attached:", callable(factory))
+```
+
+## Grade the trajectory as well
+
+Reaching the right answer by a bad route still counts for something. Add checks on **how** the agent got there:
+
+```python
+def trajectory_problems(outcome, forbidden=("delete_file", "send_email"), max_turns=6):
+    problems = []
+    used = set(outcome["tools"])
+    if used & set(forbidden):
+        problems.append(f"used forbidden tools: {sorted(used & set(forbidden))}")
+    if outcome["turns"] > max_turns:
+        problems.append(f"took {outcome['turns']} turns, expected at most {max_turns}")
+    if outcome["status"] != "done":
+        problems.append(f"stopped with status {outcome['status']}")
+    repeats = len(outcome["tools"]) - len(set(outcome["tools"]))
+    if repeats > 3:
+        problems.append("repeated tool calls many times")
+    return problems
+
+
+good = {"tools": ["search_files", "read_file"], "turns": 3, "status": "done"}
+bad = {"tools": ["read_file"] * 6 + ["delete_file"], "turns": 9, "status": "max_turns"}
+print("good run:", trajectory_problems(good) or "no problems")
+print("bad run: ", trajectory_problems(bad))
+```
+
+Useful trajectory signals: forbidden or unexpected tools, step count far above the minimum, repeated calls, ignoring a tool error, giving up early, and **claiming success without checking**.
+
+## Run each task more than once
+
+An agent that passes a task 8 times out of 10 passes it **only 80 percent of the time**, and the consequences compound: a workflow that needs the agent to succeed five times in a row works only about a third of the time. Two measures capture this:
+
+- **pass at k**: the chance that **at least one** of k attempts succeeds. This matters when you can check and retry.
+- **pass to the k** (all of k): the chance that **every** one of k attempts succeeds. This matters when it must work every time.
+
+```python
+import numpy as np
+
+rng = np.random.default_rng(0)
+print("per-run success   all 3    all 5    all 10   at least 1 of 3")
+for p in (0.95, 0.90, 0.80, 0.60):
+    runs = rng.random((20_000, 10)) < p                      # simulate 20,000 sets of 10 attempts
+    all3, all5, all10 = (runs[:, :k].all(axis=1).mean() for k in (3, 5, 10))
+    any3 = runs[:, :3].any(axis=1).mean()
+    print(f"      {p:.0%}          {all3:6.0%}   {all5:6.0%}   {all10:6.0%}   {any3:6.0%}   (formula: {p**3:.0%} / {p**5:.0%} / {p**10:.0%})")
+```
+
+An agent that is right 90 percent of the time is right on all ten runs only about a third of the time. So **choose the measure to match the use**: for an assistant a person supervises, pass at k may be fine. For an unattended job, aim for a very high per-run rate, and add checks, retries and escalation to humans.
+
+## Make the cost visible
+
+Report cost and time beside success. An agent that succeeds 90 percent of the time at ten times the cost may be the wrong choice compared with a workflow. Useful measures:
+
+- **Cost per run** and **cost per success** (total spend divided by successes).
+- **Turns and tool calls** per task, against the minimum a good solution needs.
+- **Latency**, because users wait.
+- **Statuses**: how often runs end by hitting a limit.
+
+## Read the transcripts
+
+Numbers say **how often** an agent fails. Transcripts say **why**. For every failing task, read the trace, and write down the cause in one of these buckets:
+
+| Failure | Typical fix |
+| --- | --- |
+| **Wrong tool** or tool overlap | Merge or rename tools, improve descriptions |
+| **Bad arguments** | Better schemas, enums, examples, error messages that teach |
+| **Gave up too early** or stopped without checking | Prompt to verify, check in code, raise limits |
+| **Looped or repeated itself** | Loop detection, clearer stopping rules |
+| **Ignored an error** | Make errors prominent, require handling |
+| **Lost context** on a long task | Notes, summaries, smaller outputs |
+| **Hallucinated success** | Check end state in code, require evidence |
+| **Followed injected instructions** | Policy, untrusted-content handling |
+| **Took too many steps** | Better tools (search instead of paging), planning |
+| **Wrong answer from correct evidence** | Prompt, model choice, a verification step |
+
+Fix the **tool or its description first**, then the prompt, then the model. Change one thing at a time, rerun the same tasks and compare with intervals (responsible-AI course).
+
+## Build the task set
+
+- Start with **10 to 20 tasks** from real work, including easy, medium and hard ones.
+- Include **impossible or unanswerable** tasks, where the right behavior is to say so.
+- Include **tasks with faults**: a tool that errors, missing files, ambiguous instructions.
+- Include **attack tasks**: hostile content in the files the agent reads.
+- Write checks that are **strict about facts and lenient about wording**. A check that rejects a correct answer because of formatting is a bug.
+- Keep a **held-out set** that you do not tune against.
+- Turn every **real failure** into a new task, so it cannot silently return.
+- Run on every change to the **model, the prompt, the tools or the limits**.
+
+## Evaluation in production
+
+After launch, keep watching: sample real runs and review their traces, track status mix and cost, collect user feedback, and look for tasks that hit limits or loop. Replay a real failure as a test. Log enough to reconstruct a run, with personal data redacted.
+
+<Callout title="Trust the check, not the claim">
+  Agents are very good at sounding finished. The only reliable test is to look
+  at the world they were supposed to change, and to do it many times.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Demystifying evals for AI agents" href="https://www.anthropic.com/research/demystifying-evals-for-ai-agents" source="Anthropic">
+  Anthropic's practical guide to evaluating agents: graders, task design and common pitfalls.
+</Resource>
+
+<Resource kind="paper" title="tau-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains" href="https://arxiv.org/abs/2406.12045" source="Yao et al., arXiv">
+  A benchmark that introduced the "pass to the k" measure for the reliability of agents.
+</Resource>
+
+<Resource kind="article" title="Writing effective tools for agents" href="https://www.anthropic.com/research/writing-tools-for-agents" source="Anthropic">
+  Includes a workflow for evaluating tools with realistic tasks and reading transcripts.
+</Resource>
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Anthropic">
+  General guidance on building evaluations.
+</Resource>
+
+## Check yourself
+
+1. Write three tasks for an agent you want to build, each with a check on the **end state**. What would a lazy check miss?
+2. For a task your agent passes 80 percent of the time, what is the chance it passes five times in a row? Does your use case need that?
+3. Run a task five times and read the traces of two different runs. What differed, and what would you change?

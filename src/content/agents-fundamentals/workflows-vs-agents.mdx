@@ -1,0 +1,298 @@
+"Agent" is the most overused word in AI. Used carefully, it names a specific design: a system where the **model decides what to do next**, step after step, using tools, until the job is done. That freedom is powerful and costly. Many tasks that people build agents for are better solved by something simpler. This lesson draws the line, shows the five standard workflow patterns in working code, and gives you a way to decide when an agent is actually worth it.
+
+## Watch
+
+<Video id="FwOTs4UxQS4" title="AI Agents, Clearly Explained" channel="Jeff Su" minutes={10}>
+  A ten-minute, non-technical walk from plain chatbots, to workflows, to agents. A good map before you start building.
+</Video>
+
+<Video id="LP5OCa20Zpg" title="Tips for building AI agents" channel="Anthropic" minutes={18}>
+  Anthropic engineers on when agents help, common mistakes, and why to keep designs simple.
+</Video>
+
+## The definitions
+
+- A **workflow** is a system where the steps are fixed in **your code**. The model does work inside each step, but your program decides the order.
+- An **agent** is a system where the **model chooses** the steps and the tools, in a loop, and decides when it is finished.
+
+```text
+WORKFLOW                                   AGENT
+code decides the path                      the model decides the path
+
+  input -> step A -> step B -> output       input -> [ model picks an action -> tool -> result ] -> ... -> output
+                                                       ^__________________ repeat ___________________|
+```
+
+Neither is better in general. Workflows are **predictable, cheaper, faster and easier to test**. Agents handle **open-ended problems** where you cannot know the steps in advance, at the price of more cost, more latency, more ways to fail and more risk.
+
+> Start with the simplest thing that could work. Many "agent" problems are solved by one well-written call with good context. Add structure only when measurements show you need it.
+
+## Five workflow patterns
+
+These patterns, described in Anthropic's guidance on building effective agents, cover most real systems. You will build each one. They use the Claude API as in the earlier courses, so set `ANTHROPIC_API_KEY` as before.
+
+### 1. Prompt chaining
+
+Split a task into fixed steps, where each step works on the previous output, with a **check in code** between steps. Use it when the task breaks cleanly into subtasks and you want accuracy more than speed.
+
+```python
+import anthropic
+
+MODEL = "claude-opus-5-5"
+client = anthropic.Anthropic()
+
+
+def ask(prompt, system=None):
+    response = client.messages.create(
+        model=MODEL, max_tokens=2048, system=system or "You are a careful assistant.",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return "".join(b.text for b in response.content if b.type == "text")
+
+
+def reply_to_ticket(ticket):
+    # Step 1: pull out the facts
+    facts = ask(f"List the key facts in this support ticket as short bullet points:\n\n{ticket}")
+    # Step 2: draft a reply from the facts only
+    draft = ask(f"Using only these facts, write a short, polite reply to the customer:\n\n{facts}")
+    # A check in code between steps: reject drafts that are too long or promise a refund
+    if len(draft.split()) > 150 or "refund" in draft.lower():
+        draft = ask(f"Rewrite this reply in under 100 words and do not promise any refund:\n\n{draft}")
+    return facts, draft
+
+
+facts, draft = reply_to_ticket("My VPN has dropped every ten minutes since Monday's update and I work remotely.")
+print("FACTS:", facts[:80])
+print("DRAFT:", draft[:80])
+```
+
+### 2. Routing
+
+Classify the input, then send it down the path suited to it: a different prompt, a different model, or a different tool set. Use it when categories are distinct and classification is reliable.
+
+```python
+from typing import Literal
+
+import anthropic
+from pydantic import BaseModel
+
+client = anthropic.Anthropic()
+
+
+class Route(BaseModel):
+    kind: Literal["simple_question", "complex_problem", "complaint"]
+
+
+HANDLERS = {
+    "simple_question": ("claude-haiku-5-5", "Answer briefly and directly."),
+    "complex_problem": ("claude-opus-5-5", "Work through the problem carefully and explain your reasoning."),
+    "complaint": ("claude-opus-5-5", "Respond with empathy, acknowledge the problem, and offer a human follow-up."),
+}
+
+
+def route(text):
+    response = client.messages.parse(
+        model="claude-haiku-5-5", max_tokens=512,
+        system="Classify the message.",
+        messages=[{"role": "user", "content": text}],
+        output_format=Route,
+    )
+    return response.parsed_output.kind
+
+
+def handle(text):
+    kind = route(text)
+    model, instruction = HANDLERS[kind]
+    response = client.messages.create(
+        model=model, max_tokens=2048, system=instruction,
+        messages=[{"role": "user", "content": text}],
+    )
+    return kind, "".join(b.text for b in response.content if b.type == "text")
+
+
+kind, answer = handle("What's the VPN session timeout?")
+print(kind, "->", answer[:60])
+```
+
+Routing is also a cost lever: easy requests can go to a smaller, cheaper model. Check the classifier on your own examples before you trust it.
+
+### 3. Parallelization
+
+Run independent work **at the same time**. There are two forms. **Sectioning** splits a job into independent parts. **Voting** runs the same job several times and combines the answers for higher confidence.
+
+```python
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+
+import anthropic
+
+client = anthropic.Anthropic()
+
+
+def ask(prompt):
+    response = client.messages.create(
+        model="claude-opus-5-5", max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return "".join(b.text for b in response.content if b.type == "text").strip()
+
+
+CODE = "def get_user(db, name):\n    return db.execute(f\"SELECT * FROM users WHERE name = '{name}'\")"
+
+# Sectioning: three independent reviews, run concurrently
+reviews = {
+    "security": "Review this code for security problems only:\n\n" + CODE,
+    "style": "Review this code for readability and style only:\n\n" + CODE,
+    "tests": "Suggest tests for this code:\n\n" + CODE,
+}
+with ThreadPoolExecutor(max_workers=3) as pool:
+    results = dict(zip(reviews, pool.map(ask, reviews.values())))
+print({name: text[:25] for name, text in results.items()})
+
+# Voting: ask the same yes/no question five times, take the majority
+question = "Answer with exactly one word, YES or NO. Is this code vulnerable to SQL injection?\n\n" + CODE
+votes = Counter(ask(question).upper()[:3] for _ in range(5))
+print(votes.most_common())
+```
+
+### 4. Orchestrator and workers
+
+One model plans the subtasks **at run time** and hands them to workers, then combines the results. Use it when you cannot know the subtasks in advance, such as a change that touches an unknown number of files. This pattern is the bridge to multi-agent systems.
+
+```python
+from typing import List
+
+import anthropic
+from pydantic import BaseModel
+
+client = anthropic.Anthropic()
+
+
+class Plan(BaseModel):
+    subtasks: List[str]
+
+
+def solve(task):
+    plan = client.messages.parse(
+        model="claude-opus-5-5", max_tokens=1024,
+        system="Break the task into 2 to 4 independent subtasks.",
+        messages=[{"role": "user", "content": task}],
+        output_format=Plan,
+    ).parsed_output
+    parts = []
+    for subtask in plan.subtasks:
+        reply = client.messages.create(
+            model="claude-opus-5-5", max_tokens=1024,
+            messages=[{"role": "user", "content": f"Complete this subtask and be concise:\n{subtask}"}],
+        )
+        parts.append("".join(b.text for b in reply.content if b.type == "text"))
+    summary = client.messages.create(
+        model="claude-opus-5-5", max_tokens=1024,
+        messages=[{"role": "user", "content": "Combine these results into one answer:\n\n" + "\n---\n".join(parts)}],
+    )
+    return plan.subtasks, "".join(b.text for b in summary.content if b.type == "text")
+
+
+subtasks, answer = solve("Prepare a checklist for migrating our file server to cloud storage.")
+print(len(subtasks), "subtask(s);", answer[:50])
+```
+
+### 5. Evaluator and optimizer
+
+One call produces, another **judges and gives feedback**, and the loop repeats until the result passes or you hit a limit. Use it when you have clear criteria and revision measurably helps.
+
+```python
+import anthropic
+from pydantic import BaseModel, Field
+
+client = anthropic.Anthropic()
+
+
+class Review(BaseModel):
+    acceptable: bool = Field(description="True if the draft meets every criterion")
+    feedback: str = Field(description="Specific changes needed, or an empty string if acceptable")
+
+
+CRITERIA = "Under 80 words. Plain language. No jargon. Says what the customer should do next."
+
+
+def write_until_good(task, max_rounds=3):
+    draft = ""
+    feedback = ""
+    for round_number in range(1, max_rounds + 1):
+        prompt = task if not feedback else f"{task}\n\nPrevious draft:\n{draft}\n\nFix these issues:\n{feedback}"
+        reply = client.messages.create(model="claude-opus-5-5", max_tokens=1024,
+                                       messages=[{"role": "user", "content": prompt}])
+        draft = "".join(b.text for b in reply.content if b.type == "text")
+        review = client.messages.parse(
+            model="claude-opus-5-5", max_tokens=1024,
+            system=f"Judge the draft against these criteria: {CRITERIA}",
+            messages=[{"role": "user", "content": draft}],
+            output_format=Review,
+        ).parsed_output
+        if review.acceptable:
+            return draft, round_number
+        feedback = review.feedback
+    return draft, max_rounds
+
+
+draft, rounds = write_until_good("Tell staff that the VPN will be down on Saturday night for maintenance.")
+print(f"accepted after {rounds} round(s):", draft[:50])
+```
+
+A cap on rounds matters: without it, a picky evaluator and a stubborn generator can loop forever, spending money.
+
+## When is an agent worth it?
+
+Ask four questions. If any answer is "no", use a simpler design.
+
+| Question | A good sign |
+| --- | --- |
+| **Complexity**: is the task multi-step and hard to specify in advance? | You cannot write the steps down, and they differ each time |
+| **Value**: does the result justify more cost and latency? | The task is worth several dollars of effort, not fractions of a cent |
+| **Viability**: can the model do this kind of task? | You have seen it succeed on hand-picked examples |
+| **Cost of error**: can mistakes be caught and undone? | There are tests, review or rollback |
+
+| Choose | When |
+| --- | --- |
+| **A single call** | The task fits in one well-written prompt, possibly with retrieved context |
+| **A workflow** | The steps are known and stable, and you want predictability |
+| **An agent** | The steps are not known in advance and the task is valuable enough to justify the cost |
+
+Good agent tasks: investigating an incident across logs and systems, fixing a bug in an unfamiliar codebase, researching a question across many sources. Poor ones: classifying text, extracting fields, answering from a known document, anything a flowchart would handle.
+
+## Three principles
+
+1. **Keep it simple.** Every extra loop, tool and role is another thing to fail and to pay for.
+2. **Be transparent.** Show the plan and the steps, and keep a trace you can read.
+3. **Invest in the interface.** The tools you give an agent decide how well it works (lesson 3).
+
+<Callout title="The rest of this course">
+  You will build a real agent from the loop up: the loop, its tools, planning
+  and memory, safety controls and an evaluation harness. By the end you will
+  also know when not to build one.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Building effective agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  The source of the workflow patterns and the guidance on when to use agents. Read it twice, now and after the course.
+</Resource>
+
+<Resource kind="repo" title="Agent patterns cookbook" href="https://github.com/anthropics/claude-cookbooks/tree/main/patterns/agents" source="Anthropic on GitHub">
+  Worked notebooks for each of the patterns above.
+</Resource>
+
+<Resource kind="docs" title="Tool use overview" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" source="Anthropic">
+  The API feature every agent rests on.
+</Resource>
+
+<Resource kind="docs" title="LLM Powered Autonomous Agents" href="https://lilianweng.github.io/posts/2023-06-23-agent/" source="Lilian Weng">
+  A widely read overview of planning, memory and tool use in agents.
+</Resource>
+
+## Check yourself
+
+1. Pick a task from your own work. Run the four questions. Should it be a single call, a workflow or an agent?
+2. Write a prompt chain for it with a code check between two steps. What does the check catch that the model would miss?
+3. Which workflow pattern would reduce the cost of a feature you know, and how would you measure the saving?

@@ -111,6 +111,13 @@ import L108 from "./evaluate-and-use-ai-responsibly/safety-and-red-teaming.mdx";
 import L109 from "./evaluate-and-use-ai-responsibly/oversight-and-governance.mdx";
 import L110 from "./evaluate-and-use-ai-responsibly/deciding-to-ship.mdx";
 import L111 from "./evaluate-and-use-ai-responsibly/capstone.mdx";
+import L112 from "./agents-fundamentals/workflows-vs-agents.mdx";
+import L113 from "./agents-fundamentals/the-agent-loop.mdx";
+import L114 from "./agents-fundamentals/designing-tools.mdx";
+import L115 from "./agents-fundamentals/planning-and-memory.mdx";
+import L116 from "./agents-fundamentals/safety-and-control.mdx";
+import L117 from "./agents-fundamentals/evaluating-agents.mdx";
+import L118 from "./agents-fundamentals/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -227,4 +234,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "evaluate-and-use-ai-responsibly/oversight-and-governance": L109,
   "evaluate-and-use-ai-responsibly/deciding-to-ship": L110,
   "evaluate-and-use-ai-responsibly/capstone": L111,
+  "agents-fundamentals/workflows-vs-agents": L112,
+  "agents-fundamentals/the-agent-loop": L113,
+  "agents-fundamentals/designing-tools": L114,
+  "agents-fundamentals/planning-and-memory": L115,
+  "agents-fundamentals/safety-and-control": L116,
+  "agents-fundamentals/evaluating-agents": L117,
+  "agents-fundamentals/capstone": L118,
 };

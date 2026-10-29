@@ -48,7 +48,7 @@ export const pathStages: PathStage[] = [
     level: "Designer",
     blurb: "You can design agent-based systems.",
     items: [
-      { key: "agents", title: "Agents fundamentals", sub: "Loops, tools, workflows", after: "Tell a workflow from an agent, and build a simple tool-using agent." },
+      { key: "agents", course: "agents-fundamentals", title: "Agents fundamentals", sub: "Loops, tools, workflows", after: "Tell a workflow from an agent, and build a simple tool-using agent." },
       { key: "browser", course: "browser-automation", title: "Browser Automation for Agents", sub: "Agents that use the web", after: "Give an agent a browser and keep it reliable, safe and polite." },
       { key: "graphrag", course: "graphrag", title: "GraphRAG with Knowledge Graphs", sub: "Retrieval over connected data", after: "Answer connected, multi-hop questions with a knowledge graph." },
       { key: "memory", course: "agent-memory", title: "Persistent Memory for Agents", sub: "Agents that remember", after: "Design memory that stays accurate, private and affordable." },

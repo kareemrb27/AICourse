@@ -1,0 +1,272 @@
+An agent is only as good as its tools. A model that can search, read and act precisely will solve problems that a model with clumsy, overlapping, chatty tools never will. Designing tools for a model is a lot like designing an interface for a person, and deserves the same care. Anthropic calls this the **agent-computer interface**. In this lesson you build a small set of safe file tools, test them like real code, and learn the rules that make tools easy for a model to use correctly.
+
+## Watch
+
+<Video id="HzGOWq5UyjY" title="How AI Agents Actually Work (Every Piece Explained & Built)" channel="Tech With Tim" minutes={19}>
+  A 19-minute build-along covering the pieces of an agent, with a close look at how tools are defined and used.
+</Video>
+
+## Principles for good tools
+
+These come from Anthropic's guidance on writing tools for agents, and from experience:
+
+1. **Build a few tools for real jobs, not one per API endpoint.** If a person would do "find the file, then read it" as one step, consider offering one tool that does it. Fewer tools means fewer wrong choices.
+2. **Avoid overlap.** Two tools that look alike make the model hesitate or pick wrongly. Make the boundaries obvious in the names and descriptions.
+3. **Name and group clearly.** Related tools share a prefix (`logs_search`, `logs_read`), and names say what they do.
+4. **Describe each tool like a briefing for a new teammate.** Say what it does, **when to use it**, what the inputs mean, what it returns and what it does not do.
+5. **Make mistakes hard** (poka-yoke): use enums for fixed choices, required fields for must-haves, and defaults for the rest. One famous example: requiring absolute file paths removed a whole class of path mistakes.
+6. **Return high-signal output.** Give names and meanings, not opaque IDs. Offer a `concise` and a `detailed` option when it matters.
+7. **Spend tokens wisely.** Every tool result goes into the context and costs money on every later turn. Paginate, filter and truncate, and when you truncate, **tell the model how to narrow** the request.
+8. **Make errors teach.** Say what was wrong and show a valid example, not a stack trace.
+9. **Make tools safe.** Least privilege, validated inputs, sandboxed paths, and idempotent operations where possible.
+10. **Test them with the model**, read its transcripts and refine.
+
+## Build a sandboxed file toolkit
+
+A file tool is a classic risk: a model that can read any path can read your secrets. So confine every path to one folder. Save this as `tools_fs.py`:
+
+```python
+# tools_fs.py
+import re
+from pathlib import Path
+
+from agent import Tool
+
+
+class Sandbox:
+    """Read-only file access confined to one folder."""
+
+    def __init__(self, root, max_chars=3000):
+        self.root = Path(root).resolve()
+        self.max_chars = max_chars
+
+    def _resolve(self, relative):
+        target = (self.root / relative).resolve()          # follows symlinks and removes ".."
+        if not target.is_relative_to(self.root):
+            raise PermissionError(f"{relative!r} is outside the allowed folder. Use a path inside it, such as 'logs/app.log'.")
+        return target
+
+    def list_files(self, path="."):
+        folder = self._resolve(path)
+        if not folder.is_dir():
+            raise NotADirectoryError(f"{path!r} is not a folder. Use list_files('.') to see what exists.")
+        entries = sorted(folder.iterdir())
+        lines = [f"{e.name}{'/' if e.is_dir() else ''}  ({e.stat().st_size} bytes)" if e.is_file() else f"{e.name}/" for e in entries[:40]]
+        if len(entries) > 40:
+            lines.append(f"... and {len(entries) - 40} more. Call list_files with a subfolder to narrow down.")
+        return "\n".join(lines) or "(empty folder)"
+
+    def read_file(self, path, start_line=1, max_lines=40):
+        file = self._resolve(path)
+        if not file.is_file():
+            raise FileNotFoundError(f"{path!r} is not a file. Use list_files to find the right name.")
+        lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
+        chunk = lines[start_line - 1:start_line - 1 + max_lines]
+        text = "\n".join(f"{start_line + i}: {line}" for i, line in enumerate(chunk))
+        if len(text) > self.max_chars:
+            text = text[: self.max_chars] + "\n... output cut. Read fewer lines with max_lines, or use search_files for a keyword."
+        end = start_line - 1 + len(chunk)
+        if end < len(lines):
+            text += f"\n[lines {start_line}-{end} of {len(lines)}. Call again with start_line={end + 1} for more.]"
+        return text or "(no lines in that range)"
+
+    def search_files(self, pattern, path=".", max_results=15):
+        folder = self._resolve(path)
+        try:
+            regex = re.compile(pattern, re.IGNORECASE)
+        except re.error as err:
+            raise ValueError(f"invalid pattern {pattern!r}: {err}. Use plain words or a simple regular expression.")
+        hits = []
+        files = [folder] if folder.is_file() else sorted(p for p in folder.rglob("*") if p.is_file())
+        for file in files:
+            for number, line in enumerate(file.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                if regex.search(line):
+                    hits.append(f"{file.relative_to(self.root)}:{number}: {line.strip()[:160]}")
+        if not hits:
+            return f"No matches for {pattern!r}. Try a shorter or different word."
+        shown = hits[:max_results]
+        if len(hits) > max_results:
+            shown.append(f"... {len(hits) - max_results} more matches. Narrow with a subfolder or a more specific pattern.")
+        return "\n".join(shown)
+
+
+def make_tools(sandbox):
+    path_note = "A path relative to the log folder, such as 'payments/app.log'. Do not use absolute paths."
+    return [
+        Tool("list_files",
+             "List the files and folders inside the log folder. Call this first to see what exists, and again with a subfolder to look inside it. Read-only.",
+             {"type": "object", "properties": {"path": {"type": "string", "description": path_note, "default": "."}}},
+             sandbox.list_files),
+        Tool("read_file",
+             "Read lines from one file, with line numbers. Use it after list_files or search_files tell you which file matters. Returns at most 40 lines at a time. Read-only.",
+             {"type": "object", "properties": {"path": {"type": "string", "description": path_note},
+                                               "start_line": {"type": "integer", "minimum": 1, "default": 1},
+                                               "max_lines": {"type": "integer", "minimum": 1, "maximum": 100, "default": 40}},
+              "required": ["path"]},
+             sandbox.read_file),
+        Tool("search_files",
+             "Search every file under a folder, or one file, for a word or simple pattern (case-insensitive) and return matching lines as file:line: text. Use it to find errors or keywords before reading whole files. Read-only.",
+             {"type": "object", "properties": {"pattern": {"type": "string", "description": "A word or simple regular expression, such as 'timeout' or 'error|fail'"},
+                                               "path": {"type": "string", "description": path_note, "default": "."}},
+              "required": ["pattern"]},
+             sandbox.search_files),
+    ]
+```
+
+## Use the tools directly
+
+Before any model touches them, call them yourself, including with bad input:
+
+```python
+import tempfile
+from pathlib import Path
+
+from tools_fs import Sandbox
+
+root = Path(tempfile.mkdtemp())
+(root / "payments").mkdir()
+(root / "payments" / "app.log").write_text("\n".join(
+    f"12:{i:02d} INFO request ok" if i % 7 else f"12:{i:02d} ERROR timeout talking to db" for i in range(1, 60)))
+(root / "web.log").write_text("12:01 INFO started\n12:05 WARN slow response\n")
+(root.parent / "secret.txt").write_text("do not read me")
+
+box = Sandbox(root)
+print(box.list_files())
+print("---")
+print(box.read_file("payments/app.log", max_lines=3))
+print("---")
+print(box.search_files("error", max_results=3))
+print("---")
+for attempt in ("../secret.txt", "/etc/passwd", "payments/missing.log"):
+    try:
+        box.read_file(attempt)
+    except Exception as err:
+        print(f"{attempt!r} -> {type(err).__name__}: {err}")
+```
+
+Notice the messages. When the model asks for something outside the folder, the error says **what is wrong and what to do**. When output is cut, the result says **how to get the rest**. Those two habits do more for agent reliability than most prompt tuning.
+
+## Test the tools like real code
+
+Tools are your security boundary, so test them hard, especially the sandbox:
+
+```python
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+from tools_fs import Sandbox
+
+
+class SandboxTests(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        (self.root / "a.log").write_text("one\ntwo ERROR three\nfour\n")
+        outside = Path(tempfile.mkdtemp())
+        (outside / "secret.txt").write_text("secret")
+        self.outside = outside
+        self.box = Sandbox(self.root)
+
+    def test_reads_inside_files(self):
+        self.assertIn("two ERROR three", self.box.read_file("a.log"))
+
+    def test_blocks_parent_directory(self):
+        with self.assertRaises(PermissionError):
+            self.box.read_file("../" + self.outside.name + "/secret.txt")
+
+    def test_blocks_absolute_paths(self):
+        with self.assertRaises(PermissionError):
+            self.box.read_file(str(self.outside / "secret.txt"))
+
+    def test_blocks_symlinks_that_escape(self):
+        os.symlink(self.outside / "secret.txt", self.root / "link.txt")
+        with self.assertRaises(PermissionError):
+            self.box.read_file("link.txt")
+
+    def test_search_reports_file_and_line(self):
+        self.assertEqual(self.box.search_files("error"), "a.log:2: two ERROR three")
+
+    def test_search_accepts_a_single_file(self):
+        self.assertEqual(self.box.search_files("error", path="a.log"), "a.log:2: two ERROR three")
+
+    def test_long_output_is_cut_with_guidance(self):
+        (self.root / "big.log").write_text("x" * 100 + "\n" + "y" * 5000)
+        self.assertIn("output cut", Sandbox(self.root, max_chars=200).read_file("big.log", max_lines=2))
+
+
+suite = unittest.defaultTestLoader.loadTestsFromTestCase(SandboxTests)
+unittest.TextTestRunner(verbosity=1).run(suite)
+```
+
+The symlink test matters: a link inside the folder can point outside it. Resolving the path first, then checking it, catches that. Any tool that touches files, commands or networks needs tests like these, because the model **will** eventually ask for something you did not expect, whether by accident or because an attacker steered it.
+
+## Descriptions are prompts
+
+The description is what the model reads when choosing and using a tool, so write it as carefully as a prompt:
+
+| Weak | Better |
+| --- | --- |
+| `"Reads a file"` | "Read lines from one file, with line numbers. Use it after list_files or search_files tell you which file matters. Returns at most 40 lines at a time." |
+| `path: string` | `path: A path relative to the log folder, such as 'payments/app.log'. Do not use absolute paths.` |
+| `mode: string` | `mode: "concise" or "detailed"` as an **enum** |
+| `"Error 500"` | "Path 'x' is not a file. Use list_files to find the right name." |
+| Two tools: `get_data`, `fetch_data` | One tool with a clear job, or names that mark the boundary |
+
+State **when** to call the tool, not just what it does. Models call tools more reliably when the trigger is spelled out. Small edits to a description can change accuracy a lot, which is why you test.
+
+## Shape the output
+
+What a tool returns is part of its design:
+
+- **Natural names over IDs**: `payments/app.log` helps a model more than `file_8841`. If you must use IDs, return the name beside them.
+- **Only what is needed**: leave out internal fields the model will not use.
+- **A `concise` or `detailed` choice** when the detail is expensive.
+- **Stable formats**: the same layout every time, so the model learns to read it.
+- **Plain text or simple structures** over deeply nested JSON, which costs tokens and invites mistakes.
+- **Bounded size**: always cap it, and say what was cut.
+
+## Test with the model
+
+A tool is not finished when it passes unit tests. It is finished when a model **uses it well**. The process:
+
+1. Write 10 to 20 realistic tasks that need your tools, each with a checkable result.
+2. Run an agent on them, and **read the transcripts**.
+3. Look for confusion: wrong tool choices, repeated calls, bad arguments, giving up early, paging through everything.
+4. Fix the tool or its description, not the prompt first.
+5. Re-run, and keep a **held-out** set so you do not overfit your tools to your own tasks.
+
+You will build the harness for this in lesson 6.
+
+## Other tool sources
+
+You do not have to write every tool. The **Model Context Protocol (MCP)** is an open standard for exposing tools and data to models, and many ready-made MCP servers exist. They are convenient, and the same rules apply: check what each tool can do, give the agent only the ones it needs, and treat what they return as untrusted input.
+
+<Callout title="Tools are the agent's hands">
+  Whatever a tool can do, a confused or tricked model can do. Make them
+  narrow, safe by construction, easy to use correctly and hard to use wrongly.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Writing effective tools for agents" href="https://www.anthropic.com/research/writing-tools-for-agents" source="Anthropic">
+  The main source for this lesson: choosing tools, descriptions, token efficiency and evaluating tools.
+</Resource>
+
+<Resource kind="docs" title="Define tools" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" source="Anthropic">
+  The reference for tool definitions, schemas and descriptions.
+</Resource>
+
+<Resource kind="docs" title="Model Context Protocol" href="https://modelcontextprotocol.io/docs/getting-started/intro" source="Model Context Protocol">
+  What MCP is and how servers expose tools to models.
+</Resource>
+
+<Resource kind="docs" title="pathlib" href="https://docs.python.org/3/library/pathlib.html" source="Python documentation">
+  The path handling used by the sandbox, including `resolve` and `is_relative_to`.
+</Resource>
+
+## Check yourself
+
+1. Run the unit tests, then add two attack paths of your own. Does the sandbox hold?
+2. Take a tool you use or have written. Rewrite its description as a briefing for a new teammate, and make its errors teach.
+3. List the tools an agent for your own task would need. Which could you merge, and which would you refuse to build because they are too risky?

@@ -229,6 +229,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "agents-fundamentals",
+    title: "Agents Fundamentals",
+    track: "Stage 3 · Design",
+    level: "Intermediate",
+    summary:
+      "Build an agent from the loop up and learn when not to. Tell workflows from agents, write the tool-use loop with hard limits, design safe and teachable tools, manage planning and context, enforce safety in code, and evaluate agents with repeatable tasks and honest statistics.",
+    prerequisites: [
+      "Comfortable with Python and the Claude API, as taught in Build with LLM APIs",
+      "Recommended: Evaluate and Use AI Responsibly, for evaluation statistics and safety thinking",
+      "API credit is only needed to run agents against a real model. All tests in the course run without one",
+    ],
+    outcomes: [
+      "Choose between a single call, a workflow and an agent, and build the five standard workflow patterns",
+      "Write an agent loop with turn, token and error handling, and test it with a scripted client",
+      "Design sandboxed, bounded and self-explaining tools and test them like security boundaries",
+      "Manage planning, notes and long runs without editing conversation history",
+      "Enforce permissions, approvals, limits and loop detection in code, and defend against injected instructions",
+      "Evaluate agents on checkable tasks, repeat runs, report intervals and read traces to find failure causes",
+    ],
+    lessons: [
+      { slug: "workflows-vs-agents", title: "Workflows versus agents", summary: "The definitions, five workflow patterns in code and when an agent is worth it.", minutes: 90 },
+      { slug: "the-agent-loop", title: "The agent loop", summary: "Build the loop, add limits and a trace, and test it without a model.", minutes: 90 },
+      { slug: "designing-tools", title: "Designing tools", summary: "Sandboxed file tools, descriptions as prompts and errors that teach.", minutes: 120 },
+      { slug: "planning-and-memory", title: "Planning, memory and long tasks", summary: "Plans, notes, small outputs and restarting from a summary.", minutes: 90 },
+      { slug: "safety-and-control", title: "Safety and control", summary: "A policy layer, approvals, sandboxes, limits and injected instructions.", minutes: 120 },
+      { slug: "evaluating-agents", title: "Evaluating agents", summary: "End-state checks, repeated runs, pass-to-the-k and reading transcripts.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: an incident investigator", summary: "Build, test and evaluate a read-only log-investigation agent.", minutes: 300 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

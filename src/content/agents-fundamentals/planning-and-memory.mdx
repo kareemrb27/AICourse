@@ -1,0 +1,235 @@
+A short task fits in one conversation. A long one does not: the history grows, every tool result is paid for again on every turn, and the model starts to lose the thread. Real agents therefore need ways to **plan**, to **remember** what they have learned and done, and to **manage their context** over many steps. This lesson covers the practical techniques, and one important rule about editing history on current models.
+
+## Watch
+
+<Video id="GDm_uH6VxPY" title="AI agent design patterns" channel="Google Cloud Tech" minutes={8}>
+  An eight-minute overview of patterns such as planning, reflection and multi-agent designs.
+</Video>
+
+## Planning
+
+For anything beyond a few steps, an agent does better when it **writes a plan** and tracks progress against it:
+
+- A plan makes the intent **visible**, which helps you debug and helps the model stay on track.
+- It breaks a big goal into checkable steps.
+- It lets the agent notice it is off course, and revise.
+
+The simplest implementation is a to-do list the model can update, exposed as a tool. Note the single tool with an `action` enum, which is easier to use correctly than four separate tools:
+
+```python
+import json
+
+from agent import Tool
+
+
+class TodoList:
+    def __init__(self):
+        self.items = []
+
+    def run(self, action, text=None, number=None):
+        if action == "add":
+            if not text:
+                raise ValueError("add needs 'text'. Example: action='add', text='read the error log'")
+            self.items.append({"text": text, "done": False})
+        elif action == "complete":
+            if number is None or not 1 <= number <= len(self.items):
+                raise ValueError(f"complete needs 'number' between 1 and {len(self.items)}")
+            self.items[number - 1]["done"] = True
+        elif action != "show":
+            raise ValueError("action must be 'add', 'complete' or 'show'")
+        return self.render()
+
+    def render(self):
+        if not self.items:
+            return "(no plan yet)"
+        return "\n".join(f"{i}. [{'x' if item['done'] else ' '}] {item['text']}" for i, item in enumerate(self.items, 1))
+
+
+todo = TodoList()
+plan_tool = Tool(
+    "plan",
+    "Keep a to-do list for the task. Add a step before you start it, mark it complete when done, and show the list to check progress. "
+    "Use it for any task with more than two steps.",
+    {"type": "object", "properties": {"action": {"type": "string", "enum": ["add", "complete", "show"]},
+                                      "text": {"type": "string", "description": "The step, for action 'add'"},
+                                      "number": {"type": "integer", "description": "Step number, for action 'complete'"}},
+     "required": ["action"]},
+    todo.run,
+)
+
+for step in ("find which service is failing", "read its error lines", "write a one-paragraph diagnosis"):
+    plan_tool.func("add", text=step)
+plan_tool.func("complete", number=1)
+print(plan_tool.func("show"))
+try:
+    plan_tool.func("complete", number=9)
+except ValueError as err:
+    print("error the model would see:", err)
+```
+
+You can also **tell the model in the system prompt** to plan first, check its work against the goal before finishing, and say so when it cannot finish. Newer models with thinking already plan internally, so measure whether an explicit plan tool helps before adding one.
+
+## Keep output small at the source
+
+Every tool result stays in the conversation, and the whole history is re-sent each turn. So the cheapest way to manage context is to **never let large output in**:
+
+- Cap and paginate tool results, and say how to get more (lesson 3).
+- Prefer **search** over reading whole files, and **summaries** over raw dumps.
+- Return the fields the model needs, not the whole record.
+
+```python
+def limit_output(text, limit=1500, hint="Narrow the request or read a smaller range."):
+    """Cut a long tool result and tell the model what to do about it."""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n... [{len(text) - limit} more characters cut. {hint}]"
+
+
+big = "line of log output\n" * 400
+short = limit_output(big)
+print(len(big), "->", len(short))
+print(short[-90:])
+```
+
+## Do not edit history
+
+It is tempting to shrink the conversation by rewriting old turns, for example replacing earlier tool results with "[trimmed]". **On current models this can break your requests.** Earlier assistant turns can contain **thinking blocks that are cryptographically tied to the exact conversation that produced them**. If you change the history before them, the API can reject the request with an error about an invalid thinking signature.
+
+So treat the conversation as **append-only**. The safe ways to keep context under control are:
+
+- **Small outputs at the source** (above).
+- **External notes**: have the agent write down what it learns, so it does not need the whole history.
+- **Start a fresh conversation from a summary**: when the history gets long, summarize the work so far in text and begin a **new** message list with that summary. A new conversation has no thinking blocks to invalidate.
+- **Server-side options**: the API offers context editing and compaction features that manage this for you inside the platform. They are in beta and change, so read the current docs before using them.
+
+## Notes: memory outside the conversation
+
+Give the agent a place to keep what matters, and tell it to use it. Notes survive restarts and keep the context small, because only what is worth keeping is kept:
+
+```python
+from pathlib import Path
+
+from agent import Tool
+
+
+class Notes:
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def run(self, action, text=None):
+        if action == "append":
+            if not text:
+                raise ValueError("append needs 'text'")
+            with self.path.open("a", encoding="utf-8") as f:
+                f.write(f"- {text}\n")
+            return "saved"
+        if action == "read":
+            return self.path.read_text(encoding="utf-8") if self.path.exists() else "(no notes yet)"
+        raise ValueError("action must be 'append' or 'read'")
+
+
+import tempfile
+
+notes = Notes(Path(tempfile.mkdtemp()) / "notes.md")
+notes_tool = Tool(
+    "notes",
+    "Save and read short notes that persist across the whole task. Append a note whenever you learn a fact you will need later "
+    "(a file name, a finding, a decision). Read the notes when you start or lose track.",
+    {"type": "object", "properties": {"action": {"type": "string", "enum": ["append", "read"]},
+                                      "text": {"type": "string", "description": "The note, for action 'append'"}},
+     "required": ["action"]},
+    notes.run,
+)
+notes_tool.func("append", text="payments service logs errors from 12:07 onwards")
+notes_tool.func("append", text="root cause candidate: database timeouts")
+print(notes_tool.func("read"))
+```
+
+This is simple **long-term memory**. The Persistent Memory course in this stage goes much further: what to store, how to retrieve it, and how to keep it accurate, private and affordable.
+
+## Restart from a summary
+
+When a run is long, summarize and continue in a fresh conversation. The summary is built from the **trace you already keep**, not from the raw message objects:
+
+```python
+from agent import Tool, run_agent
+from fakes import ScriptedClient, say
+
+
+def render_trace(trace, max_chars=1500):
+    lines = []
+    for step in trace:
+        for call in step["tool_calls"]:
+            status = "ERROR" if call["error"] else "ok"
+            lines.append(f"- {call['name']}({call['input']}) -> {status}: {call['output'][:80]}")
+        if step["text"]:
+            lines.append(f"- agent said: {step['text'][:100]}")
+    return "\n".join(lines)[:max_chars]
+
+
+def continue_task(client, task, previous, tools, notes_text=""):
+    """Start a NEW conversation that carries forward what the last one achieved."""
+    handover = (
+        f"{task}\n\nYou are continuing earlier work. What has happened so far:\n{render_trace(previous['trace'])}\n"
+        + (f"\nYour saved notes:\n{notes_text}\n" if notes_text else "")
+        + "\nContinue from here. Do not repeat steps that already succeeded."
+    )
+    return run_agent(client, handover, tools)
+
+
+# Test it with a scripted client (no model call)
+earlier = {"trace": [{"turn": 1, "text": "", "stop_reason": "tool_use",
+                      "tool_calls": [{"name": "search_files", "input": {"pattern": "error"}, "output": "payments/app.log:7: ERROR timeout", "error": False}]}]}
+client = ScriptedClient([say("Diagnosis: the database timed out.")])
+result = continue_task(client, "Find why payments failed.", earlier, [], notes_text="- logs start 12:07")
+sent = client.requests[0]["messages"][0]["content"]
+print(result["answer"])
+print("handover includes the earlier search:", "search_files" in sent, "| and the notes:", "logs start 12:07" in sent)
+```
+
+## Checkpoints
+
+For runs that may fail or be interrupted, save the **trace and the notes** to disk after each step. If the process dies, you can restart with `continue_task`. Keep checkpoints small and human-readable, because you will read them when something goes wrong.
+
+## Patterns for long tasks
+
+- **Plan, then act**: write the plan first, then work through it.
+- **Initializer and worker**: a first phase sets up the environment and a progress file, and later phases pick up from that file each time.
+- **Verify as you go**: run tests, check outputs, and re-read the goal. A model that checks its work with a tool catches many of its own errors.
+- **Hand off cleanly**: when context fills, leave a summary and a to-do list for the next session.
+- **Bound everything**: turns, tokens, time and money, as in lesson 2.
+
+<Callout title="Remember less, remember better">
+  The aim is not to keep everything in the model's head. It is to keep the right
+  few things within reach, and to put the rest where the agent can look it up.
+</Callout>
+
+## Go deeper (optional)
+
+<Video id="mR-WAvEPRwE" title="Anthropic Workshop: Build Agents That Run for Hours" channel="AI Engineer" minutes={76}>
+  A long workshop on keeping agents coherent over long runs: evaluators, structured handoffs and sprint-style task decomposition. Optional, and a good preview of the production course in this stage.
+</Video>
+
+## Resources
+
+<Resource kind="article" title="Effective context engineering for AI agents" href="https://www.anthropic.com/research/effective-context-engineering-for-ai-agents" source="Anthropic">
+  A deeper treatment of what goes into an agent's context and how to keep it useful over time.
+</Resource>
+
+<Resource kind="docs" title="Context windows" href="https://platform.claude.com/docs/en/build-with-claude/context-windows" source="Anthropic">
+  How much a model can hold, and the platform's options for managing long conversations.
+</Resource>
+
+<Resource kind="article" title="How we built our multi-agent research system" href="https://www.anthropic.com/research/multi-agent-research-system" source="Anthropic">
+  A candid account of planning, delegation and state in a real system.
+</Resource>
+
+<Resource kind="paper" title="ReAct: Synergizing Reasoning and Acting in Language Models" href="https://arxiv.org/abs/2210.03629" source="Yao et al., arXiv">
+  The reasoning-and-acting pattern that planning builds on.
+</Resource>
+
+## Check yourself
+
+1. Give an agent the plan and notes tools and a task with five steps. Read the trace. Did it plan, and did it use the notes?
+2. Find a tool in your own work that returns too much. Redesign its output with a cap, a hint and a way to page.
+3. Describe a long task at your workplace. What would you keep in notes, what would you summarize, and where would you restart?

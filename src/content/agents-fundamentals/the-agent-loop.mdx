@@ -1,0 +1,259 @@
+An agent is a loop. The model looks at the situation, asks for a tool, your code runs it, the result goes back, and the model decides what to do next, until it says it is done. In this lesson you build that loop from scratch in about forty lines, make it observable with a trace, put hard limits on it, and test it without calling a model at all.
+
+## Watch
+
+<Video id="vFdIrZyKEwQ" title="ReAct AI Agents, clearly explained!" channel="Akshay Pachaar" minutes={6}>
+  A six-minute explanation of the reason-then-act pattern behind most agent loops.
+</Video>
+
+<Video id="L7FF8Zgab3M" title="What is OpenClaw? Inside AI Agents, LLMs and the Agentic Loop" channel="IBM Technology" minutes={12}>
+  An 11-minute tour of how models, tools and the loop fit together in an agent.
+</Video>
+
+## The loop
+
+```text
+1. Send the task, the tool list and the history to the model
+2. The model answers with text, or asks to use one or more tools (stop_reason = "tool_use")
+3. If it used no tools, it is done: return its answer
+4. Otherwise run each requested tool, and add the results to the history
+5. Go back to step 1
+```
+
+You saw this loop in the API course. An agent is that loop with **good tools**, **good limits** and **good records**. This lesson covers the loop and the limits, and the next lessons cover the rest.
+
+## Build it
+
+Save this as `agent.py`. It is the core of everything else in the course:
+
+```python
+# agent.py
+MODEL = "claude-opus-5-5"
+
+
+def text_of(response):
+    return "".join(block.text for block in response.content if block.type == "text")
+
+
+class Tool:
+    """A function the model may ask for, with the description and schema the model sees."""
+
+    def __init__(self, name, description, schema, func):
+        self.name, self.description, self.schema, self.func = name, description, schema, func
+
+    def spec(self):
+        return {"name": self.name, "description": self.description, "input_schema": self.schema}
+
+
+def run_agent(client, task, tools, system="You are a careful assistant.", max_turns=10, max_tokens_total=60_000):
+    """Run the loop. Returns a dict with the status, final answer, a full trace and token use."""
+    handlers = {tool.name: tool.func for tool in tools}
+    specs = [tool.spec() for tool in tools]
+    messages = [{"role": "user", "content": task}]
+    trace, tokens_in, tokens_out = [], 0, 0
+
+    def outcome(status, answer=""):
+        return {"status": status, "answer": answer, "trace": trace, "turns": len(trace),
+                "tokens": tokens_in + tokens_out, "tokens_in": tokens_in, "tokens_out": tokens_out}
+
+    for turn in range(1, max_turns + 1):
+        response = client.messages.create(
+            model=MODEL, max_tokens=4096, system=system, tools=specs, messages=messages,
+        )
+        tokens_in += response.usage.input_tokens
+        tokens_out += response.usage.output_tokens
+        step = {"turn": turn, "stop_reason": response.stop_reason, "text": text_of(response), "tool_calls": []}
+        trace.append(step)
+
+        if response.stop_reason != "tool_use":
+            return outcome("done" if response.stop_reason == "end_turn" else response.stop_reason, text_of(response))
+        if tokens_in + tokens_out > max_tokens_total:
+            return outcome("budget_exceeded")
+
+        messages.append({"role": "assistant", "content": response.content})
+        results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            failed = False
+            try:
+                if block.name not in handlers:
+                    raise KeyError(f"unknown tool {block.name!r}")
+                output = str(handlers[block.name](**block.input))
+            except Exception as err:
+                output, failed = f"Error: {err}", True
+            step["tool_calls"].append({"name": block.name, "input": dict(block.input), "output": output[:300], "error": failed})
+            results.append({"type": "tool_result", "tool_use_id": block.id, "content": output, "is_error": failed})
+        messages.append({"role": "user", "content": results})
+
+    return outcome("max_turns")
+```
+
+Every design decision here is deliberate:
+
+- **`max_turns`** stops a loop that never converges. Agents do get stuck.
+- **`max_tokens_total`** stops a loop that spends too much, even if turns are few.
+- **Errors become results.** A failing tool returns `Error: ...` with `is_error` set, so the model can adapt, for example by fixing a bad argument, instead of the whole run crashing.
+- **Unknown tools** produce an error result, not an exception, because models occasionally invent names.
+- **The trace** records each turn: what the model said, which tools it called, with what input, and what came back. This is how you debug and evaluate.
+- **The status** tells the caller **why** it stopped: `done`, `max_turns`, `budget_exceeded`, or a stop reason such as `max_tokens` or `refusal`. Never treat a limit as success.
+
+## Try it with a real model
+
+A tiny agent with two tools to answer a question that needs both:
+
+```python
+import anthropic
+
+from agent import Tool, run_agent
+
+SERVERS = {"web-01": {"cpu": 91, "region": "eu"}, "db-01": {"cpu": 40, "region": "us"}}
+
+
+def list_servers():
+    return ", ".join(SERVERS)
+
+
+def get_metrics(name):
+    if name not in SERVERS:
+        raise KeyError(f"no server named {name}. Known servers: {', '.join(SERVERS)}")
+    return str(SERVERS[name])
+
+
+tools = [
+    Tool("list_servers", "List the names of all monitored servers. Call this first when you do not know a name.",
+         {"type": "object", "properties": {}}, list_servers),
+    Tool("get_metrics", "Get the current CPU percentage and region for one server by exact name.",
+         {"type": "object", "properties": {"name": {"type": "string", "description": "Exact server name, such as web-01"}},
+          "required": ["name"]}, get_metrics),
+]
+
+result = run_agent(anthropic.Anthropic(), "Which servers are above 80 percent CPU?", tools, max_turns=8)
+print(result["status"], "after", result["turns"], "turns,", result["tokens"], "tokens")
+print(result["answer"])
+for step in result["trace"]:
+    print(f"turn {step['turn']}:", [(c["name"], c["input"]) for c in step["tool_calls"]])
+```
+
+With a real model you would typically see it call `list_servers`, then `get_metrics` for each name, then answer. Reading the trace of runs like this is the most useful habit you can build.
+
+## Test the loop without a model
+
+An agent loop is ordinary code, so test it like ordinary code. The trick is a **scripted client** that plays the part of the model, returning exactly the replies you choose. Here are the helpers:
+
+```python
+# fakes.py
+from types import SimpleNamespace
+
+
+def say(text, stop="end_turn", tokens=(10, 5)):
+    return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)], stop_reason=stop,
+                           usage=SimpleNamespace(input_tokens=tokens[0], output_tokens=tokens[1]))
+
+
+def call(name, args, call_id="t1", tokens=(10, 5)):
+    block = SimpleNamespace(type="tool_use", id=call_id, name=name, input=args)
+    return SimpleNamespace(content=[block], stop_reason="tool_use",
+                           usage=SimpleNamespace(input_tokens=tokens[0], output_tokens=tokens[1]))
+
+
+class ScriptedClient:
+    """Plays back a list of model replies, and records what it was sent."""
+
+    def __init__(self, replies):
+        self.replies, self.requests = list(replies), []
+        self.messages = self
+
+    def create(self, **kwargs):
+        self.requests.append(kwargs)
+        return self.replies.pop(0)
+```
+
+Save that as `fakes.py`, then write the tests:
+
+```python
+from agent import Tool, run_agent
+from fakes import ScriptedClient, call, say
+
+add = Tool("add", "Add two numbers.", {"type": "object", "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+                                       "required": ["a", "b"]}, lambda a, b: a + b)
+
+# 1. The happy path: the model calls a tool, then answers
+client = ScriptedClient([call("add", {"a": 2, "b": 3}), say("The sum is 5.")])
+result = run_agent(client, "What is 2 + 3?", [add])
+print(result["status"], result["answer"], "| tool calls:", result["trace"][0]["tool_calls"][0]["output"])
+
+# 2. A tool that fails: the error is returned to the model, and the run continues
+client = ScriptedClient([call("add", {"a": 2}), say("I could not add those.")])
+result = run_agent(client, "Add 2 and something", [add])
+print(result["status"], "| error recorded:", result["trace"][0]["tool_calls"][0]["error"])
+
+# 3. An invented tool is an error result, not a crash
+client = ScriptedClient([call("teleport", {}), say("Sorry.")])
+result = run_agent(client, "Teleport me", [add])
+print(result["trace"][0]["tool_calls"][0]["output"])
+
+# 4. A loop that never ends is stopped
+client = ScriptedClient([call("add", {"a": 1, "b": 1}, f"t{i}") for i in range(10)])
+result = run_agent(client, "Keep going", [add], max_turns=3)
+print(result["status"], "after", result["turns"], "turns")
+
+# 5. A loop that spends too much is stopped
+client = ScriptedClient([call("add", {"a": 1, "b": 1}, "t1", tokens=(30_000, 5_000)), say("never reached")])
+result = run_agent(client, "Expensive", [add], max_tokens_total=20_000)
+print(result["status"])
+```
+
+Five tests, no model, no cost, instant. Keep tests like these for every limit and every error path. They prove your **harness** is safe; the evaluation lesson shows how to measure the **model's** behavior inside it.
+
+## Stop reasons and edge cases
+
+Handle these explicitly in a real agent:
+
+| Case | What to do |
+| --- | --- |
+| `end_turn` | Done. Return the answer |
+| `tool_use` | Run the tools and continue |
+| `max_tokens` | The reply was cut off. Raise the limit or stop. Never run a half-written tool call |
+| `refusal` | The model declined. Stop and report it, do not retry blindly |
+| `pause_turn` | A server-side tool paused. Send the history back to continue |
+| Several tool calls at once | Run them all and return **all** results in one message |
+| No tool and no answer | Treat as done with an empty answer, and log it |
+
+## Streaming and long runs
+
+A real agent can run for minutes. Stream the model's text so a person sees progress, show each tool call as it happens, and let the user **stop** a run. Because your code owns the loop, a cancel button is just a flag you check each turn.
+
+## Making the loop observable
+
+Persist the trace of every run. When something goes wrong, the trace answers three questions: what did the agent try, what did the tools return, and where did it go off course. Store at least the task, the model and prompt versions, each step, timing and token counts, and the final status. Lesson 6 builds evaluation on top of these traces.
+
+<Callout title="The loop is the easy part">
+  Anyone can write forty lines of loop. What separates a useful agent from a
+  dangerous or expensive one is the tools it has, the limits around it and how
+  well you can see and measure what it does.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Tool use overview" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" source="Anthropic">
+  The request and result rules your loop follows.
+</Resource>
+
+<Resource kind="paper" title="ReAct: Synergizing Reasoning and Acting in Language Models" href="https://arxiv.org/abs/2210.03629" source="Yao et al., arXiv">
+  The paper that popularized interleaving reasoning with tool use.
+</Resource>
+
+<Resource kind="docs" title="Claude Agent SDK overview" href="https://code.claude.com/docs/en/agent-sdk/overview" source="Anthropic">
+  A ready-made agent harness with built-in tools, for when you want a framework instead of your own loop.
+</Resource>
+
+<Resource kind="docs" title="Claude Managed Agents" href="https://platform.claude.com/docs/en/managed-agents/overview" source="Anthropic">
+  A hosted option where the platform runs the loop and the sandbox for you.
+</Resource>
+
+## Check yourself
+
+1. Run the loop on a question that needs three tool calls. Print the trace and say what each turn decided.
+2. Add a scripted test for a case I did not cover, such as two tool calls in one reply. Does your loop return both results together?
+3. Set `max_turns` to 2 on a task that needs 4. What status do you get, and what should the caller do with it?
