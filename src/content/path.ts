@@ -36,7 +36,7 @@ export const pathStages: PathStage[] = [
     level: "Practitioner",
     blurb: "You can ship a small AI solution safely.",
     items: [
-      { key: "apis", title: "Build with LLM APIs", sub: "Structured output, tool calls", after: "Build small apps that call a model, return structured data and use tools." },
+      { key: "apis", course: "build-with-llm-apis", title: "Build with LLM APIs", sub: "Structured output, tool calls", after: "Build small apps that call a model, return structured data and use tools." },
       { key: "rag", title: "Chat with your documents (RAG)", sub: "Retrieval from scratch", after: "Ship a document question-and-answer app and explain how it finds answers." },
       { key: "responsible", title: "Evaluate and use AI responsibly", sub: "Evals, privacy, bias", after: "Test an AI feature, protect data, and say when not to ship." },
       { key: "aicode", course: "ai-code-analysis", title: "Analyze AI-Generated Code", sub: "Review, test, scan", after: "Review, test and scan AI-written code before it reaches production." },

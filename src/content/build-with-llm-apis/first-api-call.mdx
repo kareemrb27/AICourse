@@ -1,0 +1,214 @@
+Until now you have used language models through chat windows. In this course you call them from your own code, which is how real AI features get built: a support tool that summarizes tickets, a script that classifies alerts, an app that answers questions. This lesson gets you from nothing to a working first call, and to understanding what happened and what it cost.
+
+## Watch
+
+<Video id="H7LZb20-fUY" title="Claude API Crash Course #1 - Introduction & Setup" channel="Net Ninja" minutes={9}>
+  A nine-minute walkthrough of installing the SDK and sending a first message. It builds a small web app, but the setup and the first request are the same as here.
+</Video>
+
+<Video id="nKSk_TiR8YA" title="Most devs don't understand how LLM tokens work" channel="Matt Pocock" minutes={11}>
+  Tokens decide what a call costs and how much text fits in a request. This video makes them concrete.
+</Video>
+
+## What an LLM API is
+
+A model provider runs the model on its servers. Your code sends an **HTTP request** containing your messages as JSON, and gets an **HTTP response** with the model's answer as JSON. That is all an API call is, and it is the same pattern you used with the weather service in the Python course.
+
+Three facts shape everything else in this course:
+
+1. **It is stateless.** The server remembers nothing between calls. If you want a conversation, you send the earlier messages again each time.
+2. **You pay per token.** Tokens in (your prompt) and tokens out (the answer) are both billed, and output tokens cost more.
+3. **It can fail.** Networks drop, servers get busy, limits are hit. Lesson 5 covers handling that.
+
+This course uses **Claude** and Anthropic's official Python SDK, a library that builds the requests and reads the responses for you. The ideas carry over to other providers, whose APIs have very similar shapes, but the code and the details here are for Claude.
+
+## Before you start: an account, a limit and a key
+
+1. **Create an account** in the Claude Console (platform.claude.com) and add a small amount of credit. For this course, a few dollars goes a long way.
+2. **Set a spend limit first.** In the Console, open the **Billing** page and use the spend limits section to cap your monthly spend at an amount you are comfortable losing. When the limit is reached, requests are refused until you raise it, which is exactly the safety net you want while learning.
+3. **Create an API key** and copy it once.
+4. **Put the key in an environment variable**, never in your code:
+
+```bash
+export ANTHROPIC_API_KEY="paste-your-key-here"
+```
+
+On Windows PowerShell, use `$env:ANTHROPIC_API_KEY="paste-your-key-here"`. The SDK reads this variable by itself.
+
+Treat the key like a password: do not commit it, paste it into chats or put it in screenshots. If it leaks, delete it in the Console and create a new one. Lesson 6 returns to this.
+
+## Install the SDK
+
+Use a virtual environment as in the Python course, and a reasonably current Python (the SDK needs 3.10 or newer):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install anthropic
+```
+
+## Your first call
+
+Save this as `first_call.py`:
+
+```python
+import anthropic
+
+MODEL = "claude-opus-5-5"
+
+client = anthropic.Anthropic()      # reads ANTHROPIC_API_KEY from the environment
+
+response = client.messages.create(
+    model=MODEL,
+    max_tokens=4096,
+    messages=[
+        {"role": "user", "content": "Explain DNS in two sentences for a new IT hire."}
+    ],
+)
+
+for block in response.content:
+    if block.type == "text":
+        print(block.text)
+
+print("stop reason:", response.stop_reason)
+print("tokens in/out:", response.usage.input_tokens, response.usage.output_tokens)
+```
+
+Run it with `python first_call.py`. Each part has a job:
+
+- **`model`** picks which model answers. IDs look like `claude-opus-5-5`. Use the exact string from the docs, with no date suffix.
+- **`max_tokens`** is a hard cap on how long the answer can be. It is required. Set it high enough, because thinking tokens (lesson 2) count toward it, and a cap that is too low cuts the answer off.
+- **`messages`** is the conversation: a list of `user` and `assistant` turns. Here there is one user turn.
+
+## Reading the response
+
+The result is an object, not just text. The parts you will use constantly:
+
+| Field | Meaning |
+| --- | --- |
+| `content` | A list of **blocks**. A reply is usually a `text` block, and may also hold `thinking` blocks or `tool_use` blocks (lesson 4). Check `block.type` before reading `.text`. |
+| `stop_reason` | Why the model stopped. See the table below. |
+| `usage` | Token counts: `input_tokens` and `output_tokens`, plus cache fields (lesson 5). |
+| `id` and `_request_id` | Identifiers. Log the request ID so you can report a problem. |
+
+| `stop_reason` | What it means | What to do |
+| --- | --- | --- |
+| `end_turn` | The model finished | Use the answer |
+| `max_tokens` | It hit your cap, so the answer may be cut off | Raise `max_tokens`, or shorten the task |
+| `stop_sequence` | It hit a stop text you set | Use the answer |
+| `tool_use` | It wants you to run a tool | Run it and continue (lesson 4) |
+| `refusal` | It declined for safety reasons | Handle it, do not retry blindly |
+
+Get in the habit of checking `stop_reason`. A silently truncated answer is a classic bug.
+
+## What actually goes over the wire
+
+Because the SDK hides the HTTP, turn on its logging once to see it. Run your script with the log level set:
+
+```bash
+ANTHROPIC_LOG=debug python first_call.py
+```
+
+You will see the request (the URL, headers with your key hidden, and the JSON body with your model and messages) and the response. Seeing this once removes the mystery: your Python call is a JSON request to a web endpoint.
+
+## Tokens and cost
+
+A **token** is a chunk of text, roughly three-quarters of a word in English. Both what you send and what you receive are counted. You can track your spend from every response:
+
+```python
+import anthropic
+
+# Dollars per million tokens: (input, output).
+# These are examples from the time of writing. Prices change, so check the pricing page.
+PRICES = {
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+}
+
+
+def estimate_cost(model, usage):
+    price_in, price_out = PRICES[model]
+    return (usage.input_tokens * price_in + usage.output_tokens * price_out) / 1_000_000
+
+
+MODEL = "claude-opus-5-5"
+client = anthropic.Anthropic()
+response = client.messages.create(
+    model=MODEL,
+    max_tokens=4096,
+    messages=[{"role": "user", "content": "List three common causes of slow DNS lookups."}],
+)
+print(response.content[0].text if response.content[0].type == "text" else "(no text)")
+print(f"about ${estimate_cost(MODEL, response.usage):.4f}")
+```
+
+A short exchange costs a fraction of a cent, which is why a spend limit is a safety net for mistakes such as a loop that runs away, not a worry for normal learning.
+
+**Choosing a model** is a trade between capability, speed and price. The three current sizes are `claude-opus-5-5` (the most capable), `claude-sonnet-5-5` (a strong all-rounder at lower cost) and `claude-haiku-5-5` (fast and cheap, for simple high-volume tasks). The examples use Opus. While practicing, you can change `MODEL` to a cheaper one and compare the answers, which is a good first experiment. Lesson 5 shows how to choose on evidence.
+
+## The errors you will meet first
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+try:
+    response = client.messages.create(
+        model="claude-opus-5-5",
+        max_tokens=4096,
+        messages=[{"role": "user", "content": "Say hello."}],
+    )
+    print(response.content[0].text)
+except anthropic.AuthenticationError:
+    print("The API key is missing or wrong (401). Check ANTHROPIC_API_KEY.")
+except anthropic.NotFoundError:
+    print("Unknown model or endpoint (404). Check the model ID spelling.")
+except anthropic.BadRequestError as err:
+    print("The request was invalid (400):", err.message)
+except anthropic.RateLimitError:
+    print("Too many requests, or a spend cap was reached (429).")
+except anthropic.APIConnectionError:
+    print("Could not reach the API. Check your network.")
+```
+
+Catch the specific exception classes, most specific first, instead of one broad `except`. Each one means something different and calls for a different response.
+
+<Callout title="Two habits to start now">
+  Keep the key out of your code, and keep a spend limit set. Everything else in
+  this course can be learned by experimenting, but those two protect you while
+  you do.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Claude API documentation" href="https://platform.claude.com/docs/en/api/overview" source="Anthropic">
+  The official reference for the Messages API, with examples in several languages.
+</Resource>
+
+<Resource kind="repo" title="Anthropic Python SDK" href="https://github.com/anthropics/anthropic-sdk-python" source="Anthropic on GitHub">
+  The source and README for the library you just installed, including examples.
+</Resource>
+
+<Resource kind="docs" title="Pricing" href="https://platform.claude.com/docs/en/about-claude/pricing" source="Anthropic">
+  Current prices per million tokens for every model. Check it before you rely on a cost estimate.
+</Resource>
+
+<Resource kind="docs" title="Models overview" href="https://platform.claude.com/docs/en/about-claude/models/overview" source="Anthropic">
+  The current model IDs, context sizes and capabilities.
+</Resource>
+
+<Resource kind="docs" title="Rate limits and spend limits" href="https://platform.claude.com/docs/en/api/rate-limits" source="Anthropic">
+  How usage tiers, rate limits and the monthly spend cap work, and how to set your own spend limit.
+</Resource>
+
+<Resource kind="course" title="Anthropic Courses" href="https://github.com/anthropics/courses" source="Anthropic on GitHub">
+  Free notebook-based courses on the API, prompt engineering and tool use. A good second voice alongside this one.
+</Resource>
+
+## Check yourself
+
+1. Run `first_call.py` with a prompt of your own. What was the stop reason, and how many tokens did it use?
+2. Change `MODEL` to `claude-haiku-5-5` and ask the same question. How do the answer, the speed and the cost compare?
+3. Run the script with `ANTHROPIC_LOG=debug`. Find the JSON body of the request and say what each field is for.

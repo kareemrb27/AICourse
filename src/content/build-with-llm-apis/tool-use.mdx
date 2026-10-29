@@ -1,0 +1,249 @@
+A model that can only produce text cannot check an order, read a file, search a database or create a ticket. **Tool use** (also called function calling) fixes that. You describe functions the model may ask for, your code runs them, and the results go back to the model. This is the foundation of every AI agent, and of most useful AI features that touch real systems.
+
+## Watch
+
+<Video id="h8gMhXYAv1k" title="What is Tool Calling? Connecting LLMs to Your Data" channel="IBM Technology" minutes={5}>
+  A five-minute overview of what tool calling is and why applications need it.
+</Video>
+
+<Video id="kwvA2Cxntuw" title="LLMs Can Use Tools, Just Like You and I - LLM Function Calling Explained" channel="Gary Explains" minutes={8}>
+  An eight-minute explanation of the request and result cycle, with examples.
+</Video>
+
+## The key idea: the model asks, your code acts
+
+The model never runs anything. It can only **request** that you run a tool. The conversation goes like this:
+
+1. You send the user's message **plus a list of tools** you are offering.
+2. The model replies with a `tool_use` block: "call `lookup_order` with `order_id` A-1001". The response has `stop_reason` set to `tool_use`.
+3. **Your code** runs the function and gets a result.
+4. You send the result back as a `tool_result`.
+5. The model reads it and either asks for another tool or writes the final answer.
+
+Everything after that is bookkeeping around those five steps. Because **your code is the one executing**, you control what is possible, which is the heart of using tools safely.
+
+## Describe a tool
+
+A tool has a name, a description and an input schema. The description is the most important part, because the model uses it to decide *whether and when* to call the tool:
+
+```python
+import json
+
+ORDERS = {
+    "A-1001": {"status": "shipped", "carrier": "DHL", "eta": "2026-11-03"},
+    "A-1002": {"status": "processing", "carrier": None, "eta": None},
+}
+
+
+def lookup_order(order_id):
+    order = ORDERS.get(order_id.strip().upper())
+    if order is None:
+        raise KeyError(f"no order with id {order_id}")
+    return json.dumps(order)
+
+
+TOOLS = [
+    {
+        "name": "lookup_order",
+        "description": (
+            "Look up the status of a customer order by its order ID. "
+            "Call this whenever the user asks where an order is, whether it has shipped, "
+            "or when it will arrive."
+        ),
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "order_id": {"type": "string", "description": "The order ID, such as A-1001"}
+            },
+            "required": ["order_id"],
+            "additionalProperties": False,
+        },
+    }
+]
+
+HANDLERS = {"lookup_order": lookup_order}
+print(lookup_order("a-1001"))
+```
+
+Good tool descriptions say **what it does and when to call it**, describe each parameter, and use `enum` for fixed choices. `"strict": True` makes the arguments match your schema exactly, and it requires `additionalProperties` to be false and the fields to be listed in `required`.
+
+## The loop
+
+Here is the whole cycle in code:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+MODEL = "claude-opus-5-5"
+
+
+def run_with_tools(question, max_turns=6):
+    messages = [{"role": "user", "content": question}]
+
+    for _ in range(max_turns):
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            system="You are a support assistant. Use the tools to answer questions about orders.",
+            tools=TOOLS,
+            messages=messages,
+        )
+
+        if response.stop_reason != "tool_use":
+            return "".join(b.text for b in response.content if b.type == "text")
+
+        # Keep the model's full reply, including its tool_use blocks
+        messages.append({"role": "assistant", "content": response.content})
+
+        results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            try:
+                output = HANDLERS[block.name](**block.input)
+                results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
+            except Exception as err:
+                results.append(
+                    {"type": "tool_result", "tool_use_id": block.id, "content": f"Error: {err}", "is_error": True}
+                )
+        messages.append({"role": "user", "content": results})
+
+    raise RuntimeError("The model kept calling tools; stopping after max_turns.")
+
+
+print(run_with_tools("Where is my order A-1001?"))
+```
+
+The rules that trip people up:
+
+- **Append the whole `response.content`** as the assistant turn, not just the text. It must contain the `tool_use` blocks.
+- **Each `tool_result` needs the `tool_use_id`** of the request it answers.
+- **Send all results for one turn together**, in one `user` message. The model may request several tools at once (parallel calls), and the loop above handles that.
+- **Report failures with `is_error: True`** and a clear message. The model can often recover, for example by asking the user for a correct ID.
+- **Always cap the loop** (`max_turns`). A confused model could otherwise call tools forever and spend your money.
+
+## Letting the model choose, not forcing it
+
+By default the model decides whether to call a tool (`tool_choice` is `auto`). On the newest models you **cannot force** a specific tool with `tool_choice`, and the request is rejected if you try. Instead:
+
+- **Say so in the prompt**: "Use the lookup_order tool to answer."
+- Use **`strict: True`** so any call it makes has valid arguments.
+- If all you wanted was structured data, use **structured output** (lesson 3), not a forced tool call.
+- **Check what came back.** If no tool was called, decide whether that is acceptable.
+
+## The shortcut: the tool runner
+
+The SDK can run the loop for you. You write a normal Python function with type hints and a docstring, decorate it, and hand it over. This helper is in **beta**, so its details may change, which is why you learned the loop first:
+
+```python
+import anthropic
+from anthropic import beta_tool
+
+client = anthropic.Anthropic()
+
+
+@beta_tool
+def lookup_order(order_id: str) -> str:
+    """Look up the status of a customer order by its order ID.
+
+    Call this whenever the user asks where an order is.
+
+    Args:
+        order_id: The order ID, such as A-1001.
+    """
+    return '{"status": "shipped", "carrier": "DHL", "eta": "2026-11-03"}'
+
+
+runner = client.beta.messages.tool_runner(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    tools=[lookup_order],
+    messages=[{"role": "user", "content": "Please look up my order A-1001."}],
+)
+
+final = runner.until_done()
+print("".join(b.text for b in final.content if b.type == "text"))
+```
+
+The schema comes from your type hints and docstring, and the runner calls the function, returns the result and repeats until the model is done. Use it when you do not need to intervene. Drop to the explicit loop when you want full control over each step.
+
+## Tools are an attack surface
+
+Giving a model tools means giving **whatever the model is persuaded to ask for** the ability to happen. Design as if the model could be tricked, because text it reads can be written by an attacker (lesson 6).
+
+| Principle | In practice |
+| --- | --- |
+| **Least privilege** | Offer only the tools the task needs. Prefer read-only tools. |
+| **Validate every input** | Treat tool arguments as untrusted. Check formats and ranges before acting. |
+| **Allowlists, not free text** | A tool that runs any shell command is dangerous. A tool that runs one of three named reports is not. |
+| **Confirm side effects** | Anything that sends, spends, changes or deletes should need human approval. |
+| **Bound the loop** | Cap turns, tokens and spend. |
+| **Log every call** | Record the tool, the arguments, the result and who asked. |
+
+An approval gate is just a function that asks a person:
+
+```python
+def request_refund(order_id, reason):
+    answer = input(f"Approve refund for {order_id} ({reason})? [y/N] ")
+    if answer.strip().lower() != "y":
+        return "The refund was not approved by a human."
+    return f"Refund for {order_id} has been queued."
+
+
+print(request_refund("A-1001", "item arrived damaged"))
+```
+
+If the answer is anything other than yes, the tool returns a refusal that the model can relay. Put the decision in your code, never in the model's judgment.
+
+## Validate arguments in the handler
+
+Even with `strict`, check meaning, not just shape:
+
+```python
+import re
+
+ORDER_ID = re.compile(r"^A-\d{4}$")
+
+
+def lookup_order_safe(order_id):
+    if not isinstance(order_id, str) or not ORDER_ID.match(order_id.strip().upper()):
+        raise ValueError("order_id must look like A-1234")
+    return f"looked up {order_id.strip().upper()}"
+
+
+print(lookup_order_safe("a-1002"))
+try:
+    lookup_order_safe("1002; DROP TABLE orders")
+except ValueError as err:
+    print("rejected:", err)
+```
+
+## Resources
+
+<Resource kind="docs" title="Tool use overview" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" source="Anthropic">
+  The official guide to defining tools, handling results and choosing how the model uses them.
+</Resource>
+
+<Resource kind="docs" title="Define tools" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools" source="Anthropic">
+  Writing names, descriptions and schemas that the model uses well.
+</Resource>
+
+<Resource kind="repo" title="Anthropic Python SDK: tools helpers" href="https://github.com/anthropics/anthropic-sdk-python" source="Anthropic on GitHub">
+  The README and examples cover the tool runner and its current options.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  Includes excessive agency and prompt injection, the two risks that matter most once a model has tools.
+</Resource>
+
+<Resource kind="article" title="Building effective AI agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  When to use a simple workflow and when an agent is worth the extra complexity. Read it before stage 3.
+</Resource>
+
+## Check yourself
+
+1. Add a second tool to the loop, such as `lookup_customer` or `get_ticket_status`, and ask a question that needs both. Print each tool call as it happens.
+2. Make a tool raise an error. What does the model say to the user? Improve the error message until the answer is helpful.
+3. List the tools you would give an assistant at your own workplace. For each, say whether it is read-only, and which would need human approval.

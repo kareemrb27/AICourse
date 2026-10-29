@@ -14,6 +14,7 @@ Live site: https://iaicourses.com
 | Working with LLMs | Beginner | 7 lessons, first draft |
 | Python and Data Essentials | Beginner | 7 lessons, first draft |
 | Machine Learning Basics | Beginner | 7 lessons, first draft |
+| Build with LLM APIs | Intermediate | 7 lessons, first draft |
 | Implement GraphRAG with Knowledge Graphs | Intermediate | 7 lessons, first draft |
 | Engineer Persistent Memory for AI Agents | Advanced | 7 lessons, first draft |
 | Deploy Reliable AI Agents in Production | Advanced | 7 lessons, first draft |

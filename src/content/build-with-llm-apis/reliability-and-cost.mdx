@@ -1,0 +1,360 @@
+A demo works once. A feature that people depend on has to keep working when the network is flaky, the service is busy, a limit is reached or a bill is growing. This lesson covers the engineering around the call: errors and retries, limits, measuring usage, and the levers that reduce cost.
+
+## Watch
+
+<Video id="43vH_lnM7x0" title="Retry Pattern: The Secret to Resilient Python Code" channel="ArjanCodes" minutes={24}>
+  A 24-minute walkthrough of retries in Python: when to retry, how long to wait, and what to avoid. The Anthropic SDK retries for you, but you will need the ideas around it.
+</Video>
+
+<Video id="HDMqDV7mmGo" title="Prompt Caching: Cut Your AI Cost by 90%" channel="Prompt Engineering" minutes={15}>
+  Why repeated prompt content can be cached to cut cost and latency. It is not specific to one provider, and the lesson shows the Claude form.
+</Video>
+
+## Which errors are worth retrying
+
+| Status | Meaning | Retry? |
+| --- | --- | --- |
+| 400 | Your request is invalid | No. Fix the request |
+| 401 | Bad or missing key | No. Fix the key |
+| 403 | Not allowed | No. Check permissions |
+| 404 | Unknown model or endpoint | No. Check the ID |
+| 413 | Request too large | No. Shorten it |
+| 429 | Rate limited, or a spend cap reached | Sometimes (see below) |
+| 500 | A problem on the provider's side | Yes, with a wait |
+| 529 | The service is overloaded | Yes, with a wait |
+| Network error | The connection failed | Yes, with a wait |
+
+The rule: retry **temporary** problems, never retry mistakes in your own request.
+
+## The SDK already retries
+
+The SDK automatically retries connection errors, 408, 409, 429 and 5xx responses with exponential backoff, two times by default. You can tune this, and set a timeout so a stuck call cannot hang your program:
+
+```python
+import anthropic
+
+# Applies to every call made with this client
+client = anthropic.Anthropic(max_retries=3, timeout=60.0)
+
+# Override for one call only
+response = client.with_options(timeout=20.0, max_retries=1).messages.create(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": "Say hello in one short sentence."}],
+)
+print(response.content[0].text)
+```
+
+Because the SDK handles the basics, write your own retry loop only for behavior it does not provide, such as queuing work for later, or switching to a fallback.
+
+## Two kinds of 429
+
+A 429 can mean two very different things, and the SDK cannot tell you which to act on:
+
+- **A rate limit.** You sent too much too fast. Wait (the response may carry a `retry-after` header) and try again.
+- **A spend cap.** Your organization reached its monthly limit. Retrying cannot help until access resumes or the limit is raised. The error body has `error.details.error_code` set to `enforced_spend_limit_reached`.
+
+If you set your own spend limit in the Console, hitting it returns a **400**, not a 429, with a message that starts "You have reached your specified API usage limits". So classify errors yourself:
+
+```python
+import anthropic
+
+
+def classify(err):
+    """Return 'retry', 'stop' or 'fix' for an API error."""
+    if isinstance(err, anthropic.RateLimitError):
+        body = err.body if isinstance(err.body, dict) else {}
+        details = body.get("error", {}).get("details", {}) or {}
+        if details.get("error_code") == "enforced_spend_limit_reached":
+            return "stop"                    # waiting will not help
+        return "retry"
+    if isinstance(err, anthropic.BadRequestError) and "specified API usage limits" in str(err):
+        return "stop"                        # your own spend limit was reached
+    if isinstance(err, (anthropic.AuthenticationError, anthropic.PermissionDeniedError, anthropic.NotFoundError)):
+        return "fix"
+    if isinstance(err, anthropic.BadRequestError):
+        return "fix"
+    if isinstance(err, (anthropic.InternalServerError, anthropic.APIConnectionError, anthropic.APITimeoutError)):
+        return "retry"
+    if isinstance(err, anthropic.APIStatusError) and err.status_code >= 500:
+        return "retry"
+    return "fix"
+```
+
+You can test this function without calling the API, by building the error objects yourself. This is a handy technique for testing any error handling:
+
+```python
+import anthropic
+import httpx2 as httpx          # the SDK's HTTP library; use this name for the examples below
+
+# This continues the example above: it calls classify(), defined there.
+
+
+def make_error(cls, status, body):
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(status, request=request)
+    return cls(f"Error code: {status} - {body}", response=response, body=body)
+
+
+rate_limit = make_error(
+    anthropic.RateLimitError, 429,
+    {"type": "error", "error": {"type": "rate_limit_error", "message": "Slow down"}},
+)
+spend_cap = make_error(
+    anthropic.RateLimitError, 429,
+    {"type": "error", "error": {"type": "rate_limit_error", "message": "Limit reached",
+                                "details": {"error_code": "enforced_spend_limit_reached"}}},
+)
+own_limit = make_error(
+    anthropic.BadRequestError, 400,
+    {"type": "error", "error": {"type": "invalid_request_error",
+                                "message": "You have reached your specified API usage limits"}},
+)
+overloaded = make_error(
+    anthropic.InternalServerError, 529,
+    {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}},
+)
+
+for name, err in [("rate limit", rate_limit), ("spend cap", spend_cap),
+                  ("own limit", own_limit), ("overloaded", overloaded)]:
+    print(f"{name:11s} -> {classify(err)}")
+```
+
+## Read the rate-limit headers
+
+Responses carry headers that tell you how much room is left. `with_raw_response` exposes them:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+raw = client.messages.with_raw_response.create(
+    model="claude-opus-5-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Say hi."}],
+)
+print("requests remaining:", raw.headers.get("anthropic-ratelimit-requests-remaining"))
+print("request id:", raw.headers.get("request-id"))
+message = raw.parse()                   # the normal response object
+print(message.content[0].text)
+```
+
+Useful headers include `anthropic-ratelimit-requests-remaining`, the input and output token equivalents, and `retry-after` on a 429. Use them to slow down before you are refused.
+
+## Measure everything you spend
+
+You cannot control what you do not measure. Count tokens **before** a big request, and log usage **after** every one:
+
+```python
+import json
+import time
+
+import anthropic
+
+client = anthropic.Anthropic()
+MODEL = "claude-opus-5-5"
+
+# 1. Estimate the input size before sending
+count = client.messages.count_tokens(
+    model=MODEL,
+    messages=[{"role": "user", "content": "Summarize this incident report: ..." * 50}],
+)
+print("input tokens would be about", count.input_tokens)
+
+
+# 2. Log every call: who, what, how much
+def log_usage(response, label, path="usage.jsonl"):
+    record = {
+        "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "label": label,
+        "model": response.model,
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "request_id": getattr(response, "_request_id", None),
+    }
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+
+response = client.messages.create(
+    model=MODEL,
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Name one risk of storing secrets in code."}],
+)
+log_usage(response, label="demo")
+print(open("usage.jsonl", encoding="utf-8").read().strip())
+```
+
+Use the SDK's `count_tokens`, not a counter from another provider. Different models split text differently, so counts from other tokenizers can be off by a large margin. A log of calls is also what lets you find which feature is the expensive one.
+
+## Put a ceiling on spend
+
+A loop with a bug can burn a lot very quickly. Add a budget in your own code, in addition to the Console spend limit:
+
+```python
+class BudgetExceeded(Exception):
+    pass
+
+
+class Budget:
+    def __init__(self, max_tokens):
+        self.max_tokens = max_tokens
+        self.used = 0
+
+    def charge(self, usage):
+        self.used += usage.input_tokens + usage.output_tokens
+        if self.used > self.max_tokens:
+            raise BudgetExceeded(f"used {self.used} tokens, limit {self.max_tokens}")
+
+
+import anthropic
+
+client = anthropic.Anthropic()
+budget = Budget(max_tokens=2_000)
+
+try:
+    for i in range(20):
+        response = client.messages.create(
+            model="claude-opus-5-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": f"Give fact number {i} about DNS."}],
+        )
+        budget.charge(response.usage)
+except BudgetExceeded as err:
+    print("stopped early:", err)
+```
+
+## The cost levers, in order of effort
+
+1. **Send less.** Trim history, drop unneeded context, and ask for short outputs where short is enough.
+2. **Choose the right model.** Use a smaller model for simple classification and extraction, and a larger one for hard reasoning. Test on your own examples before deciding.
+3. **Lower the effort** for simple tasks (lesson 2).
+4. **Cache repeated prefixes.** If many calls start with the same long instructions or documents, mark them cacheable.
+5. **Batch work that can wait.** The Batches API runs requests asynchronously at about half the price.
+6. **Stop calls you do not need**, such as re-asking questions whose answers you could store.
+
+### Prompt caching
+
+Caching stores a long, unchanging start of your prompt so repeated calls read it cheaply. It works on **exact prefixes**: any change before the cached part invalidates it.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+POLICY = "Company IT policy: " + "Passwords must be rotated every 90 days. " * 200
+
+for question in ["How often must I rotate my password?", "Can I reuse an old password?"]:
+    response = client.messages.create(
+        model="claude-opus-5-5",
+        max_tokens=1024,
+        cache_control={"type": "ephemeral"},      # cache the last cacheable block
+        system=POLICY,
+        messages=[{"role": "user", "content": question}],
+    )
+    print(
+        "written to cache:", response.usage.cache_creation_input_tokens,
+        "| read from cache:", response.usage.cache_read_input_tokens,
+        "| uncached input:", response.usage.input_tokens,
+    )
+```
+
+On the real API, the first call writes the cache and later calls read it, at a fraction of the normal input price. Prompts below a minimum length are not cached, so a short system prompt will not show a hit. If `cache_read_input_tokens` stays at zero for repeated calls, something in the prefix is changing, such as a timestamp or a random ID near the start. Keep stable content first and changing content last.
+
+### Batches
+
+For jobs that do not need an instant answer, such as classifying last month's tickets, a batch is cheaper. You submit many requests, poll until the batch ends, then read the results:
+
+```text
+import anthropic
+from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+from anthropic.types.messages.batch_create_params import Request
+
+client = anthropic.Anthropic()
+batch = client.messages.batches.create(
+    requests=[
+        Request(
+            custom_id="ticket-1",
+            params=MessageCreateParamsNonStreaming(
+                model="claude-opus-5-5",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": "Classify: printer is offline"}],
+            ),
+        ),
+    ]
+)
+print(batch.id, batch.processing_status)
+# Later: poll client.messages.batches.retrieve(batch.id) until processing_status is "ended",
+# then iterate client.messages.batches.results(batch.id) and match results by custom_id.
+```
+
+Results can arrive in any order, so always match them by `custom_id`, never by position.
+
+## Doing many calls at once
+
+When you must make many independent calls, use threads so they overlap, and keep the number of workers modest so you do not hit rate limits:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+import anthropic
+
+client = anthropic.Anthropic()
+questions = ["What is DHCP?", "What is NAT?", "What is a VLAN?", "What is BGP?"]
+
+
+def ask(q):
+    r = client.messages.create(
+        model="claude-opus-5-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": q}],
+    )
+    return q, r.content[0].text
+
+
+with ThreadPoolExecutor(max_workers=4) as pool:
+    for q, answer in pool.map(ask, questions):
+        print(q, "->", answer[:40])
+```
+
+## A reliability checklist
+
+- A **timeout** on every call.
+- Retries only for temporary errors, with a **wait that grows**.
+- A clear **stop** for spend caps and your own limits.
+- A **budget** per run, and a spend limit in the Console.
+- **Usage logged** for every call, with the request ID.
+- **Graceful failure**: tell the user something useful instead of a stack trace, and keep their work.
+
+## Resources
+
+<Resource kind="docs" title="Errors" href="https://platform.claude.com/docs/en/api/errors" source="Anthropic">
+  Every error code and type, with causes and what to do about each.
+</Resource>
+
+<Resource kind="docs" title="Rate limits" href="https://platform.claude.com/docs/en/api/rate-limits" source="Anthropic">
+  Limits by tier, the response headers, and how spend caps behave.
+</Resource>
+
+<Resource kind="docs" title="Token counting" href="https://platform.claude.com/docs/en/build-with-claude/token-counting" source="Anthropic">
+  The counting endpoint and why to use it instead of another provider's tokenizer.
+</Resource>
+
+<Resource kind="docs" title="Prompt caching" href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching" source="Anthropic">
+  How caching works, minimum sizes and pricing, and how to check hits.
+</Resource>
+
+<Resource kind="docs" title="Batch processing" href="https://platform.claude.com/docs/en/build-with-claude/batch-processing" source="Anthropic">
+  Submitting, polling and reading batches, with the price difference.
+</Resource>
+
+<Resource kind="docs" title="Optimizing for cost and intelligence" href="https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence" source="Anthropic">
+  Measured guidance on caching, batching, effort and model choice.
+</Resource>
+
+## Check yourself
+
+1. Write a wrapper that calls the API, logs usage to a file and enforces a token budget. Run twenty calls and look at the log.
+2. For each error in the table, say what your program should do and what a user should see.
+3. Take a prompt with a long, unchanging instruction block. Move it to the start, add caching, and check whether `cache_read_input_tokens` rises on the second call.

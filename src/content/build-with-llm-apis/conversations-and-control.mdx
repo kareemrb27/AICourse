@@ -1,0 +1,222 @@
+A single question and answer is the simplest use of the API. Real features need conversations, a consistent role, limits on length, a way to show text as it is generated, and some control over how hard the model thinks. This lesson covers those controls, and a few that older tutorials describe but no longer work.
+
+## Watch
+
+<Video id="NKnZYvZA7w4" title="How LLMs Actually Generate Text (Every Dev Should Know This)" channel="LearnThatStack" minutes={9}>
+  A nine-minute tour of what happens each time you send a message: tokens, prediction and sampling. It explains why answers vary and why generation arrives piece by piece.
+</Video>
+
+## Conversations are your job
+
+Because the API is stateless, a chat is just a list that **you** keep and send in full each time. Each turn, you add the user's message, call the API, and add the reply:
+
+```python
+import anthropic
+
+MODEL = "claude-opus-5-5"
+client = anthropic.Anthropic()
+
+history = []
+
+
+def chat(user_text):
+    history.append({"role": "user", "content": user_text})
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,
+        system="You are a concise helper for an IT support team.",
+        messages=history,
+    )
+    reply = "".join(b.text for b in response.content if b.type == "text")
+    history.append({"role": "assistant", "content": reply})
+    return reply
+
+
+print(chat("My laptop will not connect to the office Wi-Fi."))
+print(chat("It worked for me yesterday."))
+print("messages sent on the last call:", len(history))
+```
+
+Things to know:
+
+- **The first message must be a `user` message**, and the roles alternate.
+- **The history grows**, and every call re-sends all of it, so cost and latency grow with the conversation. Long chats need trimming or summarizing (below).
+- **Store the whole assistant response if you use tools or thinking.** Here only text is stored, which is fine for plain chat. Lesson 4 stores the full content blocks.
+
+An interactive loop around it:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+history = []
+
+while True:
+    text = input("you> ").strip()
+    if text.lower() in {"quit", "exit"}:
+        break
+    history.append({"role": "user", "content": text})
+    response = client.messages.create(
+        model="claude-opus-5-5",
+        max_tokens=4096,
+        messages=history,
+    )
+    reply = "".join(b.text for b in response.content if b.type == "text")
+    history.append({"role": "assistant", "content": reply})
+    print("bot>", reply)
+```
+
+## System prompts: set the role once
+
+The `system` parameter holds instructions that apply to the whole conversation: who the assistant is, what it may and may not do, the format and tone. It is separate from `messages`, so it is not repeated in the history.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+SYSTEM = """You are the first-line assistant for the IT service desk at a mid-sized company.
+- Answer in plain language, in at most five sentences.
+- If the user needs access, hardware or a policy exception, tell them to open a ticket.
+- Never ask for passwords."""
+
+response = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    system=SYSTEM,
+    messages=[{"role": "user", "content": "How do I get a second monitor?"}],
+)
+print(response.content[0].text)
+```
+
+Good system prompts apply the habits from the prompting course: say who the audience is, what to do when unsure, and what format to use. They are also your first line of defense against misuse, though not a perfect one (lesson 6).
+
+## Limits: `max_tokens` and stop sequences
+
+`max_tokens` caps the answer. **Thinking tokens count toward it**, so a cap that suits a short answer can be used up by thinking. If you see `stop_reason == "max_tokens"`, raise the cap or lower the thinking effort (next section).
+
+`stop_sequences` makes the model stop when it produces a given text, which is handy for ending a list or a template:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+response = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    stop_sequences=["END"],
+    messages=[
+        {"role": "user", "content": "List three Linux commands for checking disk space. Write END after the third."}
+    ],
+)
+print(response.content[0].text)
+print("stop reason:", response.stop_reason)
+```
+
+## Thinking and effort
+
+Current Claude models **think before answering** when it helps. You do not turn this on, and on `claude-opus-5-5`, the model used in these examples, you cannot turn it off. You steer it with the **effort** setting, which goes in `output_config`:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+# Simple task: ask for little thinking, which is faster and cheaper
+quick = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    output_config={"effort": "low"},
+    messages=[{"role": "user", "content": "Is 'https' a protocol or a port?"}],
+)
+
+# Hard task: allow more thinking
+deep = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=16000,
+    output_config={"effort": "high"},
+    messages=[{"role": "user", "content": "Plan a zero-downtime migration of a 2 TB database to a new region."}],
+)
+print(quick.content[0].text if quick.content[0].type == "text" else "(thinking only)")
+print(deep.stop_reason)
+```
+
+The levels run from `low` to `max`. Use `low` for simple, high-volume work and higher levels for hard reasoning. If you want to *see* a summary of the thinking, add `thinking={"type": "adaptive", "display": "summarized"}`. Thinking is billed as output tokens whether or not you display it, and it counts toward `max_tokens`. Pick one effort per conversation where you can, because changing it can reset cached prompts (lesson 5).
+
+## Things older tutorials show that no longer work
+
+If you copy code from articles or older courses, expect these to fail on current models:
+
+- **`temperature`, `top_p` and `top_k` are removed.** The latest SDK does not even accept them, and the API rejects them. To get more focused or more varied answers, change the prompt or the effort, and design for variation instead of trying to eliminate it (lesson 6).
+- **`thinking={"type": "enabled", "budget_tokens": ...}` and `{"type": "disabled"}`** are rejected on `claude-opus-5-5`, and other current models have their own rules. Use effort instead.
+- **Prefilling the start of the assistant's answer** is no longer allowed. Use a system prompt, or structured output (lesson 3), to control the format.
+- **Forcing a specific tool** with `tool_choice` set to `any` or a named tool is rejected on the newest models. Lesson 4 shows the replacement.
+
+Treat the official docs as the authority, because this part of the API moves quickly.
+
+## Streaming: show text as it arrives
+
+A long answer can take many seconds. **Streaming** returns pieces as they are generated, so a user sees text immediately, and it also protects long requests from timeouts.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+with client.messages.stream(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": "Explain how a TCP handshake works, step by step."}],
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+    final = stream.get_final_message()
+
+print()
+print("tokens used:", final.usage.output_tokens, "| stop reason:", final.stop_reason)
+```
+
+- `text_stream` yields text pieces. Always `flush=True`, or the terminal buffers them.
+- `get_final_message()` gives you the complete response object when the stream ends, with the same fields as a normal call, so your logging and checks do not change.
+- For large `max_tokens` values the SDK requires streaming, because very long non-streaming requests can time out.
+- Streams can be cut mid-way by network problems, so handle `anthropic.APIConnectionError` and keep what you already received.
+
+## Keeping long conversations affordable
+
+Every turn re-sends the history. Options when it gets long:
+
+- **Trim** old turns that no longer matter, keeping the system prompt and the recent turns.
+- **Summarize** the older part with one extra call and keep the summary in place of the turns.
+- Let the platform **compact** it for you (see the compaction section of the docs).
+- **Cache** the unchanging part (lesson 5).
+
+Whichever you use, test that the assistant still answers well afterwards, because trimming can remove facts it needs.
+
+## Resources
+
+<Resource kind="docs" title="Working with messages" href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" source="Anthropic">
+  How to build conversations, multi-turn requests and system prompts with the Messages API.
+</Resource>
+
+<Resource kind="docs" title="Streaming messages" href="https://platform.claude.com/docs/en/build-with-claude/streaming" source="Anthropic">
+  Stream event types and SDK helpers, with examples.
+</Resource>
+
+<Resource kind="docs" title="Effort" href="https://platform.claude.com/docs/en/build-with-claude/effort" source="Anthropic">
+  What each effort level does, and which models support which levels.
+</Resource>
+
+<Resource kind="docs" title="Steering thinking" href="https://platform.claude.com/docs/en/build-with-claude/thinking-steering-and-cost" source="Anthropic">
+  How thinking is billed, why it counts toward `max_tokens`, and how to bound its cost.
+</Resource>
+
+<Resource kind="docs" title="Context windows" href="https://platform.claude.com/docs/en/build-with-claude/context-windows" source="Anthropic">
+  How much a model can read at once and how to manage long inputs.
+</Resource>
+
+## Check yourself
+
+1. Build the chat loop, then have a ten-turn conversation. Print the number of input tokens on each turn. What do you see, and why?
+2. Write a system prompt for an assistant you could deploy at your own workplace. List three things it must refuse or hand off.
+3. Run the same question at `effort` `low` and `high`. Compare the length, the speed and the usage numbers.

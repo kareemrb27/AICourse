@@ -1,0 +1,267 @@
+A paragraph of friendly text is perfect for a person and awkward for a program. Most real uses of a model inside software need **data**: a category, a priority, a list of fields you can store, filter or send to another system. This lesson shows how to get reliable, validated JSON from a model, and the limits of that reliability.
+
+## Watch
+
+<Video id="XIdQ6gO3Anc" title="Pydantic Tutorial • Solving Python's Biggest Problem" channel="pixegami" minutes={11}>
+  A short introduction to Pydantic, the Python library this lesson uses to describe and validate data. Watch it first if you have not used it.
+</Video>
+
+## Why not just ask for JSON?
+
+You can ask a model to "reply only with JSON", and it often will, but "often" is not good enough for a program. It might add a sentence before the JSON, use a different key name, skip a field or write `"high"` where you allowed only `"urgent"`. Every one of these breaks the code that reads it.
+
+**Structured outputs** solve this by giving the API a **schema** (a description of the exact shape you want). The model's output is then constrained to match it, so the result is valid JSON with the right keys and types.
+
+## Describe the shape with Pydantic
+
+You describe the shape as a Python class. Install Pydantic with `pip install pydantic` (the Anthropic SDK also uses it):
+
+```python
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+
+class Triage(BaseModel):
+    category: Literal["billing", "technical", "account", "other"]
+    priority: Literal["low", "medium", "high"]
+    summary: str = Field(description="One sentence describing the problem")
+    needs_human: bool = Field(description="True if a person must handle this")
+
+
+print(Triage.model_json_schema()["properties"].keys())
+```
+
+`Literal[...]` limits a field to specific values, so the model cannot invent a new category. `Field(description=...)` tells the model what each field means, which improves accuracy.
+
+## Ask for that shape
+
+Use `messages.parse` with your class as `output_format`. The result comes back already validated:
+
+```python
+from typing import Literal
+
+import anthropic
+from pydantic import BaseModel, Field
+
+
+class Triage(BaseModel):
+    category: Literal["billing", "technical", "account", "other"]
+    priority: Literal["low", "medium", "high"]
+    summary: str = Field(description="One sentence describing the problem")
+    needs_human: bool = Field(description="True if a person must handle this")
+
+
+client = anthropic.Anthropic()
+
+ticket = "Hi, I was charged twice for my subscription this month and nobody answers my emails. Please fix this today."
+
+response = client.messages.parse(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    system="You triage customer support tickets for a software company.",
+    messages=[{"role": "user", "content": f"Triage this ticket:\n\n{ticket}"}],
+    output_format=Triage,
+)
+
+result = response.parsed_output
+print(result.category, result.priority)
+print(result.summary)
+print(response.stop_reason, response.usage.input_tokens, response.usage.output_tokens)
+```
+
+`response.parsed_output` is a real `Triage` object, so `result.priority` is a plain attribute, with autocomplete in your editor and type checks you can trust.
+
+## Always check before you use it
+
+The schema guarantees the *shape*, but only when the model finishes normally. Check the stop reason, and handle the cases where there is nothing to parse:
+
+```python
+from typing import Literal
+
+import anthropic
+from pydantic import BaseModel
+
+
+class Triage(BaseModel):
+    category: Literal["billing", "technical", "account", "other"]
+    priority: Literal["low", "medium", "high"]
+
+
+client = anthropic.Anthropic()
+
+
+def triage(text):
+    response = client.messages.parse(
+        model="claude-opus-5-5",
+        max_tokens=4096,
+        messages=[{"role": "user", "content": f"Triage this ticket:\n\n{text}"}],
+        output_format=Triage,
+    )
+    if response.stop_reason == "refusal":
+        return None, "model declined"
+    if response.stop_reason == "max_tokens":
+        return None, "answer was cut off, raise max_tokens"
+    if response.parsed_output is None:
+        return None, "no parsed output"
+    return response.parsed_output, "ok"
+
+
+result, status = triage("The VPN drops every ten minutes since the update.")
+print(status, result)
+```
+
+Returning a result and a status keeps your calling code honest: it has to decide what to do about the failures, instead of pretending they cannot happen.
+
+## The raw-schema alternative
+
+If you are not using Pydantic, pass the schema yourself in `output_config`. You then read the JSON text and parse it:
+
+```python
+import json
+
+import anthropic
+
+client = anthropic.Anthropic()
+
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "email": {"type": "string"},
+        "wants_demo": {"type": "boolean"},
+    },
+    "required": ["name", "email", "wants_demo"],
+    "additionalProperties": False,
+}
+
+response = client.messages.create(
+    model="claude-opus-5-5",
+    max_tokens=4096,
+    messages=[{"role": "user", "content": "Extract the contact: Jane Doe (jane@example.com) asked for a demo."}],
+    output_config={"format": {"type": "json_schema", "schema": schema}},
+)
+
+text = next(b.text for b in response.content if b.type == "text")
+data = json.loads(text)
+print(data["name"], data["wants_demo"])
+```
+
+`additionalProperties: False` and a `required` list make the schema strict. Not every JSON Schema feature is supported for constrained output, so check the structured-outputs page of the docs if a schema is rejected.
+
+## Shape is not truth
+
+A valid object can still be **wrong**. The model can fill `category: "billing"` for a ticket that is really about security, or invent an order number that looks plausible. So:
+
+- **Validate business rules** in code: a priority of `high` with `needs_human` false might be a contradiction you want to catch. Pydantic validators help.
+- **Check values against real data** when you can, for example that an extracted order ID exists in your system.
+- **Use `null` or a flag for "unknown"** rather than forcing a guess. Add an `Optional` field or an `other` category, and tell the model it is allowed to use it.
+- **Evaluate the accuracy** of the fields on real examples (lesson 6), not just their validity.
+
+```python
+from typing import Literal
+
+from pydantic import BaseModel, ValidationError, model_validator
+
+
+class Triage(BaseModel):
+    category: Literal["billing", "technical", "account", "other"]
+    priority: Literal["low", "medium", "high"]
+    needs_human: bool
+
+    @model_validator(mode="after")
+    def high_priority_needs_a_person(self):
+        if self.priority == "high" and not self.needs_human:
+            raise ValueError("high priority tickets must be flagged for a person")
+        return self
+
+
+try:
+    Triage(category="billing", priority="high", needs_human=False)
+except ValidationError as err:
+    print("rejected:", err.errors()[0]["msg"])
+```
+
+## Designing good schemas
+
+- **Keep them small.** Ask for the fields you will actually use.
+- **Use enums** (`Literal`) for fixed choices, and name the values clearly.
+- **Describe each field** in plain words, including edge cases ("use `other` if none fit").
+- **Prefer simple types.** Deeply nested or very long schemas are harder for the model and for you.
+- **Version your schema** when you change it, so old stored data stays readable.
+
+## Extracting from many items
+
+A common job is running the same extraction over many inputs. Count the failures instead of hiding them:
+
+```python
+from typing import Literal
+
+import anthropic
+from pydantic import BaseModel
+
+
+class Triage(BaseModel):
+    category: Literal["billing", "technical", "account", "other"]
+    priority: Literal["low", "medium", "high"]
+
+
+client = anthropic.Anthropic()
+tickets = [
+    "I cannot log in after the password reset.",
+    "Please send me last month's invoice.",
+    "The dashboard shows a 500 error when I export a report.",
+]
+
+ok, failed = [], []
+for text in tickets:
+    try:
+        response = client.messages.parse(
+            model="claude-opus-5-5",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": f"Triage this ticket:\n\n{text}"}],
+            output_format=Triage,
+        )
+        if response.parsed_output is None:
+            failed.append((text, response.stop_reason))
+        else:
+            ok.append((text, response.parsed_output))
+    except anthropic.APIError as err:
+        failed.append((text, str(err)))
+
+print(f"{len(ok)} parsed, {len(failed)} failed")
+for text, item in ok:
+    print(item.category, item.priority, "|", text[:40])
+```
+
+For large volumes that do not need an instant answer, the Batches API (lesson 5) runs these at about half the price.
+
+<Callout title="Where structured output fits">
+  Use it whenever model output feeds into code: classification, extraction,
+  routing, form filling and scoring. Use plain text only when a person reads
+  the result.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Structured outputs" href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" source="Anthropic">
+  The official guide to constraining output to a JSON schema, including supported schema features.
+</Resource>
+
+<Resource kind="docs" title="Pydantic documentation" href="https://docs.pydantic.dev/latest/" source="Pydantic">
+  Models, fields, validators and JSON Schema generation.
+</Resource>
+
+<Resource kind="docs" title="JSON Schema: getting started" href="https://json-schema.org/learn/getting-started-step-by-step" source="JSON Schema">
+  A step-by-step introduction to the schema language underneath.
+</Resource>
+
+<Resource kind="docs" title="Tool use overview" href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview" source="Anthropic">
+  Tools with `strict` schemas give another way to get validated structured arguments. You use them in the next lesson.
+</Resource>
+
+## Check yourself
+
+1. Define a Pydantic model for something from your own work, such as an alert, a change request or an expense. Run it over five realistic examples and check each field by hand.
+2. Add a validator that rejects a combination that should be impossible. Show an input that triggers it.
+3. Give the model an input that fits none of your categories. What does it do, and how would you change the schema or prompt?

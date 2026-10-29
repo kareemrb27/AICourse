@@ -90,6 +90,13 @@ import L87 from "./machine-learning-basics/evaluating-models.mdx";
 import L88 from "./machine-learning-basics/overfitting-and-improvement.mdx";
 import L89 from "./machine-learning-basics/clustering-and-anomalies.mdx";
 import L90 from "./machine-learning-basics/capstone.mdx";
+import L91 from "./build-with-llm-apis/first-api-call.mdx";
+import L92 from "./build-with-llm-apis/conversations-and-control.mdx";
+import L93 from "./build-with-llm-apis/structured-output.mdx";
+import L94 from "./build-with-llm-apis/tool-use.mdx";
+import L95 from "./build-with-llm-apis/reliability-and-cost.mdx";
+import L96 from "./build-with-llm-apis/testing-and-safety.mdx";
+import L97 from "./build-with-llm-apis/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -185,4 +192,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "machine-learning-basics/overfitting-and-improvement": L88,
   "machine-learning-basics/clustering-and-anomalies": L89,
   "machine-learning-basics/capstone": L90,
+  "build-with-llm-apis/first-api-call": L91,
+  "build-with-llm-apis/conversations-and-control": L92,
+  "build-with-llm-apis/structured-output": L93,
+  "build-with-llm-apis/tool-use": L94,
+  "build-with-llm-apis/reliability-and-cost": L95,
+  "build-with-llm-apis/testing-and-safety": L96,
+  "build-with-llm-apis/capstone": L97,
 };

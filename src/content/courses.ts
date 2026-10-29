@@ -139,6 +139,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "build-with-llm-apis",
+    title: "Build with LLM APIs",
+    track: "Stage 2 · Build",
+    level: "Intermediate",
+    summary:
+      "Call a language model from your own Python code and build features that hold up. Make your first API call, manage conversations and streaming, get validated structured output, give the model tools safely, handle errors and cost, and test and secure an LLM feature.",
+    prerequisites: [
+      "Comfortable with Python, JSON and calling web APIs, as taught in Python and Data Essentials",
+      "Recommended: Working with LLMs, for prompting and for checking model output",
+      "Python 3.10 or newer, and an account with a small amount of credit for the Claude API",
+    ],
+    outcomes: [
+      "Make a call to the Claude API with the official Python SDK, keep the key safe and set a spend limit",
+      "Build conversations, use system prompts, control length and effort, and stream responses",
+      "Get validated structured output with Pydantic and check it before using it",
+      "Give a model tools, run the tool loop and design tools that are safe to expose",
+      "Handle errors, rate limits and spend caps, log usage, set budgets and reduce cost",
+      "Unit test with a fake client, build a small eval, and defend against prompt injection and leaked secrets",
+    ],
+    lessons: [
+      { slug: "first-api-call", title: "Your first API call", summary: "Accounts, keys, the SDK, reading a response, tokens and cost.", minutes: 90 },
+      { slug: "conversations-and-control", title: "Conversations, control and streaming", summary: "History, system prompts, limits, effort, streaming and what no longer works.", minutes: 90 },
+      { slug: "structured-output", title: "Structured output", summary: "Pydantic schemas, validated results, checks and business rules.", minutes: 90 },
+      { slug: "tool-use", title: "Tool use", summary: "The tool loop, safe tool design, approval gates and the tool runner.", minutes: 120 },
+      { slug: "reliability-and-cost", title: "Reliability and cost", summary: "Errors, retries, spend caps, usage logging, caching and batches.", minutes: 90 },
+      { slug: "testing-and-safety", title: "Testing and safety", summary: "Fake-client tests, small evals, prompt injection, secrets and privacy.", minutes: 90 },
+      { slug: "capstone", title: "Capstone: a support ticket assistant", summary: "Build, test and evaluate a triage and reply assistant.", minutes: 240 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",
