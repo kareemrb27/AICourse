@@ -118,6 +118,13 @@ import L115 from "./agents-fundamentals/planning-and-memory.mdx";
 import L116 from "./agents-fundamentals/safety-and-control.mdx";
 import L117 from "./agents-fundamentals/evaluating-agents.mdx";
 import L118 from "./agents-fundamentals/capstone.mdx";
+import L119 from "./ai-solution-designer/framing-the-problem.mdx";
+import L120 from "./ai-solution-designer/choosing-an-approach.mdx";
+import L121 from "./ai-solution-designer/architecture-and-data.mdx";
+import L122 from "./ai-solution-designer/costs-roi-and-planning.mdx";
+import L123 from "./ai-solution-designer/from-pilot-to-production.mdx";
+import L124 from "./ai-solution-designer/communicating-and-leading.mdx";
+import L125 from "./ai-solution-designer/capstone.mdx";
 
 // Lessons are imported eagerly so every lesson page is fully prerendered at
 // build time (a dynamic import can push the lesson body out of the static shell).
@@ -241,4 +248,11 @@ export const lessonContent: Record<string, ComponentType> = {
   "agents-fundamentals/safety-and-control": L116,
   "agents-fundamentals/evaluating-agents": L117,
   "agents-fundamentals/capstone": L118,
+  "ai-solution-designer/framing-the-problem": L119,
+  "ai-solution-designer/choosing-an-approach": L120,
+  "ai-solution-designer/architecture-and-data": L121,
+  "ai-solution-designer/costs-roi-and-planning": L122,
+  "ai-solution-designer/from-pilot-to-production": L123,
+  "ai-solution-designer/communicating-and-leading": L124,
+  "ai-solution-designer/capstone": L125,
 };

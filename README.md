@@ -27,10 +27,11 @@ Live site: https://iaicourses.com
 | Analyze AI-Generated Code for Quality and Security | Intermediate | 7 lessons, first draft |
 | Evaluate and Use AI Responsibly | Intermediate | 7 lessons, first draft |
 | Agents Fundamentals | Intermediate | 7 lessons, first draft |
+| Capstone: AI Solution Designer | Expert | 7 lessons, first draft |
 
 ## Learning path
 
-`/path` shows a beginner-to-"AI solution designer" path: three stages and a final capstone. It is defined in `src/content/path.ts`. An item with a `course` slug links to that course; items without one show as planned. Progress is stored in the visitor's browser only.
+`/path` shows a beginner-to-"AI solution designer" path: three stages and a final capstone. It is defined in `src/content/path.ts`. An item with a `course` slug links to that course; items without one show as planned. Every item on the path now has a course. Progress is stored in the visitor's browser only.
 
 ## Run locally
 

@@ -1,0 +1,173 @@
+You have now learned how AI works, how to use it, how to build with it and how to test it. Now comes the skill that makes people valuable: deciding **what is worth building**, and **how** to turn a vague wish ("we should use AI for support") into a problem someone could actually solve, measure and ship. Most failed AI projects fail here, long before any model is chosen: they solve a problem nobody had, or one that a simpler tool would have solved, or one whose success nobody defined. This lesson teaches you to frame problems the way a solution designer does.
+
+## Watch
+
+<Video id="Tao_Qx_PpJU" title="Most AI Projects Fail Because of This | 3-Layer AI Framework" channel="The Nadkarnees" minutes={6}>
+  A six-minute look at why many AI projects fail and a framework for choosing the right tool for a business problem.
+</Video>
+
+<Video id="Ts42JTye-AI" title="10 Use Cases for AI Agents: IoT, RAG, & Disaster Response Explained" channel="IBM Technology" minutes={9}>
+  A tour of different kinds of use cases, useful for seeing how varied the problems are that AI can address.
+</Video>
+
+## Start with the problem, not the technology
+
+"We need an AI strategy" and "let's add a chatbot" are solutions looking for a problem. A solution designer reverses the order:
+
+1. **Who** has the problem, and what are they trying to get done?
+2. **What** gets in their way today, and what does it cost, in time, money, errors or frustration?
+3. **What** would better look like, in a number you can measure?
+4. **Only then**: is AI the right tool, and which kind?
+
+Try it on a real example. Compare these two descriptions of the same work:
+
+| Technology-first | Problem-first |
+| --- | --- |
+| "Add an AI assistant to the service desk." | "Service desk agents spend about 9 minutes per ticket finding the right policy, and 15 percent of first replies are wrong, which causes reopened tickets. Cut time-to-first-reply by a third without raising the wrong-reply rate." |
+
+The second can be built, measured and judged. The first cannot.
+
+## The problem statement
+
+Write every candidate in one short structure, and do not move on until you can fill it in:
+
+```text
+PROBLEM STATEMENT
+
+Who:            <the people who have the problem, and how many>
+Job to be done: <what they are trying to achieve>
+Today:          <how it is done now, how long it takes, how often it goes wrong>
+Pain:           <what it costs: hours, money, errors, risk, customer impact>
+Better means:   <a measurable target, such as "first reply in 6 minutes, wrong replies under 10%">
+Constraints:    <data we may use, systems it must fit, rules, deadlines, budget>
+Stakes:         <what happens if the solution is wrong, and who is affected>
+Not in scope:   <what we are deliberately not trying to do>
+```
+
+The most overlooked line is **Today**. You cannot say whether a solution is better until you know how the work is done now, so **measure the baseline first**: time a sample of real cases, count errors, and talk to the people doing it. Many AI projects discover that the real problem is different from the one that was described.
+
+## Find the right problems
+
+Good candidates for AI often share these traits:
+
+- **Language or pattern work**: reading, summarizing, drafting, classifying, extracting, searching.
+- **High volume** of similar tasks, so small savings add up.
+- **Tolerable errors**, or errors that are easy to catch, because the model is sometimes wrong.
+- **Available data or documents** that contain what the system needs.
+- **People who want it**, who will use it and give feedback.
+
+Weak candidates: tasks where one error is catastrophic and cannot be caught, where the answer is a simple lookup or rule, where no data exists, where nobody owns the process, or where the real obstacle is organizational, not informational.
+
+A useful early question: **"What would a clever person with a spreadsheet and an hour do?"** If a rule, a form, a better search box or a process change solves it, that may beat AI on cost, speed and risk.
+
+## Score the ideas
+
+Collect ten candidate ideas from the people who do the work, and rank them on the same criteria. Rate each from 1 to 5. This code applies one transparent formula. Change the weights to fit your organization and the ranking changes with them, which is a useful conversation in itself:
+
+```python
+import pandas as pd
+
+IDEAS = [
+    {"idea": "Draft first replies to support tickets",     "value": 5, "feasibility": 4, "data": 4, "risk": 2, "effort": 3},
+    {"idea": "Search our policies in plain language",       "value": 4, "feasibility": 5, "data": 5, "risk": 2, "effort": 2},
+    {"idea": "Auto-approve expense claims",                 "value": 4, "feasibility": 3, "data": 3, "risk": 5, "effort": 4},
+    {"idea": "Summarize incident reports for management",  "value": 3, "feasibility": 5, "data": 4, "risk": 1, "effort": 1},
+    {"idea": "Predict which servers will fail",             "value": 4, "feasibility": 2, "data": 2, "risk": 3, "effort": 4},
+    {"idea": "Screen job applicants",                       "value": 3, "feasibility": 3, "data": 3, "risk": 5, "effort": 4},
+]
+
+# Benefits count for more than costs. These weights are a starting point, not a law.
+WEIGHTS = {"value": 3, "feasibility": 2, "data": 2, "risk": -3, "effort": -1}
+
+
+def score_ideas(ideas, weights=WEIGHTS):
+    table = pd.DataFrame(ideas)
+    table["score"] = sum(table[column] * weight for column, weight in weights.items())
+    table["red_flags"] = table.apply(red_flags, axis=1)
+    return table.sort_values("score", ascending=False)
+
+
+def red_flags(row):
+    flags = []
+    if row["data"] <= 2:
+        flags.append("data is weak")
+    if row["feasibility"] <= 2:
+        flags.append("hard to build")
+    if row["risk"] >= 5:
+        flags.append("high stakes: needs human decisions and a full review")
+    return "; ".join(flags)
+
+
+print(score_ideas(IDEAS)[["idea", "score", "red_flags"]].to_string(index=False))
+```
+
+Treat the output as a **conversation starter**, not an answer. Look at what rises and falls, check whether the ranking matches your judgment, and when it does not, find out why. Pay special attention to the **red flags**: a high-scoring idea that touches people's rights, money or safety needs the responsible-AI review from earlier in this path, and sometimes the right decision is to leave it out, or to keep a human firmly in charge.
+
+## Define success before you build
+
+Decide what "good" means **in numbers**, and which numbers must not get worse:
+
+| Kind of measure | Examples |
+| --- | --- |
+| **Outcome** (the point) | Time to resolve, cases handled per person, cost per case, customer satisfaction |
+| **Quality** (guardrails) | Accuracy on a test set, wrong-reply rate, complaints, escalations |
+| **Adoption** | Share of eligible people using it, how often, whether they keep using it |
+| **Risk** | Incidents, policy breaches, harmful outputs, data exposures |
+| **Cost** | Cost per task, total monthly spend, effort to maintain |
+
+Pick **one or two outcome measures**, a few guardrails, and a **threshold** for each. Write them down before the pilot, as you did with the launch gate. People will be tempted to redefine success after seeing the results.
+
+## Understand the people
+
+Technology succeeds or fails through people. Before designing, talk to:
+
+- **The users**: watch them work. What do they do, what do they hate, what will they not give up?
+- **The owners of the process**: who is accountable, and what constraints do they live with?
+- **The people affected** but not using it, such as customers or colleagues downstream.
+- **The people who can stop it**: security, privacy, legal, compliance and works councils.
+- **The sponsor**: who pays, and what do they need to see to continue?
+
+Map their interests early. A solution that delights the users but alarms the security team will not ship.
+
+## Ask the uncomfortable questions
+
+- What happens when it is **wrong**? Who finds out, and how fast?
+- **Who loses** if this works? Jobs, status and habits change, and people notice.
+- Is the data **ours to use** for this purpose?
+- Would we be comfortable if a **customer or regulator** saw exactly how this works?
+- What is the **simplest version** that would still teach us something?
+- What would make us **stop**?
+
+## Choose one idea
+
+From your ranked list, pick the one with the best mix of value, feasibility and learning, and a sponsor who cares. A good first project is **valuable but not critical**, uses data you already have, has a clear owner and can show a result in weeks, not years. Write the problem statement, measure the baseline and move on to choosing an approach.
+
+<Callout title="A good problem statement is already half of the solution">
+  If you can say who has the problem, what it costs today and what better
+  looks like in a number, you can test any proposed solution against it,
+  including the solution of doing nothing.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Define success criteria and build evaluations" href="https://platform.claude.com/docs/en/test-and-evaluate/develop-tests" source="Anthropic">
+  Guidance on turning vague goals into measurable ones.
+</Resource>
+
+<Resource kind="article" title="Building effective agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  Its advice to start with the simplest solution applies to every AI project.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  The Map function covers understanding context, purpose and who is affected, which is what framing is for.
+</Resource>
+
+<Resource kind="docs" title="AI Incident Database" href="https://incidentdatabase.ai/" source="Responsible AI Collaborative">
+  Real cases of AI projects going wrong, a sobering source of "uncomfortable questions".
+</Resource>
+
+## Check yourself
+
+1. Write a problem statement for a real problem at your workplace. Which line was hardest to fill in, and what would it take to find out?
+2. Score ten ideas with the code above, then change the weights. Which idea moves most, and what does that tell you?
+3. Describe the baseline for your top idea: how is it done today, and how would you measure it in a week?

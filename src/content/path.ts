@@ -60,6 +60,7 @@ export const pathStages: PathStage[] = [
 
 export const pathFinal: PathItem = {
   key: "capstone",
+  course: "ai-solution-designer",
   title: "Capstone: AI solution designer",
   sub: "Frame, architect, ship, explain",
   after:

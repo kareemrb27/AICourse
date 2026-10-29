@@ -1,0 +1,171 @@
+Once you know the problem, you choose the **kind of solution**. The options range from a spreadsheet formula to a fleet of agents, and the best answer is usually the **simplest one that meets the measure**. This lesson gives you a way to choose, backed by everything you learned in the path: when a rule beats a model, when classic machine learning beats a language model, when retrieval is needed, when a workflow is enough and when an agent is justified. It also covers build versus buy, and how to choose and test a model.
+
+## Watch
+
+<Video id="zYGDpG-pTho" title="RAG vs Fine-Tuning vs Prompt Engineering: Optimizing AI Models" channel="IBM Technology" minutes={13}>
+  A 13-minute comparison of three common ways to adapt a model to a task, and when each is the right call.
+</Video>
+
+## The ladder of approaches
+
+Think of a ladder. Start at the bottom and climb only when you must, because each rung adds cost, delay, risk and things to maintain:
+
+| Rung | Approach | Use when | You learned it in |
+| --- | --- | --- | --- |
+| **1** | **No AI**: a rule, a form, a better process, a spreadsheet | The logic is clear and stable | |
+| **2** | **Classic machine learning** | Tabular or numeric data, labeled history, a prediction or a score | Machine Learning Basics |
+| **3** | **One well-prompted model call** | Language work with no private knowledge needed | Working with LLMs, Build with LLM APIs |
+| **4** | **Model call plus structured output** | The result feeds other systems | Build with LLM APIs |
+| **5** | **RAG** (retrieval plus generation) | Answers must come from your own, changing documents, with sources | Chat with Your Documents |
+| **6** | **A workflow** (several calls in a fixed order) | Steps are known and stable, and you want predictability | Agents Fundamentals |
+| **7** | **An agent** | Steps cannot be known in advance, and the value justifies the cost | Agents Fundamentals |
+| **8** | **Fine-tuning or training a model** | You need a consistent style or skill that prompting cannot deliver, and you have good data | Advanced courses in this path |
+
+## A recommender you can argue with
+
+The answers to a few questions point to a rung. This function encodes the reasoning as rules, in order. It is deliberately simple, so you can read it, disagree with it and change it:
+
+```python
+def recommend_approach(
+    clear_rules=False,            # could a person write down the exact rules?
+    tabular_numeric_data=False,   # is the input mostly numbers or categories in a table?
+    labeled_history=False,        # do we have many past examples with the right answer?
+    language_task=False,          # reading, writing, summarizing, extracting, answering?
+    needs_private_knowledge=False,# must answers come from our own documents?
+    knowledge_changes_often=False,
+    output_feeds_systems=False,   # does a program consume the result?
+    steps_known_in_advance=True,  # can we list the steps ahead of time?
+    takes_actions=False,          # does it change things in the world?
+    stakes="medium",              # "low", "medium" or "high" if it is wrong
+):
+    if clear_rules:
+        approach, reasons = "A rule or ordinary automation", ["The logic can be written down, which is cheaper, exact and auditable."]
+    elif tabular_numeric_data and labeled_history and not language_task:
+        approach, reasons = "Classic machine learning", ["Numeric data with labeled history suits a trained model, faster and cheaper than a language model."]
+    elif not language_task:
+        approach, reasons = "Reconsider the problem", ["It is not clear that this needs AI. Revisit the problem statement and the baseline."]
+    else:
+        approach, reasons = "A single model call", ["Language work can start with one well-written prompt."]
+        if output_feeds_systems:
+            approach = "A model call with structured output"
+            reasons.append("Another program consumes the result, so use a schema and validate it.")
+        if needs_private_knowledge:
+            approach = "RAG (retrieval plus a cited answer)"
+            reasons.append("Answers must come from your documents" + (", which change often, so retrieval beats fine-tuning." if knowledge_changes_often else "."))
+        if not steps_known_in_advance:
+            approach = "An agent, with tight controls"
+            reasons.append("The steps cannot be listed in advance, so the model must choose them. Add limits, a policy and an evaluation.")
+        elif takes_actions or (needs_private_knowledge and output_feeds_systems):
+            approach = "A workflow: fixed steps with model calls inside"
+            reasons.append("The steps are known, so keep control in code and let the model do work inside each step.")
+    if stakes == "high":
+        reasons.append("High stakes: keep a person in charge of the decision, and do the full responsible-AI review.")
+    return approach, reasons
+
+
+SCENARIOS = {
+    "Route expense claims by fixed policy thresholds": dict(clear_rules=True),
+    "Predict which servers will fail next month": dict(tabular_numeric_data=True, labeled_history=True),
+    "Summarize a long incident report": dict(language_task=True),
+    "Extract fields from invoices into the ERP": dict(language_task=True, output_feeds_systems=True),
+    "Answer staff questions from the policy handbook": dict(language_task=True, needs_private_knowledge=True, knowledge_changes_often=True),
+    "Investigate an outage across logs and systems": dict(language_task=True, steps_known_in_advance=False),
+    "Decide who gets a loan": dict(tabular_numeric_data=True, labeled_history=True, stakes="high"),
+}
+
+for name, answers in SCENARIOS.items():
+    approach, reasons = recommend_approach(**answers)
+    print(f"{name}\n   -> {approach}\n      {reasons[-1]}\n")
+```
+
+Real decisions have more dimensions, and you should override the output when you have a good reason. The value of writing it down is that the **reasons are explicit**, so teammates can challenge them. Notice the last scenario: a loan decision points to classic machine learning, and the stakes flag adds that a person must stay in charge. The approach and the governance are separate decisions.
+
+## Fine-tuning versus the alternatives
+
+People often reach for fine-tuning too early. As a rule:
+
+- **Knowledge** (facts that change, private documents) belongs in **retrieval**, not in model weights. Weights update slowly and cannot cite.
+- **Behavior and style** (a consistent format, tone, a narrow skill) can be taught by **examples in the prompt**, and only if that fails by **fine-tuning**.
+- **Fine-tune** when you have **hundreds to thousands of good examples**, a stable task, a measurable gap that prompting cannot close, and the ability to re-do it when the base model changes.
+
+Always try, in order: a better prompt, examples in the prompt, retrieval, a workflow. Measure at each step.
+
+## Build, buy or configure
+
+| Option | Good for | Watch out for |
+| --- | --- | --- |
+| **Buy a product** (a ready tool for support, search, coding) | Common needs, speed to value | Fit to your process, data handling, lock-in, cost per user |
+| **Configure a platform** (a low-code builder, a managed service) | Standard patterns with your data | Limits on control, testing and evaluation |
+| **Build on an API** (your code and a model provider) | Differentiating or unusual needs, control over quality and safety | You own the engineering, testing and operation |
+| **Self-host open models** | Strict data rules, cost at very high volume | Hardware, skills, and usually lower capability |
+
+A sensible rule: **buy what is common, build what differentiates you**, and keep your data, evaluations and prompts portable so you can change provider. Ask every vendor the questions from the responsible-AI course: where data goes, retention, subprocessors, security certifications, evaluation evidence and an exit plan.
+
+## Choosing a model
+
+For the model itself, do not choose by reputation. A short, repeatable process:
+
+1. **Shortlist** two or three models from different size tiers, from the options your policies allow.
+2. Build a **test set** from real cases for your task (earlier courses), including hard ones.
+3. **Run every candidate** on the same set, several times, and score them.
+4. Record **cost per task** and **latency** as well as quality.
+5. Choose the **cheapest model that clears your quality bar**, with a margin, and note what would make you switch.
+6. **Re-run** when new models arrive or your task changes.
+
+Different tasks inside one product can use different models: a small, fast one for classification and routing, a larger one for the hard reasoning. A router in front is a common pattern.
+
+## Prototype the riskiest part first
+
+Before committing to a design, run a short **spike** (days, not months) on whatever you are least sure about:
+
+- Can the model do the core task at the needed quality on **real** examples?
+- Can you get the **data** you need, in usable form?
+- Is the **latency** and **cost** acceptable?
+- Will the **users** accept it?
+
+A spike that fails early saves months. Write down what you tested and what you learned, because those notes feed the design document.
+
+## Write down the decision
+
+Record the approach you chose, and why, in a short **decision record**. It helps reviewers and your future self:
+
+```text
+DECISION RECORD: <short title>
+Date / owner:    <date, name>
+Context:         <the problem and constraints, in two or three sentences>
+Options:         <the alternatives you considered, including doing nothing>
+Decision:        <what you chose>
+Why:             <the evidence and reasoning, with numbers from tests>
+Consequences:    <what this makes easier, harder and riskier>
+Revisit when:    <what evidence would change our mind>
+```
+
+<Callout title="Climb the ladder slowly">
+  Every rung you climb must pay for itself in a measurement. The most valuable
+  skill of a solution designer is knowing which rung the problem actually
+  needs.
+</Callout>
+
+## Resources
+
+<Resource kind="article" title="Building effective agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  Guidance on moving from a single call to workflows and agents only when the problem demands it.
+</Resource>
+
+<Resource kind="docs" title="Optimizing for cost and intelligence" href="https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence" source="Anthropic">
+  Measured guidance on model, effort and caching choices, useful when you compare options.
+</Resource>
+
+<Resource kind="docs" title="Models overview" href="https://platform.claude.com/docs/en/about-claude/models/overview" source="Anthropic">
+  The current model tiers and their capabilities and prices.
+</Resource>
+
+<Resource kind="docs" title="Rules of Machine Learning" href="https://developers.google.com/machine-learning/guides/rules-of-ml" source="Google for Developers">
+  Practical advice that includes "don't be afraid to launch a product without machine learning".
+</Resource>
+
+## Check yourself
+
+1. Run `recommend_approach` for three problems from your own work. Do you agree with the answers? Which rule would you change?
+2. For your chosen problem, name two approaches below your recommendation on the ladder. Why would each not be enough?
+3. Write a decision record for the approach, including the evidence you would want from a one-week spike.

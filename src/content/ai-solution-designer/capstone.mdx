@@ -1,0 +1,159 @@
+This is the last course on the path, and it is a project, not a lesson. You will take a real problem, frame it, choose and justify an approach, design the system, test the riskiest part, model the cost and value, review the risks and make the case, then present it. The result is a complete **AI solution design** that you could take to a team tomorrow, and the strongest single piece in your portfolio. It is where you start to think in AI.
+
+## The project: design an AI solution for a real problem
+
+Choose a **real problem** from your own work or a community you know, with real people who have it. Use only non-confidential details in anything you share. If you cannot use a real workplace, choose a public one, such as a library, a charity, a public office or an open-source project, and interview someone who works there.
+
+Good problems share these traits: a clear group of people, a task done many times, a measurable cost today, and enough data or documents to test an idea. Avoid problems that need regulated personal data you cannot use, or that you could not test at all.
+
+## The deliverables
+
+Produce a design package with these ten parts. Keep each one short and specific, and put them in a repository or a single folder.
+
+1. **Problem statement and baseline** (lesson 1): who, the job, today's process, the pain in numbers, the target, constraints, stakes and what is out of scope. Include the **baseline you measured** from real cases, not an estimate.
+2. **Idea ranking**: at least six ideas scored with your own weights, and why you chose the one you did, including a red-flag review.
+3. **Approach decision** (lesson 2): the `recommend_approach` answers for your problem, the options you rejected with reasons, a build-or-buy note, and a **decision record**.
+4. **Architecture and data plan** (lesson 3): a one-page diagram, the component checklist filled in, a latency budget, a data-readiness profile of the data you would use, and at least three decision records.
+5. **A working spike of the riskiest part**, built with the skills from earlier courses: for example a retrieval test, a classifier with a measured accuracy, an agent run on a sample task, or a prompt tested on real examples. It must run, and its code must be in the package.
+6. **Evaluation**: a test set of at least **40 real or realistic cases**, results with intervals, at least two slices, repeated runs where outputs vary, and an honest list of failures with causes.
+7. **Responsible-AI review**: stakes level, privacy and data-flow review, a fairness or equal-treatment check suited to the use, a small red-team set of at least ten attacks, a risk register of at least eight risks with owners, and a **launch gate** with rules written before you tested.
+8. **Cost and value model** (lesson 4): your assumptions, the monthly cost, the value, the payback, a **sensitivity table**, and the one assumption the case depends on most.
+9. **Pilot, rollout and operating plan** (lesson 5): a pilot plan with success and stop criteria, the staged rollout, the operating model with named roles, a go-live checklist and a runbook outline.
+10. **Communication pieces** (lesson 6): a **design document** produced with `render_design_doc` and then polished, a **one-page brief**, and the outline of a **10-minute presentation** with answers to your five hardest questions.
+
+## A starting skeleton
+
+This tracks your progress through the package and says what is left. Save it as `package_status.py` in your project folder and keep it updated:
+
+```python
+# package_status.py
+from pathlib import Path
+
+DELIVERABLES = {
+    "1 problem statement and baseline": "01_problem.md",
+    "2 idea ranking": "02_ideas.md",
+    "3 approach decision": "03_approach.md",
+    "4 architecture and data plan": "04_architecture.md",
+    "5 working spike": "spike/README.md",
+    "6 evaluation and results": "06_evaluation.md",
+    "7 responsible-AI review and gate": "07_responsible_ai.md",
+    "8 cost and value model": "08_cost_value.md",
+    "9 pilot, rollout and operations": "09_plan.md",
+    "10 design doc, brief and presentation": "10_communication.md",
+}
+
+
+def status(folder="."):
+    folder = Path(folder)
+    done, todo = [], []
+    for name, filename in DELIVERABLES.items():
+        path = folder / filename
+        (done if path.exists() and path.stat().st_size > 200 else todo).append(name)
+    return done, todo
+
+
+if __name__ == "__main__":
+    done, todo = status()
+    print(f"{len(done)} of {len(DELIVERABLES)} deliverables started")
+    for name in todo:
+        print("  still to do:", name)
+```
+
+Try it in an empty folder to see the shape, then create the files as you work:
+
+```python
+import tempfile
+from pathlib import Path
+
+from package_status import DELIVERABLES, status
+
+folder = Path(tempfile.mkdtemp())
+(folder / "01_problem.md").write_text("Service desk agents spend 9 minutes per ticket finding policy. " * 6)
+(folder / "02_ideas.md").write_text("Ranked ideas with scores and red flags. " * 10)
+
+done, todo = status(folder)
+print(f"{len(done)} of {len(DELIVERABLES)} deliverables started")
+for name in todo[:3]:
+    print("  still to do:", name)
+print("  ...")
+```
+
+## Suggested path
+
+A realistic plan is **four to six weeks at a few hours a week**:
+
+| Week | Focus |
+| --- | --- |
+| 1 | Interview users, measure the baseline, write the problem statement, rank ideas, pick one |
+| 2 | Choose the approach, sketch the architecture, profile the data, start the spike |
+| 3 | Finish the spike, build the test set, run the evaluation, read the failures |
+| 4 | Responsible-AI review, red team, risk register, launch gate |
+| 5 | Cost and value model, sensitivity, pilot and rollout plan |
+| 6 | Design doc, one-page brief, presentation, peer review, revise |
+
+## How to check your work
+
+- Could a **stranger** understand the problem and why it matters from the first page?
+- Is the **baseline measured**, and does every improvement claim compare against it?
+- Does every evaluation number have a **sample size and an interval**?
+- Were the **gate rules written before** you ran the evaluation?
+- Does the cost model name the **assumption** the case depends on, and show what happens if it is wrong?
+- Did you **reject at least one simpler option** with evidence, and one fancier one?
+- Would the design survive questions from a **security engineer, a user and a finance partner**?
+- Does the package say honestly what you **do not know yet**?
+
+## A simple rubric
+
+| Area | Strong | Needs work |
+| --- | --- | --- |
+| Problem framing | Measured baseline, clear users and target, stakes named | A technology looking for a problem |
+| Approach | Simplest sufficient option, alternatives rejected with reasons | Jumped to an agent or fine-tuning |
+| Architecture | Clear diagram, data flows, failure behavior, decision records | A box diagram with no reasoning |
+| Evidence | A working spike, a real test set, intervals, slices, failures | A demo and an opinion |
+| Responsible AI | Gate written first, privacy, fairness, red team, owners | A paragraph saying it is safe |
+| Economics | Honest model, sensitivity, the key assumption named | A single hopeful number |
+| Delivery | Pilot with stop criteria, operating model, runbook | "We will roll it out" |
+| Communication | Short, honest, decision-oriented, ready for hard questions | Jargon, hype, or no clear ask |
+| Judgment | A clear recommendation, which may be "not yet" | Every path leads to "build it" |
+
+## Stretch goals
+
+- **Present it** to the people with the problem, and record what they challenge.
+- Have a **second person** review your design doc and red-team your assumptions.
+- Run a **second spike** on a competing approach and compare them on cost per task and quality.
+- Build a **two-minute video** explaining the project to a non-technical audience.
+- Write a **retrospective**: what you would do differently, and what surprised you.
+- Map the package to the **NIST AI RMF** functions and see what is thin.
+- Choose a **specialist elective** from this site that fits your domain, and add a section on how it would deepen the design.
+
+## Share it
+
+Put the package in a public repository without any confidential information, with a README that lists the ten deliverables and the one-page brief at the top. This is the piece to show a hiring manager, a client or your own leadership: it demonstrates that you can frame a problem, choose sensibly, build and test the hard part, count the cost, manage the risk and explain it honestly. A design that concludes "do not build this yet, and here is the evidence" is just as valuable as one that says "build it".
+
+## Where to go next
+
+You have finished the path: you understand how AI works, you can use it well, you can build with it, you can test and govern it, and you can design solutions for real problems. To keep growing:
+
+- **Go deeper on a specialty** with the remaining courses on this site: browser automation, GraphRAG, persistent memory, repository context, production agents, synthetic data, meta-harness architectures, and agentic systems for financial workflows.
+- **Keep your evaluations alive.** New models arrive constantly, and the habit that lasts is re-running your tests on them.
+- **Read the primary sources** you met along the way: the frameworks, the engineering write-ups and the papers.
+- **Teach someone.** Running a short workshop for your team using the AI literacy brief and prompt playbook you wrote is the fastest way to find the gaps in your own understanding.
+- **Stay skeptical and curious.** The best people in this field combine enthusiasm for what is possible with discipline about what is proven.
+
+## Resources
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  A structure for mapping your package to recognized risk-management practice.
+</Resource>
+
+<Resource kind="article" title="Building effective agents" href="https://www.anthropic.com/research/building-effective-agents" source="Anthropic">
+  A reminder, before you finalize the approach, to prefer the simplest design that works.
+</Resource>
+
+<Resource kind="docs" title="AI Act: regulatory framework for AI" href="https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai" source="European Commission">
+  The official reference for the legal part of your review if you serve people in the EU.
+</Resource>
+
+<Resource kind="docs" title="Claude Academy" href="https://academy.claude.com/" source="Anthropic">
+  Free learning material for continuing after this path.
+</Resource>

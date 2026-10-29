@@ -44,8 +44,9 @@ export default function PathPage() {
         </h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           Start with no AI background. Three stages, one destination: each
-          course makes you more capable of the next. Courses marked planned are
-          still being written, so this path grows over time.
+          course makes you more capable of the next. Every course on the path
+          is now available, so you can follow it from the first step to the
+          final capstone.
         </p>
       </section>
       <section className="border-x border-t border-line px-6 py-10 sm:px-12">

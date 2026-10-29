@@ -1,0 +1,190 @@
+The best design fails if nobody understands it, trusts it or agrees to fund it. A solution designer spends as much time **explaining and persuading** as building, to executives, to the people who will use the system, to security and legal reviewers, and to skeptics. This lesson gives you the documents, the demos, the honest numbers and the habits that make a good design land, and ends with the mental models that make you someone people turn to when AI is on the agenda.
+
+## Watch
+
+<Video id="Fzi4T94QCjw" title="5 Rules for Communicating Effectively with Executives" channel="Dr. Grace Lee" minutes={10}>
+  Ten minutes on how senior people take in information, and how to shape what you say to match.
+</Video>
+
+<Video id="bgHL41e7vgI" title="What Is A Design Doc In Software Engineering? (full example)" channel="Clément Mihailescu" minutes={16}>
+  What a design document is for and what a good one contains, with a worked example.
+</Video>
+
+## Know your audiences
+
+Each audience asks a different question, so give each a different document:
+
+| Audience | Their question | What they need |
+| --- | --- | --- |
+| **Executive sponsor** | Should we fund this, and what do we get? | A one-page brief: problem, result, cost, risk, decision needed |
+| **Users** | Will this make my work better or worse? | A demo of real tasks, honest limits, a way to give feedback |
+| **Engineers** | How does it work and how do I change it? | The design document, diagrams, decision records, runbook |
+| **Security, privacy, legal** | Is it safe and lawful? | Data flows, threat model, red-team results, system card |
+| **Finance** | What does it cost, and when does it pay back? | The cost and value model, with assumptions and sensitivity |
+| **Skeptics** | Why shouldn't we just ...? | Evidence, the alternatives you rejected and why, and what would change your mind |
+
+## The design document
+
+A design document is the main record of your thinking. It forces you to find gaps, lets others review before you build, and tells the future team **why** things are the way they are. This function turns a structured description into a Markdown document and tells you which sections are still missing. Save it as `design_doc.py`:
+
+```python
+# design_doc.py
+SECTIONS = [
+    ("summary", "Summary"),
+    ("problem", "Problem and baseline"),
+    ("goals", "Goals and success measures"),
+    ("non_goals", "Not in scope"),
+    ("approach", "Approach and alternatives considered"),
+    ("architecture", "Architecture and data"),
+    ("evaluation", "Evaluation and results"),
+    ("risks", "Risks and responsible-AI review"),
+    ("cost", "Cost and value"),
+    ("rollout", "Pilot and rollout plan"),
+    ("open_questions", "Open questions"),
+]
+
+
+def missing_sections(spec):
+    return [title for key, title in SECTIONS if not spec.get(key)]
+
+
+def render_design_doc(spec):
+    lines = [f"# {spec['title']}", "", f"*Owner: {spec['owner']} · Status: {spec['status']}*", ""]
+    for key, title in SECTIONS:
+        lines += [f"## {title}", ""]
+        content = spec.get(key)
+        if isinstance(content, list):
+            lines += [f"- {item}" for item in content]
+        else:
+            lines.append(content or "_TODO: not written yet._")
+        lines.append("")
+    return "\n".join(lines)
+```
+
+A short example of the output, with some sections deliberately left empty:
+
+```python
+from design_doc import missing_sections, render_design_doc
+
+spec = {
+    "title": "Support reply assistant",
+    "owner": "A. Khan",
+    "status": "Draft for review",
+    "summary": "Draft first replies to support tickets so agents spend less time searching for policy, with an agent always approving the reply.",
+    "problem": "Agents spend about 9 minutes per ticket finding policy. 15% of first replies are wrong, causing reopened tickets (measured on 120 tickets in October).",
+    "goals": ["Cut time to first reply by a third", "Keep the wrong-reply rate under 10%", "Adoption above 60% of eligible tickets"],
+    "non_goals": ["Sending replies without a person", "Handling billing disputes in the first release"],
+    "approach": "RAG over the policy handbook with cited drafts. Rejected: fine-tuning (policies change monthly), a full agent (steps are fixed).",
+    "evaluation": "180-case test set. Correct 89% (95% interval 84% to 93%). Weakest slice, refunds: 78%.",
+    "rollout": ["4-week pilot with 12 agents", "Compare with last month's baseline", "Staged release to 10%, 50%, 100%"],
+}
+
+print("still to write:", ", ".join(missing_sections(spec)))
+print()
+print(render_design_doc(spec)[:600], "...")
+```
+
+The "still to write" list is the point: a document with gaps is **honest about what you have not figured out**, which is far better than a polished one that hides them. Keep the document short (a few pages), link to the details, and keep it **updated**. A design doc is a living record, not a launch-day artifact.
+
+## The one-page brief
+
+For executives, compress everything onto one page, in this order:
+
+```text
+ONE-PAGE BRIEF: <project>
+
+THE PROBLEM      Who has it, what it costs today (a number).
+THE PROPOSAL     What we will build, in one sentence a customer would understand.
+THE EVIDENCE     What we tested and found: the headline result WITH its interval and sample size.
+THE COST         Build, run, and when it pays back, with the main assumption named.
+THE RISKS        The top three, and how each is controlled. What a bad day looks like.
+THE DECISION     What we are asking for now, and what happens next for each answer.
+```
+
+Lead with the **decision you need**, not the history. Use **numbers with honest ranges**. Name the **biggest risk** yourself: executives trust people who show the weak spot before they are asked.
+
+## Demonstrate honestly
+
+A good demo builds trust, and a staged one destroys it:
+
+- **Use real tasks**, including ones you have not rehearsed, and let a user drive.
+- **Show a failure** and how the system handles it: declining, escalating, citing a source.
+- **Show the evidence**, not only the demo: the evaluation numbers and where it is weak.
+- **Say what it is not for.**
+- **Do not call it intelligent** or suggest it understands. Say what it does: drafts, searches, classifies.
+- **Avoid the hand-picked best case.** If the audience later meets the average case, the gap hurts you.
+
+## Answer the hard questions
+
+You will hear these. Prepare answers you believe:
+
+| Question | A good answer |
+| --- | --- |
+| "Can't we just use a public chatbot?" | "You can for non-confidential tasks. For ours we need our own documents, access control, citations and logs, and the policy forbids pasting customer data into public tools." |
+| "Will it replace people?" | Be honest about what the pilot data shows, what roles change and what support you are offering. Do not give a glib no. |
+| "How do you know it is accurate?" | "We tested on 180 real cases: 89 percent correct, with an interval of 84 to 93 percent. Here are the failures and what we do about them." |
+| "What if it makes something up?" | "It cites sources and declines when it has none. A person approves every reply. Here is the failure rate we measured." |
+| "Is it safe and legal?" | Walk through the risk review, the data flows, the red-team results and the legal sign-off, and say what remains open. |
+| "Why this and not ...?" | Show the alternatives you evaluated and the numbers. |
+| "What does it cost?" | The model with its assumptions and the sensitivity table. |
+| "What if the vendor changes or leaves?" | "Our data, prompts and tests are portable. We pin versions and evaluate before upgrades." |
+
+## Set expectations
+
+Over-promising is the most common way to damage an AI project. Replace "it will" with "in our tests it did, and here is how we will check in production". Tell people what **mistakes** look like, how often to expect them, and what to do. Share bad news early, with a plan.
+
+## Lead the work
+
+A solution designer leads without always having authority:
+
+- **Make decisions visible**, with decision records and reviews, so people can disagree on paper.
+- **Bring the reviewers in early**: security, privacy and legal first, not last.
+- **Keep the scope small** and the next milestone close.
+- **Protect the team's honesty**: people must be able to report a failing test without fear.
+- **Write things down** and keep them current.
+- **Credit** the people who did the work.
+- **Know when to stop**: kill a project that fails its criteria, and share what you learned.
+
+## The mental models to keep
+
+If you remember nothing else from this path, remember these:
+
+1. **Start from the problem and the baseline**, not the technology.
+2. **Climb the ladder slowly**: a rule, a model call, retrieval, a workflow, an agent, only as the measurements require.
+3. **A model produces plausible text, not verified facts.** Ground it, cite it, check it.
+4. **Test with real questions, repeat runs, and report intervals.** Look at the weakest slice.
+5. **Put controls in code**, not only in prompts. Assume the model can be fooled.
+6. **The model is the small part.** Data, integration, operations and people decide success.
+7. **Write the ship rules before you see the results.**
+8. **Saying "not yet" with evidence is a good outcome.**
+
+<Callout title="You are the translator">
+  The AI solution designer sits between what the technology can do, what the
+  business needs and what people will accept. Your value is judgment: knowing
+  what is worth building, how to build it safely, and how to explain it
+  honestly.
+</Callout>
+
+## Resources
+
+<Resource kind="paper" title="Model Cards for Model Reporting" href="https://arxiv.org/abs/1810.03993" source="Mitchell et al., arXiv">
+  A concise format for communicating what a model does and where it is weak.
+</Resource>
+
+<Resource kind="docs" title="AI Risk Management Framework" href="https://www.nist.gov/itl/ai-risk-management-framework" source="NIST">
+  A shared vocabulary for talking about AI risk with non-engineers and regulators.
+</Resource>
+
+<Resource kind="docs" title="AI Act: regulatory framework for AI" href="https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai" source="European Commission">
+  The official source for the obligations your legal colleagues will ask about if you serve the EU.
+</Resource>
+
+<Resource kind="docs" title="Claude Academy" href="https://academy.claude.com/" source="Anthropic">
+  Continuing education material on working and building with Claude.
+</Resource>
+
+## Check yourself
+
+1. Write the one-page brief for your project. Which line is weakest, and what evidence would strengthen it?
+2. Write answers to the five hardest questions you expect. Ask a colleague to attack them.
+3. Fill in the design document for your project with `render_design_doc`. Which sections are still missing, and what does that tell you about your next step?

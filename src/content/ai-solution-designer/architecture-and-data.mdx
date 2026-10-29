@@ -1,0 +1,214 @@
+With an approach chosen, you design the system around it: the components, how data flows between them, where the model sits, and what protects it. A good architecture is not the most elaborate one. It is the **simplest arrangement of parts that meets the goal, can be tested and can be operated by the team you have**. This lesson gives you reference designs for the common AI solutions, the components every one needs, and a way to check that your data is actually ready.
+
+## Watch
+
+<Video id="RRKwmeyIc24" title="What Is an AI Stack? LLMs, RAG, & AI Hardware" channel="IBM Technology" minutes={9}>
+  A nine-minute tour of the layers of an AI system, from hardware to the application.
+</Video>
+
+<Video id="xBSMBEowLcY" title="Building AI Applications with Large Language Models" channel="IBM Technology" minutes={5}>
+  A short overview of how the pieces fit together in an LLM application.
+</Video>
+
+## Four reference designs
+
+Most business AI systems are variations on a few shapes. Learn these, then adapt.
+
+### 1. A document assistant (RAG)
+
+```text
+  Documents -> clean & chunk -> embed -> index
+                                           |
+  User question -> rewrite -> search (+ filter by access) -> rerank
+                                           |
+                  prompt (rules + sources + question) -> model -> answer + citations
+                                           |
+                              checks -> user      logs & feedback -> evaluation
+```
+
+Examples: policy questions, support knowledge base, internal search. You built this in *Chat with Your Documents*.
+
+### 2. A classification or extraction pipeline
+
+```text
+  Input (email, ticket, invoice) -> redact personal data -> model with a schema
+                                           |
+                       validate (types, rules, business checks)
+                          |                        |
+                     passes                    fails or low confidence
+                          |                        |
+                  write to system            human review queue -> corrections feed the test set
+```
+
+Examples: ticket triage, invoice capture, routing. Structured output and validation come from *Build with LLM APIs*, and the review queue from *Evaluate and Use AI Responsibly*.
+
+### 3. A drafting assistant with a person in charge
+
+```text
+  Context (customer, history, policy) -> model drafts -> person edits and approves -> send
+                                                         |
+                                      edits and rejections are measured and learned from
+```
+
+Examples: replies, reports, summaries. The model never sends anything itself, which keeps the risk low and the learning rich.
+
+### 4. An agent for operations
+
+```text
+  Task -> agent loop -> tools (read-only first) -> policy & approvals -> results
+            |                                          |
+        limits & budget                      audit trail & traces -> evaluation
+```
+
+Examples: incident investigation, data analysis, code maintenance. This is the design from *Agents Fundamentals*, with its limits, policy and evaluation.
+
+## The components every system needs
+
+Whatever the shape, check that you have thought about each of these:
+
+| Component | Questions to answer |
+| --- | --- |
+| **Interface** | Where do people meet it: chat, form, email, existing tool? How do they give feedback or reach a person? |
+| **Input handling** | How are inputs validated, size-limited and cleaned? Is personal data redacted? |
+| **Knowledge and data** | Where does the information come from? Who owns it, and how fresh is it? |
+| **Model layer** | Which models for which steps? What if the provider is down or changes a model? |
+| **Orchestration** | The code that ties the steps together, with limits and error handling |
+| **Tools and integrations** | What can it read or change? With which credentials, and what approvals? |
+| **Guardrails** | Input and output checks, policy, human approval for risky steps |
+| **Evaluation** | The test set, the metrics, who runs them and when |
+| **Observability** | Traces, usage, cost, errors, quality signals, alerts |
+| **Security and access** | Authentication, authorization, secrets, network boundaries, logging |
+| **Operations** | Deployment, versions, rollback, on-call, runbooks |
+
+If you cannot say who owns a component, it is a gap.
+
+## Fit it into the real world
+
+The AI part is usually the smaller part of the work. The rest is connecting it to the systems where people work:
+
+- **Authentication and permissions**: the system must act **as the user**, with the user's access, not with a powerful shared account.
+- **Existing tools**: put it where people already are (the ticket tool, the chat tool, the editor) rather than a new place they will forget.
+- **Data connectors**: expect most of the effort to go into getting clean data in and results out.
+- **Failure behavior**: when the model or a service is down, the fallback should be a human route or a plain search, not an error page.
+- **Latency**: the interface must feel responsive. Stream answers, and show progress for slow steps.
+- **Multi-tenancy**: if several customers or teams use it, their data must never mix.
+
+## A latency budget
+
+Users give up on slow systems, and every extra step adds time. Write a **budget** and check the design against it:
+
+```python
+def latency_budget(stages, target_seconds):
+    total = sum(seconds for _, seconds in stages)
+    print(f"{'stage':28s} seconds")
+    for name, seconds in stages:
+        print(f"{name:28s} {seconds:6.1f}   {'#' * int(seconds * 4)}")
+    print(f"{'total':28s} {total:6.1f}   (target {target_seconds:.1f})")
+    return total <= target_seconds
+
+
+STAGES = [
+    ("receive and validate", 0.1),
+    ("rewrite the question", 1.2),
+    ("embed and search", 0.3),
+    ("rerank", 0.6),
+    ("generate the answer", 4.5),
+    ("check the answer", 0.4),
+]
+ok = latency_budget(STAGES, target_seconds=6.0)
+print("within budget" if ok else "over budget: stream the answer, drop a stage or use a faster model")
+```
+
+When you are over budget, options include **streaming** (the user sees text after a second, even if the full answer takes five), running stages **in parallel**, a **smaller model** for the early stages, **caching**, and removing a stage whose measured value is small.
+
+## Is the data ready?
+
+Data problems sink more AI projects than model problems. Before you commit, **profile** the data you plan to use:
+
+```python
+import re
+
+import pandas as pd
+
+PII_PATTERNS = {
+    "email": re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"),
+    "phone": re.compile(r"\+?\d[\d ()-]{8,}\d"),
+    "card-like number": re.compile(r"\b(?:\d[ -]?){13,19}\b"),
+}
+
+
+def profile_dataset(df, sample_rows=200):
+    rows = []
+    for column in df.columns:
+        values = df[column].dropna().astype(str).head(sample_rows)
+        flags = [name for name, pattern in PII_PATTERNS.items() if values.str.contains(pattern).any()]
+        rows.append({
+            "column": column,
+            "missing": f"{df[column].isna().mean():.0%}",
+            "distinct": df[column].nunique(),
+            "possible personal data": ", ".join(flags) or "-",
+        })
+    report = pd.DataFrame(rows)
+    duplicates = int(df.duplicated().sum())
+    return report, duplicates
+
+
+tickets = pd.DataFrame({
+    "ticket_id": [1, 2, 3, 4, 5, 5],
+    "text": ["VPN drops, call me on +44 20 7946 0958", "Printer jam", "Please refund card 4111 1111 1111 1111",
+             "Password reset for jane@example.com", None, None],
+    "category": ["network", "hardware", "billing", None, "other", "other"],
+    "resolved_at": ["2026-03-01", "2026-03-02", None, "2026-03-04", "2026-03-04", "2026-03-04"],
+})
+report, duplicates = profile_dataset(tickets)
+print(report.to_string(index=False))
+print("\nduplicate rows:", duplicates)
+```
+
+Look closely at the output. The scan found an email, a phone number and a card number **inside the free-text column**, which a check of column names alone would miss. It also flagged `resolved_at` as possibly holding a phone number, a **false alarm**: a date such as 2026-03-01 looks like a number to a simple pattern. Treat flags as questions to check, not verdicts, and use a purpose-built tool for real data.
+
+A readiness review asks, for each dataset:
+
+- **Coverage**: does it contain the cases the system will meet, including rare and awkward ones?
+- **Quality**: missing values, duplicates, inconsistent labels, outdated entries.
+- **Freshness and ownership**: who maintains it, and how will changes reach the system?
+- **Access and rights**: may we use it for this purpose? Are there personal or confidential fields? (privacy lesson from the responsible-AI course)
+- **Format**: is it machine-readable, or locked in scanned PDFs and slides?
+- **Labels or answers**: for supervised tasks, do we have the right answers, and who checked them?
+- **Representativeness**: does it cover all the groups of users, including languages and regions?
+
+If the answers are poor, **fixing the data is the project**.
+
+## Record the big decisions
+
+Capture the main architectural choices in short decision records, the same format as the last lesson. Typical ones: which model and why, where retrieval happens, how permissions are enforced, how long data is kept, what is human-approved, how the system fails. Together with a diagram, they are the heart of the design document you will write in lesson 6.
+
+<Callout title="Draw it before you build it">
+  Sketch the boxes and arrows on one page, mark where data crosses a boundary
+  and where a person decides, and ask a security engineer and a user to find
+  the holes. It is the cheapest review you will ever get.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Claude Platform documentation" href="https://platform.claude.com/docs/en/api/overview" source="Anthropic">
+  The reference for the model-layer decisions: models, tools, caching, batching and limits.
+</Resource>
+
+<Resource kind="docs" title="Generative AI Profile (NIST AI 600-1)" href="https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence" source="NIST">
+  Risks and suggested actions specific to generative AI systems, useful as a design checklist.
+</Resource>
+
+<Resource kind="docs" title="OWASP Top 10 for LLM Applications" href="https://genai.owasp.org/llm-top-10/" source="OWASP">
+  A security checklist for the components above.
+</Resource>
+
+<Resource kind="paper" title="Hidden Technical Debt in Machine Learning Systems" href="https://papers.nips.cc/paper_files/paper/2015/hash/86df7dcfd896fcaf2674f757a2463eba-Abstract.html" source="Sculley et al., NeurIPS">
+  A classic on why the model is a small part of a real system.
+</Resource>
+
+## Check yourself
+
+1. Sketch the architecture for your chosen problem on one page, using one of the four reference designs. Mark where personal data crosses a boundary and where a person decides.
+2. Fill in a latency budget for it. Which stage would you cut or speed up first?
+3. Profile a dataset you would use. What did it reveal that you did not expect?

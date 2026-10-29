@@ -1,0 +1,186 @@
+A successful pilot is not a finished product. It ran with willing users, close attention and tolerance for rough edges. Production means everyone can use it, it must keep working when you are not watching, and someone must own it for years. Many AI projects stall in the gap between the two. This lesson covers the path across it: staged release, the operating model, keeping quality from decaying, handling change, and the human side of adoption.
+
+## Watch
+
+<Video id="ZIAzZtKWmbI" title="Demo to Production. Architect a Real Agentic AI System (Step by Step)" channel="Applied with AI - Sanjay Kumar" minutes={23}>
+  A 23-minute build-up from a three-box demo to a production design, one component at a time. It shows how much surrounds the model.
+</Video>
+
+## Go deeper (optional)
+
+<Video id="JVEQOT01AoU" title="From AI Pilots To Production: Designing The Path To Scalable AI" channel="Pascal BORNET" minutes={40}>
+  A 40-minute interview with an enterprise AI leader on why pilots stall and how to scale. Optional, and more about organizations than code.
+</Video>
+
+## Why pilots stall
+
+| Reason | What it looks like |
+| --- | --- |
+| **No owner** | Everyone liked it, nobody is accountable for running it |
+| **Unclear value** | The pilot showed it works, not that it pays |
+| **Data and integration debt** | The prototype used a hand-made data set and no real connections |
+| **Security, privacy or legal blockers** | Raised late, when changes are expensive |
+| **No path to adoption** | People were not trained, or it is not in their workflow |
+| **Hidden manual effort** | The pilot depended on someone fixing things by hand |
+| **Cost surprise** | Costs at full volume were not modeled |
+| **Quality decay** | It worked in the pilot and drifted afterward |
+
+Most of these are solved by deciding early who owns what, and by designing the pilot as a **dress rehearsal** for production.
+
+## The route to production
+
+```text
+Spike --> Pilot --> Limited release --> General release --> Operation
+ days     4-8 wk     staged rollout      with monitoring      continuous
+```
+
+At each step, widen the audience only when the evidence says it is safe:
+
+- **Limited release**: a few percent of real users, staged (responsible-AI course), with the launch gate, monitoring and kill switch in place.
+- **General release**: everyone eligible, with the support team trained and the rollback plan tested.
+- **Operation**: the assistant is now part of how work is done, and has an owner, a budget and a review cycle.
+
+Do not skip the **launch gate**. Run the checks from the previous course: evaluation with intervals, slices, red teaming, privacy and fairness reviews, and a written ship decision.
+
+## The operating model: who runs it
+
+Decide, before launch, who does each of these, by name:
+
+| Responsibility | Typical owner |
+| --- | --- |
+| **The product**: goals, priorities, whether it is still worth running | Product owner |
+| **The system**: availability, updates, incidents, on-call | Engineering or platform team |
+| **Quality**: evaluation, sampling, regressions | An evaluation owner, often an engineer with a domain expert |
+| **Content and data**: freshness and correctness of documents and data | Content or data owners |
+| **Risk**: reviews, incidents, regulatory changes | Security, privacy, legal, compliance |
+| **Users**: training, support, feedback | Support and change-management leads |
+| **Budget**: usage, cost per task | Product owner with finance |
+
+Write them down, with a **runbook**: what to do when quality drops, an outage occurs, the budget alarm fires, a harmful output is reported or the model provider changes something.
+
+## Keep quality from decaying
+
+AI systems degrade quietly: documents change, users ask new things, a provider updates a model, a data source breaks. Operate against that:
+
+- **Version everything**: the model ID, the prompts, the retrieval settings, the tools and the evaluation data. If you cannot say what ran yesterday, you cannot explain a change.
+- **Run the evaluation automatically**: on every change in your pipeline, and on a schedule, so a silent drift shows up.
+- **Pin model versions** and plan upgrades like releases: evaluate the new model first, roll out in stages, keep the old one available to roll back.
+- **Monitor** quality, safety, cost, latency and errors, with alerts that name a responder.
+- **Sample and review** real outputs every week.
+- **Close the loop**: turn user feedback and found failures into new test cases and fixes.
+- **Watch the data**: stale or broken sources are a leading cause of bad answers.
+
+A minimal record of what a release consists of is worth keeping with each deployment:
+
+```python
+import json
+import time
+
+MANIFEST = {
+    "release": "support-assistant-2026-11-03",
+    "model": "claude-opus-5-5",
+    "prompt_version": "support-v14",
+    "retrieval": {"embedding_model": "BAAI/bge-small-en-v1.5", "chunking": "by heading", "top_k": 4},
+    "tools": ["search_kb", "lookup_order"],
+    "evaluation": {"test_set": "tickets-v6 (180 cases)", "correct": "89% (95% interval 84% to 93%)", "weakest_slice": "billing disputes 78%"},
+    "gate": "passed 2026-11-02, approved by: product owner",
+    "rollback_to": "support-assistant-2026-10-06",
+}
+
+MANIFEST["recorded_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+with open("release_manifest.json", "w", encoding="utf-8") as f:
+    json.dump(MANIFEST, f, indent=2)
+print(json.dumps(MANIFEST, indent=2)[:420], "...")
+```
+
+A scheduled evaluation is easy to set up in most build systems. The idea, as a pipeline definition (adapt it to yours):
+
+```text
+name: nightly-evaluation
+on: schedule (every night) and any change to prompts, tools or data
+steps:
+  - install dependencies
+  - run unit tests (no model calls)
+  - run the evaluation set against the deployed configuration
+  - compare with the last release using the paired bootstrap
+  - fail the build if any gate rule is broken, and notify the evaluation owner
+```
+
+## A go-live checklist
+
+Turn your readiness into something you can check. This function reports what is **not** done, so nobody can wave the checklist through:
+
+```python
+CHECKLIST = {
+    "Owner named for product, system, quality, content and risk": True,
+    "Problem statement and success measures written before the pilot": True,
+    "Evaluation with intervals, slices and repeated runs passed the gate": True,
+    "Red-team suite run, attack success rate acceptable": True,
+    "Privacy review done, data retention set, deletion tested": False,
+    "Fairness or equal-treatment checks done for this use": True,
+    "Human review or escalation path in place and tested": True,
+    "Monitoring and alerts live, with a named responder": False,
+    "Kill switch tested in the last 30 days": True,
+    "Runbook written and walked through with the on-call team": False,
+    "Users trained, support team briefed, users told it is AI": True,
+    "Cost at full volume modeled, and a budget cap set": True,
+    "Rollback plan tested": True,
+}
+
+
+def go_live(checklist):
+    missing = [item for item, done in checklist.items() if not done]
+    for item in missing:
+        print("NOT DONE:", item)
+    print(f"\n{len(checklist) - len(missing)}/{len(checklist)} complete")
+    return not missing
+
+
+print("READY TO GO LIVE" if go_live(CHECKLIST) else "NOT READY: finish the items above first")
+```
+
+## Adoption is part of the system
+
+A system nobody uses has zero value, however well it was built. Treat adoption as engineering work:
+
+- **Involve users from the start**, so it fits how they work.
+- **Put it in their workflow**, not in a new place to remember.
+- **Train people**, including on its limits and how to give feedback.
+- **Be honest** about what it can do and get wrong. Overselling creates disappointment and then distrust.
+- **Make a person easy to reach** when it fails.
+- **Show quick wins**, and share them.
+- **Listen to resistance.** People worry about jobs, quality and being monitored. Some of those concerns are right, and the best fixes come from taking them seriously.
+- **Measure use** (who, how often, for which tasks), and talk to the people who stopped.
+
+## Plan for the end
+
+Everything should have a retirement plan: when to review whether it is still worth running, how to migrate users, what to do with the data and the logs, and how to shut it down safely. Model versions are retired on a schedule, so plan **migrations** as routine work.
+
+<Callout title="Production is a commitment">
+  Shipping is the start of a responsibility, not the end of a project. Before
+  you launch, be sure there is someone who will still care in a year.
+</Callout>
+
+## Resources
+
+<Resource kind="docs" title="Model deprecations" href="https://platform.claude.com/docs/en/about-claude/model-deprecations" source="Anthropic">
+  How and when models are retired, so you can plan upgrades.
+</Resource>
+
+<Resource kind="docs" title="AI RMF Playbook" href="https://airc.nist.gov/airmf-resources/playbook/" source="NIST">
+  Suggested actions for managing AI risk through deployment and operation.
+</Resource>
+
+<Resource kind="paper" title="Hidden Technical Debt in Machine Learning Systems" href="https://papers.nips.cc/paper_files/paper/2015/hash/86df7dcfd896fcaf2674f757a2463eba-Abstract.html" source="Sculley et al., NeurIPS">
+  Why operating a learning system costs far more than building it.
+</Resource>
+
+<Resource kind="article" title="How we built our multi-agent research system" href="https://www.anthropic.com/research/multi-agent-research-system" source="Anthropic">
+  An honest account of the engineering, testing and operational lessons of taking an agentic system to production.
+</Resource>
+
+## Check yourself
+
+1. Fill in the operating-model table for your project with real names. Which row has no owner?
+2. Run the go-live function with your own checklist. Which three items would be hardest to complete?
+3. Write the first page of the runbook: what happens when the quality alarm fires at 2 a.m.?

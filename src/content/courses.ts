@@ -259,6 +259,36 @@ export const courses: Course[] = [
     ],
   },
   {
+    slug: "ai-solution-designer",
+    title: "Capstone: AI Solution Designer",
+    track: "Final course · Think in AI",
+    level: "Expert",
+    summary:
+      "Bring the whole path together on a real problem. Frame it with a measured baseline, choose the simplest approach that works, design the architecture and data, test the riskiest part, model the cost and value, review the risks, plan the pilot and operations, and make the case honestly. You finish with a complete AI solution design.",
+    prerequisites: [
+      "Best taken after the Stage 1 and Stage 2 courses on this path, and at least one Stage 3 course",
+      "A real problem to work on, from your own work or a community you can interview. Use non-confidential details only",
+      "Everything runs locally. Calls to the Claude API are optional for your spike",
+    ],
+    outcomes: [
+      "Turn a vague wish into a problem statement with a measured baseline and success measures",
+      "Choose between a rule, classic machine learning, a model call, RAG, a workflow and an agent, and justify the choice",
+      "Design an architecture, a latency budget and a data-readiness plan, and record the decisions",
+      "Build a cost and value model with a sensitivity analysis and design a pilot with stop criteria",
+      "Plan a staged release, an operating model, monitoring and a runbook",
+      "Write a design document and a one-page brief, and defend them under hard questions",
+    ],
+    lessons: [
+      { slug: "framing-the-problem", title: "Framing the problem", summary: "Problem statements, baselines, scoring ideas and defining success.", minutes: 90 },
+      { slug: "choosing-an-approach", title: "Choosing an approach", summary: "The ladder from rules to agents, build versus buy and choosing a model.", minutes: 90 },
+      { slug: "architecture-and-data", title: "Architecture and data", summary: "Four reference designs, the components, latency budgets and data readiness.", minutes: 90 },
+      { slug: "costs-roi-and-planning", title: "Costs, return and planning", summary: "A cost and value model, sensitivity analysis and pilot design.", minutes: 90 },
+      { slug: "from-pilot-to-production", title: "From pilot to production", summary: "Staged release, the operating model, keeping quality and adoption.", minutes: 90 },
+      { slug: "communicating-and-leading", title: "Communicating and leading", summary: "Design docs, one-page briefs, honest demos and the mental models to keep.", minutes: 90 },
+      { slug: "capstone", title: "Capstone project: your AI solution design", summary: "Design a complete AI solution for a real problem and present it.", minutes: 600 },
+    ],
+  },
+  {
     slug: "graphrag",
     title: "Implement GraphRAG with Knowledge Graphs",
     track: "Grounding models with data",

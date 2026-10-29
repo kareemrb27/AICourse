@@ -293,9 +293,35 @@ export function PathBoard({
         <p className="mt-2 max-w-3xl leading-7 text-[#d6d6de]">
           {final.after} This is where you start to think in AI.
         </p>
-        <p className={`label mt-4 ${isDone(final.key) ? "text-accent" : ""}`}>
-          {isDone(final.key) ? "✓ Done" : "Planned"}
+        <p
+          className={`label mt-4 ${isDone(final.key) || final.href ? "text-accent" : ""}`}
+        >
+          {isDone(final.key) ? "✓ Done" : final.href ? "Ready" : "Planned"}
+          {final.meta ? ` · ${final.meta}` : ""}
         </p>
+        {final.href ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={final.href}
+              className="label inline-flex min-h-11 items-center rounded border border-accent bg-accent px-4 !text-black hover:opacity-90"
+            >
+              Open the final course
+            </Link>
+            <button
+              type="button"
+              aria-pressed={isDone(final.key)}
+              onClick={() => toggle(final.key)}
+              className={`label inline-flex min-h-11 items-center rounded border px-3 hover:border-accent ${
+                isDone(final.key)
+                  ? "border-accent bg-accent-dim text-accent"
+                  : "border-line text-foreground"
+              }`}
+            >
+              {isDone(final.key) ? "Completed" : "Mark as done"}
+              <span className="sr-only"> {final.title}</span>
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section
