@@ -216,7 +216,6 @@ body {
 .card-lift:hover,
 .card-lift:focus-visible {
   border-color: var(--c);
-  box-shadow: 0 20px 44px -20px color-mix(in srgb, var(--c) 60%, transparent);
 }
 @media (prefers-reduced-motion: no-preference) {
   .card-lift:hover {

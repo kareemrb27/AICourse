@@ -64,11 +64,11 @@ export function CourseCatalog() {
         >
           <div className="card-art relative overflow-hidden">
             <CourseIllustration slug={course.slug} className="aspect-[3/2] w-full" />
-            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-[11px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
+            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#14141b]/85 px-2.5 py-1 font-mono text-[11px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
               <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--c)" }} />
               {label}
             </span>
-            <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-xs font-medium text-[#e5e5ec] backdrop-blur">
+            <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-[#14141b]/85 px-2.5 py-1 text-xs font-medium text-[#e5e5ec] backdrop-blur">
               {course.level}
             </span>
           </div>

@@ -25,10 +25,7 @@ export function CourseCover({
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(60% 150% at 85% 50%, color-mix(in srgb, var(--c) 42%, transparent), transparent 72%), linear-gradient(120deg, color-mix(in srgb, var(--c2) 30%, #14141b), color-mix(in srgb, var(--c) 8%, #14141b) 75%)",
-        }}
+        style={{ background: "color-mix(in srgb, var(--c) 14%, #14141b)" }}
       />
       <div
         className={`flex items-center justify-between gap-5 ${
@@ -49,7 +46,7 @@ export function CourseCover({
         </div>
         <CourseIllustration
           slug={slug}
-          className={`shrink-0 rounded-xl border border-white/10 shadow-2xl shadow-black/40 ${
+          className={`shrink-0 rounded-xl border border-white/10 ${
             compact ? "hidden aspect-[3/2] w-28 sm:block" : "aspect-[3/2] w-32 sm:w-72"
           }`}
         />
