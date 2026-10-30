@@ -1,424 +1,157 @@
-import type { ReactNode } from "react";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 
-// Vector illustrations for each course, drawn in one soft, dark style so they
-// match the site. Every scene is 400 x 260 and uses two accent colors.
-type Palette = [string, string];
-type P = { id: string; a: string; b: string };
-
-const PALETTES: Record<string, Palette> = {
-  "ai-foundations": ["#10b981", "#22d3ee"],
-  "working-with-llms": ["#34d399", "#a3e635"],
-  "python-and-data-essentials": ["#3b82f6", "#facc15"],
-  "machine-learning-basics": ["#22d3ee", "#8b5cf6"],
-  "build-with-llm-apis": ["#60a5fa", "#6366f1"],
-  "chat-with-your-documents": ["#38bdf8", "#a78bfa"],
-  "evaluate-and-use-ai-responsibly": ["#f59e0b", "#10b981"],
-  "agents-fundamentals": ["#a78bfa", "#ec4899"],
-  "browser-automation": ["#818cf8", "#22d3ee"],
-  graphrag: ["#c084fc", "#34d399"],
-  "agent-memory": ["#f472b6", "#8b5cf6"],
-  "production-agents": ["#fb7185", "#f59e0b"],
-  "repo-context": ["#2dd4bf", "#6366f1"],
-  "synthetic-data": ["#e879f9", "#22d3ee"],
-  "meta-harness": ["#f97316", "#a855f7"],
-  "financial-workflows": ["#facc15", "#10b981"],
-  "ai-code-analysis": ["#f87171", "#60a5fa"],
-  "ai-solution-designer": ["#fbbf24", "#10b981"],
+type IconName = "layers" | "chat" | "code" | "table" | "model" | "search" | "document" | "check" | "shield" | "tools" | "browser" | "graph" | "memory" | "trace" | "folder" | "workflow";
+type Artwork = {
+  label: string;
+  caption: string;
+  color: string;
+  icons: [IconName, IconName];
+  description: string;
 };
 
-const WHITE = "rgba(255,255,255,";
+const ARTWORK: Record<string, Artwork> = {
+  "ai-foundations": { label: "The AI landscape", caption: "Understand how the ideas fit together", color: "#6ee7b7", icons: ["layers", "model"], description: "Nested fields: artificial intelligence contains machine learning, deep learning, and generative AI." },
+  "working-with-llms": { label: "A better conversation", caption: "Give context. Check the response. Refine.", color: "#6ee7b7", icons: ["chat", "check"], description: "A prompt supplies a task, context, and format. The response is checked and refined." },
+  "python-and-data-essentials": { label: "From data to insight", caption: "Load, transform, and explore", color: "#7dd3fc", icons: ["code", "table"], description: "JSON data passes through a Python script to become a table and chart." },
+  "machine-learning-basics": { label: "The learning workflow", caption: "Train on one split. Evaluate on another.", color: "#7dd3fc", icons: ["model", "check"], description: "Data is split into training and test sets. Training produces a model, which is evaluated on the test set." },
+  "build-with-llm-apis": { label: "Your first AI integration", caption: "Request, structure, validate", color: "#7dd3fc", icons: ["code", "model"], description: "An application sends a request to a language model, receives JSON, and validates its schema." },
+  "chat-with-your-documents": { label: "Answers with evidence", caption: "Retrieve the source. Cite the answer.", color: "#7dd3fc", icons: ["document", "search"], description: "Documents are searched for relevant passages, which ground an answer with citations." },
+  "evaluate-and-use-ai-responsibly": { label: "Evidence before release", caption: "Test quality, privacy, and safety", color: "#fcd34d", icons: ["shield", "check"], description: "Quality, privacy, and safety checks inform a human review and a ship or hold decision." },
+  "agents-fundamentals": { label: "Inside the agent loop", caption: "Choose a tool. Observe. Repeat or finish.", color: "#c4b5fd", icons: ["model", "tools"], description: "A model chooses a tool, receives its result, and uses that observation to choose the next step or finish." },
+  "browser-automation": { label: "An agent on the web", caption: "Observe the page. Act. Verify the result.", color: "#c4b5fd", icons: ["browser", "tools"], description: "A browser agent observes a page, interacts with a control, and verifies the resulting page state." },
+  graphrag: { label: "Retrieve the relationships", caption: "Follow connections across your sources", color: "#7dd3fc", icons: ["graph", "search"], description: "A knowledge graph connects a team, project, service, and owner, allowing a retrieval path across related entities." },
+  "agent-memory": { label: "Context that carries forward", caption: "Store what matters. Retrieve what helps.", color: "#c4b5fd", icons: ["memory", "chat"], description: "Working context can store selected facts in persistent memory and retrieve relevant facts for later tasks." },
+  "production-agents": { label: "See the whole run", caption: "Trace, evaluate, and monitor", color: "#fcd34d", icons: ["trace", "shield"], description: "A request is traced through an agent and tool. Tests, traces, and monitoring support production reliability." },
+  "repo-context": { label: "Give the agent a map", caption: "Instructions, relevant code, fast feedback", color: "#c4b5fd", icons: ["folder", "code"], description: "Repository instructions, source files, and tests give a coding agent context. Checks provide feedback on its changes." },
+  "synthetic-data": { label: "A data generation pipeline", caption: "Generate, filter, train, and test", color: "#7dd3fc", icons: ["table", "model"], description: "Examples seed generated data. A quality filter precedes training, and a separate held-out set is used for testing." },
+  "meta-harness": { label: "Improve the system around AI", caption: "Change the harness. Measure the result.", color: "#c4b5fd", icons: ["workflow", "tools"], description: "A harness connects a model, tools, and memory. Evaluation informs the next change to the harness." },
+  "financial-workflows": { label: "A controlled workflow", caption: "Extract, validate, approve, and audit", color: "#fcd34d", icons: ["workflow", "shield"], description: "An AI extraction step feeds deterministic validation and human approval, with an audit record for each step." },
+  "ai-code-analysis": { label: "From generated code to review", caption: "Test the change before it ships", color: "#fcd34d", icons: ["code", "shield"], description: "A generated code change passes through tests, security scanning, and review before a merge decision." },
+  "ai-solution-designer": { label: "Your solution blueprint", caption: "Connect the problem, architecture, and pilot", color: "#6ee7b7", icons: ["workflow", "check"], description: "An AI solution design connects users, an application, a model, and data, while accounting for cost, risk, and the pilot." },
+};
 
-function Solid({ p, x, y, w, h, r = 14, rev = false }: { p: P; x: number; y: number; w: number; h: number; r?: number; rev?: boolean }) {
-  return (
-    <g filter={`url(#${p.id}-sh)`}>
-      <rect x={x} y={y} width={w} height={h} rx={r} fill={`url(#${p.id}-${rev ? "b" : "a"})`} />
-      <rect x={x + 2} y={y + 2} width={w - 4} height={Math.min(h / 2, 18)} rx={r - 2} fill={`${WHITE}0.22)`} />
-    </g>
-  );
+// Shared geometry keeps the set cohesive. Labels remain SVG text, and the
+// compact variant omits labels that would be unreadable at thumbnail size.
+function Icon({ name, x, y, scale = 1, color = "currentColor" }: { name: IconName; x: number; y: number; scale?: number; color?: string }) {
+  let shape: ReactNode;
+  switch (name) {
+    case "layers": shape = <><path d="m2 9 14-7 14 7-14 7Z" /><path d="m2 16 14 7 14-7M2 23l14 7 14-7" /></>; break;
+    case "chat": shape = <><path d="M4 3h24v19H14l-8 7v-7H4Z" /><path d="M10 10h12M10 16h8" /></>; break;
+    case "code": shape = <><path d="m9 7-7 9 7 9m14-18 7 9-7 9M19 3l-6 26" /></>; break;
+    case "table": shape = <><rect x="2" y="3" width="28" height="26" rx="3" /><path d="M2 12h28M12 12v17M2 20h28" /></>; break;
+    case "model": shape = <><rect x="7" y="7" width="18" height="18" rx="4" /><rect x="12" y="12" width="8" height="8" rx="1" /><path d="M12 2v5m8-5v5M12 25v5m8-5v5M2 12h5m-5 8h5m18-8h5m-5 8h5" /></>; break;
+    case "search": shape = <><circle cx="13" cy="13" r="10" /><path d="m21 21 9 9M8 13h10m-5-5v10" /></>; break;
+    case "document": shape = <><path d="M7 2h13l7 7v21H7ZM20 2v8h7M12 16h10m-10 6h7" /></>; break;
+    case "check": shape = <><circle cx="16" cy="16" r="13" /><path d="m9 16 5 5 10-11" /></>; break;
+    case "shield": shape = <><path d="m16 2 12 5v10c0 6-6 11-12 14C10 28 4 23 4 17V7Z" /><path d="m10 16 4 4 8-9" /></>; break;
+    case "tools": shape = <><path d="m20 3-5 5 2 7 7 2 5-5c2 8-5 13-12 10L7 31l-6-6 10-10C8 7 13 1 20 3Z" /></>; break;
+    case "browser": shape = <><rect x="1" y="3" width="30" height="26" rx="4" /><path d="M1 11h30M6 7h1m4 0h1m4 0h1M12 16l10 5-5 1-2 5Z" /></>; break;
+    case "graph": shape = <><path d="m7 7 18 3-9 15ZM7 7l9 18" /><circle cx="7" cy="7" r="4" /><circle cx="25" cy="10" r="4" /><circle cx="16" cy="25" r="4" /></>; break;
+    case "memory": shape = <><ellipse cx="16" cy="6" rx="12" ry="4" /><path d="M4 6v20c0 5 24 5 24 0V6M4 16c0 5 24 5 24 0" /></>; break;
+    case "trace": shape = <><path d="M2 4v26h28M6 21h5l4-11 6 14 5-9h4" /></>; break;
+    case "folder": shape = <><path d="M2 8V4h11l4 5h13v20H2ZM2 13h28" /></>; break;
+    case "workflow": shape = <><rect x="11" y="1" width="10" height="9" rx="2" /><rect x="1" y="22" width="10" height="9" rx="2" /><rect x="21" y="22" width="10" height="9" rx="2" /><path d="M16 10v6H6v6m10-6h10v6" /></>; break;
+  }
+  return <g transform={`translate(${x} ${y}) scale(${scale})`} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{shape}</g>;
 }
 
-function Glass({ p, x, y, w, h, r = 14 }: { p: P; x: number; y: number; w: number; h: number; r?: number }) {
-  return (
-    <g filter={`url(#${p.id}-sh)`}>
-      <rect x={x} y={y} width={w} height={h} rx={r} fill={`${WHITE}0.08)`} stroke={`${WHITE}0.2)`} />
-    </g>
-  );
+function Text({ x, y, children, size = 14, color = "#dce7ee", center = false, weight = 500 }: { x: number; y: number; children: ReactNode; size?: number; color?: string; center?: boolean; weight?: number }) {
+  return <text x={x} y={y} fontSize={size} fontWeight={weight} fill={color} textAnchor={center ? "middle" : "start"}>{children}</text>;
 }
 
-function Orb({ p, cx, cy, r, glass = false, rev = false }: { p: P; cx: number; cy: number; r: number; glass?: boolean; rev?: boolean }) {
-  return (
-    <g filter={`url(#${p.id}-sh)`}>
-      <circle cx={cx} cy={cy} r={r} fill={glass ? `${WHITE}0.1)` : `url(#${p.id}-${rev ? "b" : "a"})`} stroke={glass ? `${WHITE}0.28)` : "none"} />
-      {glass ? null : <circle cx={cx - r * 0.3} cy={cy - r * 0.35} r={r * 0.45} fill={`url(#${p.id}-o)`} />}
-    </g>
-  );
+function Panel({ x, y, w, h, color = "#334350", tint = false }: { x: number; y: number; w: number; h: number; color?: string; tint?: boolean }) {
+  return <rect x={x} y={y} width={w} height={h} rx="10" fill={tint ? color : "#141e29"} fillOpacity={tint ? 0.1 : 1} stroke={color} strokeOpacity={tint ? 0.65 : 1} />;
 }
 
-function Bar({ x, y, w, h, o = 0.35 }: { x: number; y: number; w: number; h: number; o?: number }) {
-  return <rect x={x} y={y} width={w} height={h} rx={h / 2} fill={`${WHITE}${o})`} />;
+function Node({ x, y, label, icon, color, w = 96 }: { x: number; y: number; label: string; icon: IconName; color: string; w?: number }) {
+  return <><Panel x={x} y={y} w={w} h={84} color={color} tint /><Icon name={icon} x={x + w / 2 - 14} y={y + 12} scale={0.875} color={color} /><Text x={x + w / 2} y={y + 65} center size={13}>{label}</Text></>;
 }
 
-function Ln({ x1, y1, x2, y2, o = 0.25, w = 1.5, dash }: { x1: number; y1: number; x2: number; y2: number; o?: number; w?: number; dash?: string }) {
-  return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={`${WHITE}${o})`} strokeWidth={w} strokeLinecap="round" strokeDasharray={dash} />;
+function Arrow({ d, color, id, dashed = false }: { d: string; color: string; id: string; dashed?: boolean }) {
+  return <path d={d} fill="none" stroke={color} strokeWidth="1.7" strokeDasharray={dashed ? "4 5" : undefined} strokeLinejoin="round" markerEnd={`url(#${id})`} />;
 }
 
-function Sparkle({ p, x, y, s = 14 }: { p: P; x: number; y: number; s?: number }) {
-  const d = `M${x} ${y - s} L${x + s * 0.28} ${y - s * 0.28} L${x + s} ${y} L${x + s * 0.28} ${y + s * 0.28} L${x} ${y + s} L${x - s * 0.28} ${y + s * 0.28} L${x - s} ${y} L${x - s * 0.28} ${y - s * 0.28} Z`;
-  return <path d={d} fill={p.b} opacity={0.95} />;
+function Lines({ x, y, color = "#526778", widths = [62, 48, 56] }: { x: number; y: number; color?: string; widths?: number[] }) {
+  return <>{widths.map((width, index) => <rect key={index} x={x} y={y + index * 12} width={width} height="4" rx="2" fill={color} />)}</>;
 }
 
-function Glyph({ x, y, size, children, fill = "#fff", o = 0.95 }: { x: number; y: number; size: number; children: ReactNode; fill?: string; o?: number }) {
-  return (
-    <text x={x} y={y} fontSize={size} fontWeight={700} fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fill={fill} opacity={o} textAnchor="middle">
-      {children}
-    </text>
-  );
-}
-
-function Scene({ slug, p }: { slug: string; p: P }): ReactNode {
+function Scene({ slug, color: c, arrow: a }: { slug: string; color: string; arrow: string }) {
+  const arrow = (d: string, dashed = false) => <Arrow d={d} color={c} id={a} dashed={dashed} />;
   switch (slug) {
-    case "ai-foundations": {
-      const layers = [
-        { x: 90, ys: [80, 130, 180] },
-        { x: 170, ys: [60, 105, 150, 200] },
-        { x: 250, ys: [60, 105, 150, 200] },
-        { x: 330, ys: [105, 155] },
-      ];
-      return (
-        <>
-          {layers.slice(0, -1).map((l, i) =>
-            l.ys.flatMap((y1) => layers[i + 1].ys.map((y2) => <Ln key={`${i}-${y1}-${y2}`} x1={l.x} y1={y1} x2={layers[i + 1].x} y2={y2} o={0.14} />)),
-          )}
-          {layers.map((l, i) => l.ys.map((y, j) => <Orb key={`${i}-${j}`} p={p} cx={l.x} cy={y} r={i === 3 ? 17 : 12} glass={(i + j) % 3 === 0} rev={i % 2 === 1} />))}
-        </>
-      );
-    }
+    case "ai-foundations":
+      return <>{[
+        { x: 28, y: 55, w: 344, h: 165, label: "Artificial intelligence", opacity: 0.025 },
+        { x: 56, y: 96, w: 294, h: 124, label: "Machine learning", opacity: 0.045 },
+        { x: 84, y: 137, w: 244, h: 83, label: "Deep learning", opacity: 0.065 },
+        { x: 112, y: 178, w: 194, h: 42, label: "Generative AI", opacity: 0.12 },
+      ].map((box) => <g key={box.label}><rect x={box.x} y={box.y} width={box.w} height={box.h} rx="9" fill={c} fillOpacity={box.opacity} stroke={c} strokeOpacity="0.5" /><Text x={box.x + 14} y={box.y + 26} size={14}>{box.label}</Text></g>)}</>;
     case "working-with-llms":
-      return (
-        <>
-          <Glass p={p} x={55} y={52} w={200} h={72} r={20} />
-          <Bar x={75} y={72} w={150} h={8} />
-          <Bar x={75} y={90} w={110} h={8} o={0.25} />
-          <path d="M82 124 L72 142 L104 126 Z" fill={`${WHITE}0.12)`} />
-          <Solid p={p} x={140} y={140} w={205} h={72} r={20} />
-          <Bar x={162} y={160} w={150} h={8} o={0.55} />
-          <Bar x={162} y={178} w={95} h={8} o={0.4} />
-          <path d="M320 212 L336 230 L304 214 Z" fill={p.b} opacity={0.9} />
-          <Sparkle p={p} x={318} y={62} s={18} />
-          <Sparkle p={p} x={286} y={96} s={8} />
-        </>
-      );
+      return <><Panel x={28} y={62} w={144} h={142} /><Text x={44} y={87} color={c}>Your prompt</Text>{["Task", "Context", "Format"].map((label, i) => <g key={label}><rect x="44" y={102 + i * 28} width="5" height="5" rx="1" fill={c} /><Text x={58} y={109 + i * 28} size={14}>{label}</Text></g>)}{arrow("M174 130H219")}<Panel x={228} y={62} w={144} h={142} color={c} tint /><Icon name="chat" x={244} y={78} scale={0.8} color={c} /><Text x={283} y={97} size={13}>Response</Text><Lines x={244} y={120} widths={[105, 84]} /><Icon name="check" x={244} y={161} scale={0.65} color={c} /><Text x={274} y={178} size={13}>Check & refine</Text></>;
     case "python-and-data-essentials":
-      return (
-        <>
-          <Glass p={p} x={60} y={42} w={250} h={160} r={16} />
-          <circle cx={82} cy={62} r={5} fill={p.b} />
-          <circle cx={98} cy={62} r={5} fill={`${WHITE}0.35)`} />
-          <circle cx={114} cy={62} r={5} fill={`${WHITE}0.2)`} />
-          <Ln x1={60} y1={78} x2={310} y2={78} o={0.12} />
-          <Bar x={80} y={96} w={60} h={9} o={0} />
-          <rect x={80} y={96} width={60} height={9} rx={4.5} fill={p.a} />
-          <Bar x={148} y={96} w={90} h={9} />
-          <Bar x={96} y={118} w={120} h={9} o={0.28} />
-          <rect x={96} y={140} width={70} height={9} rx={4.5} fill={p.b} />
-          <Bar x={174} y={140} w={50} h={9} />
-          <Bar x={80} y={162} w={100} h={9} o={0.28} />
-          <Solid p={p} x={236} y={132} w={118} h={92} r={16} rev />
-          {[0, 1, 2, 3].map((i) => <rect key={i} x={252 + i * 24} y={198 - (i + 1) * 14} width={14} height={(i + 1) * 14} rx={5} fill={`${WHITE}0.8)`} />)}
-        </>
-      );
-    case "machine-learning-basics": {
-      const left = [[100, 150], [118, 175], [135, 140], [150, 190], [112, 205], [165, 165], [128, 120], [92, 125]];
-      const right = [[240, 80], [262, 105], [285, 70], [300, 110], [250, 130], [320, 90], [275, 135], [225, 105]];
-      return (
-        <>
-          <Ln x1={70} y1={215} x2={340} y2={215} o={0.3} />
-          <Ln x1={70} y1={215} x2={70} y2={40} o={0.3} />
-          <Ln x1={110} y1={40} x2={300} y2={215} o={0.5} w={2} dash="6 7" />
-          {left.map(([x, y], i) => <Orb key={`l${i}`} p={p} cx={x} cy={y} r={8} />)}
-          {right.map(([x, y], i) => <Orb key={`r${i}`} p={p} cx={x} cy={y} r={8} rev />)}
-          <Sparkle p={p} x={330} y={50} s={12} />
-        </>
-      );
-    }
+      return <><Node x={24} y={86} icon="document" label="JSON data" color={c} /><Node x={152} y={86} icon="code" label="Python" color={c} /><Node x={280} y={86} icon="table" label="Analysis" color={c} />{arrow("M122 128H144")}{arrow("M250 128H272")}<Text x={200} y={205} center size={13} color="#a7bac9">Files + APIs → scripts → useful results</Text></>;
+    case "machine-learning-basics":
+      return <><Panel x={148} y={54} w={104} h={38} /><Text x={200} y={79} center>Dataset</Text>{arrow("M174 94V112H89V127")}{arrow("M226 94V112H309V127", true)}<Panel x={28} y={135} w={118} h={37} color={c} tint /><Text x={87} y={159} center>Training set</Text><Panel x={254} y={135} w={118} h={37} /><Text x={313} y={159} center>Test set</Text>{arrow("M87 174V192H166")}{arrow("M313 174V208H257", true)}<Panel x={174} y={178} w={75} h={43} color={c} tint /><Text x={211} y={204} center size={13}>Model</Text><Text x={114} y={211} size={11} color="#a7bac9">Train</Text><Text x={284} y={197} size={11} color="#a7bac9">Evaluate</Text></>;
     case "build-with-llm-apis":
-      return (
-        <>
-          <Glass p={p} x={42} y={72} w={118} h={112} r={18} />
-          <Glyph x={101} y={140} size={34} fill={p.a}>&lt;/&gt;</Glyph>
-          <Solid p={p} x={240} y={72} w={118} h={112} r={18} />
-          <Glyph x={299} y={140} size={38}>{"{ }"}</Glyph>
-          <Ln x1={172} y1={112} x2={228} y2={112} o={0.6} w={3} />
-          <path d="M228 112 l-10 -7 v14 z" fill={`${WHITE}0.6)`} transform="rotate(180 228 112)" />
-          <Ln x1={228} y1={146} x2={172} y2={146} o={0.35} w={3} dash="4 6" />
-          <path d="M172 146 l10 -7 v14 z" fill={`${WHITE}0.4)`} />
-          <rect x={172} y={192} width={56} height={22} rx={11} fill={p.b} />
-          <Glyph x={200} y={208} size={13} fill="#0b0b12">200</Glyph>
-        </>
-      );
+      return <><Node x={24} y={68} icon="code" label="Your app" color={c} /><Node x={152} y={68} icon="model" label="LLM API" color={c} /><Node x={280} y={68} icon="document" label="JSON" color={c} />{arrow("M122 110H144")}{arrow("M250 110H272")}<Panel x={110} y={177} w={180} h={39} /><Icon name="check" x={127} y={186} scale={0.65} color={c} /><Text x={158} y={202} size={13}>Validate the schema</Text>{arrow("M329 154V196H299", true)}</>;
     case "chat-with-your-documents":
-      return (
-        <>
-          <g transform="rotate(-8 130 120)"><Glass p={p} x={70} y={50} w={110} h={140} r={12} /></g>
-          <g transform="rotate(4 150 120)"><Glass p={p} x={96} y={44} w={110} h={140} r={12} /></g>
-          <Solid p={p} x={122} y={52} w={112} h={144} r={14} rev />
-          <Bar x={140} y={76} w={72} h={8} o={0.7} />
-          <Bar x={140} y={94} w={62} h={8} o={0.45} />
-          <Bar x={140} y={112} w={76} h={8} o={0.45} />
-          <Bar x={140} y={130} w={50} h={8} o={0.45} />
-          <circle cx={262} cy={118} r={38} fill={`${WHITE}0.08)`} stroke={p.a} strokeWidth={8} />
-          <line x1={290} y1={146} x2={322} y2={178} stroke={p.a} strokeWidth={11} strokeLinecap="round" />
-          <Solid p={p} x={262} y={186} w={82} h={44} r={16} />
-          <Bar x={278} y={202} w={50} h={7} o={0.6} />
-        </>
-      );
+      return <><Node x={24} y={69} icon="document" label="Sources" color={c} /><Node x={152} y={69} icon="search" label="Retrieval" color={c} /><Node x={280} y={69} icon="chat" label="Answer" color={c} />{arrow("M122 110H144")}{arrow("M250 110H272")}<Panel x={46} y={177} w={308} h={40} /><Lines x={62} y={191} widths={[154, 126]} /><Text x={248} y={202} color={c}>[1]</Text><Text x={294} y={202} color={c}>[2]</Text></>;
     case "evaluate-and-use-ai-responsibly":
-      return (
-        <>
-          <rect x={196} y={80} width={8} height={120} rx={4} fill={`${WHITE}0.4)`} />
-          <Solid p={p} x={150} y={196} w={100} h={16} r={8} />
-          <Ln x1={90} y1={88} x2={310} y2={88} o={0.7} w={6} />
-          <Orb p={p} cx={200} cy={80} r={12} />
-          <Ln x1={90} y1={88} x2={66} y2={150} o={0.4} />
-          <Ln x1={90} y1={88} x2={114} y2={150} o={0.4} />
-          <Ln x1={310} y1={88} x2={286} y2={150} o={0.4} />
-          <Ln x1={310} y1={88} x2={334} y2={150} o={0.4} />
-          <path d="M58 150 H122 Q122 184 90 186 Q58 184 58 150 Z" fill={`${WHITE}0.12)`} stroke={`${WHITE}0.3)`} />
-          <path d="M278 150 H342 Q342 184 310 186 Q278 184 278 150 Z" fill={`url(#${p.id}-a)`} />
-          <Orb p={p} cx={90} cy={140} r={9} rev glass />
-          <Sparkle p={p} x={310} y={54} s={12} />
-        </>
-      );
+      return <>{["Quality", "Privacy", "Safety"].map((label, i) => <g key={label}><Panel x={28} y={59 + i * 53} w={144} h={41} /><Icon name={i === 0 ? "trace" : "shield"} x={41} y={70 + i * 53} scale={0.6} color={c} /><Text x={72} y={85 + i * 53}>{label}</Text></g>)}{arrow("M180 81H201V133H224")}{arrow("M180 186H201V133")}{arrow("M180 133H224")}<Panel x={232} y={65} w={140} h={142} color={c} tint /><Icon name="check" x={286} y={82} color={c} /><Text x={302} y={141} center>Human review</Text><Text x={302} y={178} center size={13} color={c}>Ship / Hold</Text></>;
     case "agents-fundamentals":
-      return (
-        <>
-          <circle cx={200} cy={128} r={78} fill="none" stroke={`${WHITE}0.18)`} strokeWidth={3} strokeDasharray="8 9" />
-          <path d="M200 50 A78 78 0 0 1 278 128" fill="none" stroke={p.a} strokeWidth={5} strokeLinecap="round" />
-          <path d="M278 128 l-8 -10 h16 z" fill={p.a} transform="rotate(25 278 128)" />
-          <Orb p={p} cx={200} cy={128} r={30} />
-          <circle cx={190} cy={125} r={4} fill="#0b0b12" />
-          <circle cx={210} cy={125} r={4} fill="#0b0b12" />
-          <Solid p={p} x={182} y={32} w={36} h={36} r={10} rev />
-          <Orb p={p} cx={278} cy={128} r={15} glass />
-          <path d="M200 188 L217 218 L183 218 Z" fill={p.b} />
-          <rect x={108} y={114} width={28} height={28} rx={8} fill={`${WHITE}0.16)`} stroke={`${WHITE}0.3)`} />
-        </>
-      );
+      return <><Node x={38} y={65} icon="model" label="Model" color={c} w={120} /><Node x={242} y={65} icon="tools" label="Tool" color={c} w={120} />{arrow("M160 104H233")}<Text x={199} y={85} center size={11} color="#a7bac9">Action</Text><Panel x={151} y={178} w={98} h={38} /><Text x={200} y={203} center>Result</Text>{arrow("M302 151V197H257")}{arrow("M149 197H98V157")}<Text x={61} y={183} size={11} color="#a7bac9">Observe</Text></>;
     case "browser-automation":
-      return (
-        <>
-          <Glass p={p} x={52} y={42} w={290} h={176} r={16} />
-          <circle cx={74} cy={62} r={5} fill={p.b} />
-          <circle cx={90} cy={62} r={5} fill={`${WHITE}0.35)`} />
-          <circle cx={106} cy={62} r={5} fill={`${WHITE}0.2)`} />
-          <rect x={126} y={53} width={196} height={18} rx={9} fill={`${WHITE}0.1)`} />
-          <Ln x1={52} y1={84} x2={342} y2={84} o={0.12} />
-          <Solid p={p} x={76} y={100} w={110} h={56} r={12} rev />
-          <Bar x={204} y={106} w={100} h={9} o={0.4} />
-          <Bar x={204} y={126} w={70} h={9} o={0.25} />
-          <Glass p={p} x={76} y={168} w={110} h={34} r={10} />
-          <rect x={204} y={168} width={80} height={34} rx={17} fill={p.a} />
-          <circle cx={284} cy={172} r={20} fill="none" stroke={p.b} strokeWidth={3} opacity={0.7} />
-          <path d="M276 168 L276 214 L287 204 L295 222 L303 218 L295 200 L309 200 Z" fill="#fff" stroke="#0b0b12" strokeWidth={2} strokeLinejoin="round" />
-        </>
-      );
-    case "graphrag": {
-      const nodes = [[200, 125, 24], [110, 80, 14], [290, 78, 14], [100, 180, 12], [300, 178, 16], [200, 52, 10], [200, 205, 11], [48, 130, 9], [352, 128, 9]];
-      const edges = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [1, 5], [2, 5], [3, 7], [4, 8], [1, 7], [2, 8], [3, 6], [4, 6]];
-      return (
-        <>
-          {edges.map(([i, j]) => <Ln key={`${i}-${j}`} x1={nodes[i][0]} y1={nodes[i][1]} x2={nodes[j][0]} y2={nodes[j][1]} o={0.28} w={2} />)}
-          {nodes.map(([x, y, r], i) => <Orb key={i} p={p} cx={x} cy={y} r={r} glass={i > 4} rev={i % 2 === 0 && i > 0} />)}
-        </>
-      );
-    }
+      return <><Panel x={45} y={55} w={310} h={136} /><path d="M45 82H355" stroke="#334350" />{[61, 73, 85].map((x) => <circle key={x} cx={x} cy="69" r="2.5" fill={c} />)}<rect x="111" y="63" width="222" height="12" rx="4" fill="#233442" /><Lines x={65} y={99} widths={[118, 99, 110]} /><rect x="65" y="150" width="110" height="24" rx="5" fill={c} fillOpacity="0.12" stroke={c} /><Text x={120} y={166} center size={11} color={c}>Open result</Text><Panel x={224} y={99} w={107} h={75} /><path d="m151 160 24 12-13 3-4 13Z" fill="#e8f3f9" stroke="#101822" strokeWidth="2" /><Text x={200} y={218} center size={13}>Observe → Act → Verify</Text></>;
+    case "graphrag":
+      return <><path d="M105 88 293 88 293 182 105 182Z" fill="none" stroke="#3a4b5c" strokeWidth="1.5" /><path d="M105 88 200 135 293 182M293 88 200 135 105 182" fill="none" stroke={c} strokeWidth="2" />{[{x:105,y:88,l:"Team"},{x:293,y:88,l:"Owner"},{x:105,y:182,l:"Project"},{x:293,y:182,l:"Service"}].map((n) => <g key={n.l}><Panel x={n.x-48} y={n.y-20} w={96} h={40} color={c} tint /><Text x={n.x} y={n.y+5} center>{n.l}</Text></g>)}<circle cx="200" cy="135" r="8" fill={c} /><Text x={200} y={75} center size={10} color="#a7bac9">leads</Text><Text x={200} y={217} center size={10} color="#a7bac9">depends on</Text></>;
     case "agent-memory":
-      return (
-        <>
-          {[0, 1, 2].map((i) => (
-            <g key={i} filter={`url(#${p.id}-sh)`}>
-              <rect x={90} y={150 - i * 44} width={190} height={36} rx={18} fill={i === 2 ? `url(#${p.id}-a)` : i === 1 ? `url(#${p.id}-b)` : `${WHITE}0.1)`} stroke={`${WHITE}0.22)`} />
-              <rect x={104} y={160 - i * 44} width={80} height={8} rx={4} fill={`${WHITE}0.5)`} />
-              <circle cx={256} cy={168 - i * 44} r={6} fill={`${WHITE}0.7)`} />
-            </g>
-          ))}
-          <circle cx={316} cy={74} r={34} fill={`${WHITE}0.08)`} stroke={p.b} strokeWidth={6} />
-          <line x1={316} y1={74} x2={316} y2={54} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <line x1={316} y1={74} x2={332} y2={82} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <path d="M286 130 q30 -4 30 -30" fill="none" stroke={`${WHITE}0.35)`} strokeWidth={3} strokeDasharray="5 6" />
-          <Sparkle p={p} x={78} y={60} s={12} />
-        </>
-      );
+      return <><Panel x={65} y={58} w={270} h={56} /><Icon name="chat" x={83} y={70} scale={0.9} color={c} /><Text x={131} y={91}>Working context</Text>{arrow("M132 116V157")}{arrow("M268 163V122")}<Text x={97} y={144} center size={11} color="#a7bac9">Store</Text><Text x={309} y={144} center size={11} color="#a7bac9">Retrieve</Text><Panel x={65} y={164} w={270} h={56} color={c} tint /><Icon name="memory" x={83} y={176} scale={0.9} color={c} /><Text x={131} y={197}>Persistent memory</Text></>;
     case "production-agents":
-      return (
-        <>
-          <Glass p={p} x={52} y={44} w={296} h={172} r={16} />
-          <polyline points="76,150 118,126 160,138 204,96 248,108 290,72 324,84" fill="none" stroke={p.a} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
-          <polyline points="76,150 118,126 160,138 204,96 248,108 290,72 324,84 324,170 76,170" fill={`${WHITE}0.05)`} />
-          {[0, 1, 2, 3, 4, 5].map((i) => <rect key={i} x={80 + i * 44} y={184 - (i % 3) * 6 - 10} width={26} height={(i % 3) * 6 + 14} rx={6} fill={`${WHITE}0.25)`} />)}
-          <Orb p={p} cx={290} cy={72} r={11} rev />
-          <circle cx={78} cy={62} r={5} fill="#34d399" />
-          <circle cx={94} cy={62} r={5} fill={p.b} />
-          <circle cx={110} cy={62} r={5} fill={`${WHITE}0.3)`} />
-        </>
-      );
+      return <><Panel x={25} y={58} w={350} h={86} /><Text x={42} y={81} size={11} color="#a7bac9">RUN TRACE</Text>{["Request", "Agent", "Tool"].map((label,i) => <g key={label}><circle cx={60+i*132} cy="104" r="6" fill={c} /><Text x={60+i*132} y={128} center size={12}>{label}</Text></g>)}{arrow("M69 104H175")}{arrow("M201 104H307")}{[{l:"Trace",i:"trace"},{l:"Test",i:"check"},{l:"Monitor",i:"shield"}].map((item,i) => <g key={item.l}><Panel x={25+i*121} y={165} w={108} h={52} color={c} tint /><Icon name={item.i as IconName} x={38+i*121} y={180} scale={0.65} color={c} /><Text x={66+i*121} y={197} size={12}>{item.l}</Text></g>)}</>;
     case "repo-context":
-      return (
-        <>
-          <g filter={`url(#${p.id}-sh)`}>
-            <path d="M62 70 h54 l12 14 h72 a10 10 0 0 1 10 10 v78 a10 10 0 0 1 -10 10 h-138 a10 10 0 0 1 -10 -10 v-92 a10 10 0 0 1 10 -10 z" fill={`url(#${p.id}-a)`} />
-          </g>
-          <Glass p={p} x={218} y={52} w={122} h={152} r={14} />
-          <Glyph x={279} y={140} size={46} fill={p.b}>{"{ }"}</Glyph>
-          <Bar x={236} y={72} w={70} h={8} o={0.4} />
-          <Bar x={236} y={170} w={70} h={8} o={0.3} />
-          <Bar x={82} y={178} w={100} h={9} o={0.5} />
-          <rect x={74} y={104} width={28} height={36} rx={6} fill={`${WHITE}0.3)`} />
-          <rect x={112} y={104} width={28} height={36} rx={6} fill={`${WHITE}0.2)`} />
-          <rect x={150} y={104} width={28} height={36} rx={6} fill={`${WHITE}0.2)`} />
-          <Ln x1={190} y1={128} x2={216} y2={128} o={0.45} w={3} dash="4 5" />
-        </>
-      );
-    case "synthetic-data": {
-      const cells: ReactNode[] = [];
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 7; c++) {
-          const x = 60 + c * 42;
-          const y = 58 + r * 42;
-          const generated = c + r > 4;
-          cells.push(
-            generated ? (
-              <Solid key={`${r}-${c}`} p={p} x={x} y={y} w={30} h={30} r={8} rev={(r + c) % 2 === 0} />
-            ) : (
-              <rect key={`${r}-${c}`} x={x} y={y} width={30} height={30} rx={8} fill={`${WHITE}0.09)`} stroke={`${WHITE}0.2)`} />
-            ),
-          );
-        }
-      }
-      return (
-        <>
-          {cells}
-          <Sparkle p={p} x={334} y={44} s={14} />
-          <Sparkle p={p} x={310} y={226} s={9} />
-        </>
-      );
-    }
+      return <><Panel x={25} y={58} w={158} h={159} /><Icon name="folder" x={40} y={71} scale={0.7} color={c} /><Text x={73} y={87} size={13}>Repository</Text>{["AGENTS.md", "src/", "tests/"].map((label,i)=><g key={label}><path d={`M47 ${111+i*31}v12h10`} stroke="#526778" fill="none" /><Text x={66} y={123+i*31} size={13}>{label}</Text></g>)}{arrow("M187 114H225")}<Node x={235} y={65} icon="code" label="Coding agent" color={c} w={140} /><Text x={305} y={192} center size={13}>Run checks</Text>{arrow("M305 153V165")}{arrow("M248 189H192", true)}</>;
+    case "synthetic-data":
+      return <><Node x={24} y={58} icon="table" label="Examples" color={c} /><Node x={152} y={58} icon="model" label="Generate" color={c} /><Node x={280} y={58} icon="check" label="Filter" color={c} />{arrow("M122 99H144")}{arrow("M250 99H272")}{arrow("M329 144V170H216V179")}<Panel x={162} y={187} w={100} h={33} color={c} tint /><Text x={212} y={209} center size={12}>Train & test</Text><Text x={36} y={201} size={12}>Held-out set</Text>{arrow("M119 205H153", true)}</>;
     case "meta-harness":
-      return (
-        <>
-          <circle cx={200} cy={128} r={84} fill="none" stroke={`${WHITE}0.14)`} strokeWidth={3} />
-          <circle cx={200} cy={128} r={56} fill="none" stroke={`${WHITE}0.22)`} strokeWidth={3} />
-          <circle cx={200} cy={128} r={28} fill={`${WHITE}0.08)`} stroke={p.a} strokeWidth={5} />
-          <Orb p={p} cx={200} cy={44} r={14} />
-          <Orb p={p} cx={284} cy={128} r={11} rev />
-          <Orb p={p} cx={200} cy={184} r={11} glass />
-          <Orb p={p} cx={144} cy={128} r={9} />
-          <Orb p={p} cx={259} cy={69} r={9} glass />
-          <path d="M240 36 a96 96 0 0 1 56 40" fill="none" stroke={p.b} strokeWidth={5} strokeLinecap="round" />
-          <path d="M296 76 l-14 0 l8 -12 z" fill={p.b} transform="rotate(35 296 76)" />
-          <Orb p={p} cx={200} cy={128} r={12} rev />
-        </>
-      );
+      return <><Panel x={40} y={56} w={320} h={131} color={c} tint /><Text x={58} y={81} size={13} color={c}>Harness</Text>{[{i:"model",l:"Model"},{i:"tools",l:"Tools"},{i:"memory",l:"Memory"}].map((item,i)=><g key={item.l}><Icon name={item.i as IconName} x={78+i*105} y={101} color={c} /><Text x={94+i*105} y={160} center size={13}>{item.l}</Text></g>)}<Text x={200} y={217} center size={13}>Evaluate → Improve</Text>{arrow("M362 122H380V213H290")}{arrow("M108 213H20V122H33")}</>;
     case "financial-workflows":
-      return (
-        <>
-          {[0, 1, 2, 3].map((i) => (
-            <g key={i} filter={`url(#${p.id}-sh)`}>
-              <ellipse cx={116} cy={196 - i * 20} rx={52} ry={16} fill={`url(#${p.id}-${i % 2 ? "b" : "a"})`} />
-            </g>
-          ))}
-          <ellipse cx={116} cy={116} rx={52} ry={16} fill={`${WHITE}0.3)`} />
-          <Glyph x={116} y={122} size={20} fill="#0b0b12">$</Glyph>
-          <Glass p={p} x={196} y={52} w={150} h={156} r={16} />
-          {[0, 1, 2, 3].map((i) => <Solid key={i} p={p} x={216 + i * 30} y={178 - (i + 1) * 26} w={20} h={(i + 1) * 26} r={6} rev={i % 2 === 1} />)}
-          <Ln x1={214} y1={190} x2={330} y2={190} o={0.3} />
-          <path d="M214 120 L262 98 L292 108 L328 74" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeDasharray="1 8" opacity={0.7} />
-        </>
-      );
+      return <><Node x={24} y={61} icon="document" label="Extract" color={c} /><Node x={152} y={61} icon="shield" label="Validate" color={c} /><Node x={280} y={61} icon="check" label="Approve" color={c} />{arrow("M122 102H144")}{arrow("M250 102H272")}<Panel x={42} y={175} w={316} h={42} /><Icon name="trace" x={59} y={186} scale={0.65} color={c} /><Text x={93} y={202}>Audit trail at every step</Text>{[72,200,328].map(x=><path key={x} d={`M${x} 148V173`} stroke="#526778" strokeDasharray="3 4" />)}</>;
     case "ai-code-analysis":
-      return (
-        <>
-          <Glass p={p} x={56} y={46} w={248} h={168} r={16} />
-          <Bar x={78} y={70} w={70} h={9} o={0.4} />
-          <Bar x={78} y={90} w={130} h={9} o={0.28} />
-          <rect x={70} y={108} width={226} height={24} rx={8} fill={`${p.a}55`} stroke={p.a} />
-          <Bar x={78} y={116} w={110} h={9} o={0.8} />
-          <Bar x={78} y={144} w={150} h={9} o={0.28} />
-          <Bar x={78} y={164} w={90} h={9} o={0.28} />
-          <Bar x={78} y={184} w={120} h={9} o={0.28} />
-          <circle cx={268} cy={146} r={34} fill={`${WHITE}0.1)`} stroke={p.b} strokeWidth={7} />
-          <line x1={292} y1={170} x2={320} y2={198} stroke={p.b} strokeWidth={10} strokeLinecap="round" />
-          <path d="M338 54 l22 8 v22 q0 18 -22 28 q-22 -10 -22 -28 v-22 z" fill={`url(#${p.id}-b)`} />
-          <path d="M327 84 l8 9 l16 -18" fill="none" stroke="#fff" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" transform="translate(-1 0)" />
-        </>
-      );
+      return <><Panel x={27} y={61} w={142} h={150} /><Text x={43} y={86} color={c}>Code change</Text><rect x="39" y="102" width="118" height="22" rx="3" fill="#6ee7b7" fillOpacity="0.1" /><Text x={44} y={118} color="#6ee7b7" size={12}>+</Text><Lines x={61} y={111} widths={[78]} color="#6ee7b7" /><Lines x={43} y={138} widths={[94,72,84,60]} />{arrow("M173 133H218")}<Panel x={227} y={61} w={146} h={150} color={c} tint />{["Tests", "Security scan", "Review"].map((label,i)=><g key={label}><Icon name="check" x={242} y={81+i*40} scale={0.6} color={c} /><Text x={272} y={97+i*40} size={12}>{label}</Text></g>)}</>;
     case "ai-solution-designer":
-      return (
-        <>
-          {[0, 1, 2, 3].map((i) => <Solid key={i} p={p} x={52 + i * 62} y={176 - i * 30} w={56} h={44 + i * 30} r={12} rev={i % 2 === 1} />)}
-          <line x1={282} y1={86} x2={282} y2={34} stroke="#fff" strokeWidth={5} strokeLinecap="round" />
-          <path d="M284 36 L330 50 L284 66 Z" fill={p.b} />
-          <Sparkle p={p} x={340} y={104} s={12} />
-          <Sparkle p={p} x={60} y={70} s={9} />
-          <Glass p={p} x={52} y={44} w={96} h={70} r={12} />
-          <rect x={64} y={58} width={12} height={12} rx={3} fill={p.b} />
-          <Bar x={86} y={60} w={48} h={8} o={0.5} />
-          <rect x={64} y={82} width={12} height={12} rx={3} fill={p.b} />
-          <Bar x={86} y={84} w={36} h={8} o={0.35} />
-        </>
-      );
+      return <><Panel x={25} y={56} w={350} h={160} /><Text x={43} y={79} size={11} color="#a7bac9">SOLUTION ARCHITECTURE</Text><Panel x={43} y={96} w={74} h={42} /><Text x={80} y={122} center size={13}>Users</Text><Panel x={157} y={96} w={86} h={42} color={c} tint /><Text x={200} y={122} center size={13}>App</Text><Panel x={283} y={96} w={74} h={42} /><Text x={320} y={122} center size={13}>Model</Text>{arrow("M119 117H149")}{arrow("M245 117H275")}<Panel x={157} y={168} w={86} h={32} /><Text x={200} y={189} center size={12}>Data</Text>{arrow("M200 166V146")}<Text x={44} y={189} size={11} color={c}>Cost + risk</Text><Text x={298} y={189} size={11} color={c}>Pilot plan</Text></>;
     default:
-      return <Orb p={p} cx={200} cy={128} r={44} />;
+      return <Node x={152} y={85} icon="model" label="Explore AI" color={c} />;
   }
 }
 
-export function CourseThumb({ slug, className = "" }: { slug: string; className?: string }) {
+export function CourseThumb({ slug, className = "", variant = "diagram" }: { slug: string; className?: string; variant?: "diagram" | "thumbnail" }) {
   const uid = useId().replace(/:/g, "");
-  const [a, b] = PALETTES[slug] ?? ["#10b981", "#22d3ee"];
-  const p: P = { id: `t${uid}`, a, b };
+  const art = ARTWORK[slug] ?? ARTWORK["ai-foundations"];
+  const compact = variant === "thumbnail";
+  const arrowId = `art-${uid}-arrow`;
   return (
-    <svg
-      viewBox="0 0 400 260"
-      role="presentation"
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-      preserveAspectRatio="xMidYMid slice"
-    >
+    <svg viewBox="0 0 400 260" role={compact ? "presentation" : "img"} aria-hidden={compact ? true : undefined} aria-labelledby={compact ? undefined : `art-${uid}-title art-${uid}-desc`} focusable="false" className={className} preserveAspectRatio="xMidYMid meet" style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif", background: "#101822" }}>
+      {!compact && <><title id={`art-${uid}-title`}>{art.label}</title><desc id={`art-${uid}-desc`}>{art.description}</desc></>}
       <defs>
-        <linearGradient id={`${p.id}-bg`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#191926" />
-          <stop offset="1" stopColor="#101018" />
-        </linearGradient>
-        <radialGradient id={`${p.id}-glow`} cx="0.5" cy="0.45" r="0.6">
-          <stop offset="0" stopColor={a} stopOpacity="0.32" />
-          <stop offset="0.6" stopColor={b} stopOpacity="0.1" />
-          <stop offset="1" stopColor={b} stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id={`${p.id}-a`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={a} />
-          <stop offset="1" stopColor={b} />
-        </linearGradient>
-        <linearGradient id={`${p.id}-b`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={b} />
-          <stop offset="1" stopColor={a} />
-        </linearGradient>
-        <radialGradient id={`${p.id}-o`} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.7" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </radialGradient>
-        <filter id={`${p.id}-sh`} x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="#000" floodOpacity="0.45" />
-        </filter>
-        <pattern id={`${p.id}-grid`} width="24" height="24" patternUnits="userSpaceOnUse">
-          <path d="M24 0 H0 V24" fill="none" stroke="#fff" strokeOpacity="0.035" />
-        </pattern>
+        <pattern id={`art-${uid}-grid`} width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.65" fill="#557080" fillOpacity="0.2" /></pattern>
+        <radialGradient id={`art-${uid}-light`} cx="0.9" cy="0" r="0.9"><stop offset="0" stopColor={art.color} stopOpacity="0.09" /><stop offset="1" stopColor={art.color} stopOpacity="0" /></radialGradient>
+        <marker id={arrowId} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="m1 1 5 3-5 3" fill="none" stroke={art.color} strokeWidth="1.4" /></marker>
       </defs>
-      <rect width="400" height="260" fill={`url(#${p.id}-bg)`} />
-      <rect width="400" height="260" fill={`url(#${p.id}-grid)`} />
-      <rect width="400" height="260" fill={`url(#${p.id}-glow)`} />
-      <Scene slug={slug} p={p} />
+      <rect width="400" height="260" fill="#101822" /><rect width="400" height="260" fill={`url(#art-${uid}-grid)`} /><rect width="400" height="260" fill={`url(#art-${uid}-light)`} />
+      {compact ? <>
+        <path d="M26 130H86M278 130H374" stroke={art.color} strokeOpacity="0.45" strokeWidth="3" strokeDasharray="6 7" />
+        <rect x="88" y="48" width="200" height="164" rx="24" fill={art.color} fillOpacity="0.06" stroke={art.color} strokeWidth="2" strokeOpacity="0.5" />
+        <path d="M116 48h48" stroke={art.color} strokeWidth="5" strokeLinecap="round" />
+        <Icon name={art.icons[0]} x={140} y={80} scale={3} color={art.color} />
+        <rect x="249" y="154" width="82" height="76" rx="18" fill="#172530" stroke={art.color} strokeWidth="2" />
+        <Icon name={art.icons[1]} x={265} y={169} scale={1.5} color={art.color} />
+        <circle cx="28" cy="130" r="5" fill={art.color} /><circle cx="373" cy="130" r="5" fill={art.color} />
+      </> : <>
+        <Text x={24} y={29} size={12} color={art.color} weight={600}>{art.label}</Text>
+        <path d="M24 41H376" stroke="#293b48" />
+        <Scene slug={slug} color={art.color} arrow={arrowId} />
+        <Text x={200} y={246} size={11} color="#a7bac9" center>{art.caption}</Text>
+      </>}
     </svg>
   );
 }
