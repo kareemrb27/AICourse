@@ -47,16 +47,23 @@ body {
 
 /* Lesson prose, applied by the MDX layout */
 .prose-lesson {
-  font-size: 17px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.85;
   color: #d6d6de;
+  overflow-wrap: anywhere;
 }
 .prose-lesson > * + * {
-  margin-top: 1.25rem;
+  margin-top: 1.5rem;
+}
+.prose-lesson > p:first-child {
+  color: #e5e5ec;
 }
 .prose-lesson h2 {
-  margin-top: 3rem;
-  font-size: 28px;
+  margin-top: 3.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 25px;
+  line-height: 1.3;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--foreground);
@@ -67,9 +74,10 @@ body {
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--foreground);
+  line-height: 1.4;
 }
-.prose-lesson a {
-  color: var(--accent);
+.prose-lesson a:not(.lesson-resource) {
+  color: #6ee7b7;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -84,7 +92,15 @@ body {
   list-style: decimal;
 }
 .prose-lesson li + li {
-  margin-top: 0.4rem;
+  margin-top: 0.75rem;
+}
+.prose-lesson li::marker {
+  color: #6ee7b7;
+}
+.prose-lesson li > p + p,
+.prose-lesson li > ul,
+.prose-lesson li > ol {
+  margin-top: 0.75rem;
 }
 .prose-lesson strong {
   color: var(--foreground);
@@ -98,36 +114,78 @@ body {
   color: #6ee7b7;
 }
 .prose-lesson pre {
-  overflow-x: auto;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  max-height: 32rem;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  padding: 1.25rem;
   background: var(--surface);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.8;
+  tab-size: 4;
+  border-radius: 0 0 12px 12px;
+}
+.lesson-code {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow-wrap: normal;
+}
+.prose-lesson pre:focus-visible {
+  outline-offset: -3px;
 }
 .prose-lesson pre code {
+  font-size: inherit;
   padding: 0;
   background: none;
   color: #d6d6de;
 }
 .prose-lesson blockquote {
-  padding-left: 1rem;
+  padding: 0.5rem 0 0.5rem 1.25rem;
   border-left: 2px solid var(--accent);
-  color: var(--muted);
+  color: #b9b9c8;
+}
+.prose-lesson blockquote > * + *,
+.lesson-callout p + p {
+  margin-top: 1rem;
+}
+.prose-lesson .lesson-resource {
+  text-decoration: none;
+}
+.prose-lesson .lesson-resource + .lesson-resource {
+  margin-top: 0.75rem;
+}
+/* The shared MDX heading marks the existing self-check sections. */
+.prose-lesson h2[data-self-check] {
+  color: #6ee7b7;
+}
+.prose-lesson h2[data-self-check] + ol {
+  padding: 1.5rem 1.5rem 1.5rem 3rem;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 12px;
+  background: var(--accent-dim);
+}
+.prose-lesson h2[data-self-check] + ol > li {
+  padding-left: 0.5rem;
+}
+.prose-lesson h2[data-self-check] + ol > li + li {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .prose-lesson table {
   width: 100%;
   border-collapse: collapse;
   font-size: 15px;
+  line-height: 1.65;
 }
 .prose-lesson th,
 .prose-lesson td {
   min-width: 7.5rem;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--line);
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--line);
   text-align: left;
+  vertical-align: top;
 }
 .prose-lesson th {
   font-family: var(--font-geist-mono), monospace;
@@ -136,4 +194,14 @@ body {
   text-transform: uppercase;
   color: var(--muted);
   background: var(--surface);
+}
+.prose-lesson tbody tr:last-child td {
+  border-bottom: 0;
+}
+.prose-lesson tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+@media (min-width: 640px) {
+  .prose-lesson { font-size: 17px; }
+  .prose-lesson h2 { font-size: 28px; }
 }

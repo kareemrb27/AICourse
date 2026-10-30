@@ -1,16 +1,18 @@
 import type { MDXComponents } from "mdx/types";
 import type { ComponentPropsWithoutRef } from "react";
-import { Callout, Resource } from "@/components/lesson";
+import { Callout, CodeBlock, LessonHeading, Resource } from "@/components/lesson";
 import { Video } from "@/components/video";
 
 const components = {
   Resource,
   Callout,
   Video,
+  h2: LessonHeading,
+  pre: CodeBlock,
   // Wide tables scroll inside their own region instead of the whole page.
   table: (props: ComponentPropsWithoutRef<"table">) => (
     <div
-      className="overflow-x-auto"
+      className="lesson-table overflow-x-auto rounded-xl border border-line"
       role="region"
       aria-label="Scrollable table"
       tabIndex={0}

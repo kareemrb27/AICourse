@@ -1,4 +1,40 @@
-import type { ReactNode } from "react";
+import { isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { CopyCode } from "@/components/copy-code";
+
+export function LessonHeading({ children, ...props }: ComponentPropsWithoutRef<"h2">) {
+  return (
+    <h2 {...props} data-self-check={children === "Check yourself" || undefined}>
+      {children}
+    </h2>
+  );
+}
+
+export function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<"pre">) {
+  const code = isValidElement<{ className?: string; children?: ReactNode }>(children)
+    ? children.props : null;
+  const text = typeof code?.children === "string" ? code.children : null;
+  const language = code?.className?.match(/(?:^|\s)language-([\w-]+)/)?.[1];
+  const lines = text?.trimEnd().split("\n").length;
+
+  return (
+    <div className="lesson-code">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 border-b border-line px-4 py-1">
+        <span className="font-mono text-xs text-muted">
+          {language || "Code"}{lines ? ` · ${lines} ${lines === 1 ? "line" : "lines"}` : ""}
+        </span>
+        {text !== null ? <CopyCode text={text} /> : null}
+      </div>
+      <pre
+        {...props}
+        tabIndex={0}
+        role="region"
+        aria-label={`${language || "Code"} example, scrollable`}
+      >
+        {children}
+      </pre>
+    </div>
+  );
+}
 
 const KINDS = {
   video: "Video",
@@ -29,16 +65,15 @@ export function Resource({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="not-prose group block rounded-lg border border-line bg-surface p-4 no-underline transition-colors hover:border-accent"
-      style={{ textDecoration: "none" }}
+      className="lesson-resource group block rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent"
     >
-      <div className="label flex items-center justify-between">
-        <span className="text-accent">{KINDS[kind]}</span>
-        <span>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+        <span className="rounded border border-accent/25 bg-accent-dim px-2 py-1 font-mono text-[#6ee7b7]">{KINDS[kind]}</span>
+        <span className="text-muted">
           {source} <span aria-hidden="true">↗</span>
         </span>
       </div>
-      <div className="mt-2 text-base font-semibold text-foreground">
+      <div className="mt-3 text-base font-semibold leading-6 text-foreground group-hover:text-[#6ee7b7]">
         {title}
         <span className="sr-only"> (opens in a new tab)</span>
       </div>
@@ -57,9 +92,9 @@ export function Callout({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-accent/40 bg-accent-dim p-4">
-      <div className="label text-accent">{title}</div>
-      <div className="mt-2 text-[15px] leading-7">{children}</div>
-    </div>
+    <aside className="lesson-callout rounded-xl border border-accent/25 border-l-4 border-l-accent bg-accent-dim p-5 sm:p-6" aria-label={title}>
+      <div className="font-semibold text-[#6ee7b7]">{title}</div>
+      <div className="mt-2 text-base leading-7">{children}</div>
+    </aside>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CourseShell } from "@/components/course-shell";
+import { LessonDoneBadge, LessonFooter } from "@/components/lesson-footer";
 import { courses, formatDuration, getCourse } from "@/content/courses";
 import { lessonContent } from "@/content/lesson-content";
 import { reportIssueUrl } from "@/lib/site";
@@ -45,21 +46,31 @@ export default async function LessonPage({
 
   return (
     <CourseShell course={course} active={lesson.slug}>
-      <Link
-        href={`/courses/${course.slug}`}
-        className="label inline-flex min-h-11 items-center hover:text-foreground"
-      >
-        ← {course.title}
-      </Link>
-      <p className="label mt-8 text-accent">
-        Lesson {index + 1} of {course.lessons.length} ·{" "}
-        {formatDuration(lesson.minutes)}
-      </p>
-      <h1 className="mt-3 text-5xl font-extrabold leading-tight tracking-[-0.03em]">
-        {lesson.title}
-      </h1>
+      <header className="border-b border-line pb-8 sm:pb-10">
+        <Link
+          href={`/courses/${course.slug}`}
+          className="inline-flex min-h-11 items-center gap-2 text-sm text-muted hover:text-foreground"
+        >
+          ← {course.title}
+        </Link>
+        <div className="mt-6 flex flex-wrap items-center gap-3 text-xs sm:mt-8">
+          <span className="rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 font-mono text-[#6ee7b7]">
+            Lesson {index + 1} of {course.lessons.length}
+          </span>
+          <LessonDoneBadge course={course.slug} lesson={lesson.slug} />
+          <span className="text-muted">
+            {formatDuration(lesson.minutes)} · Estimated study time
+          </span>
+        </div>
+        <h1 className="mt-5 text-3xl font-bold leading-[1.15] tracking-[-0.035em] sm:text-4xl lg:text-5xl">
+          {lesson.title}
+        </h1>
+        <p className="mt-5 text-base leading-7 text-muted sm:text-lg sm:leading-8">
+          {lesson.summary}
+        </p>
+      </header>
 
-      <article className="prose-lesson mt-10">
+      <article className="prose-lesson mt-8 sm:mt-10">
         <Content />
       </article>
 
@@ -77,31 +88,15 @@ export default async function LessonPage({
         .
       </p>
 
-      <nav
-        aria-label="Lesson navigation"
-        className="mt-16 grid gap-4 border-t border-line pt-8 sm:grid-cols-2"
-      >
-        {prev ? (
-          <Link
-            href={`/courses/${course.slug}/${prev.slug}`}
-            className="rounded-lg border border-line p-4 hover:border-accent"
-          >
-            <span className="label">← Previous</span>
-            <span className="mt-1 block font-semibold">{prev.title}</span>
-          </Link>
-        ) : (
-          <span />
-        )}
-        {next ? (
-          <Link
-            href={`/courses/${course.slug}/${next.slug}`}
-            className="rounded-lg border border-line p-4 text-right hover:border-accent"
-          >
-            <span className="label">Next →</span>
-            <span className="mt-1 block font-semibold">{next.title}</span>
-          </Link>
-        ) : null}
-      </nav>
+      <LessonFooter
+        course={course.slug}
+        courseTitle={course.title}
+        lesson={{ slug: lesson.slug, title: lesson.title }}
+        index={index}
+        total={course.lessons.length}
+        prev={prev && { slug: prev.slug, title: prev.title }}
+        next={next && { slug: next.slug, title: next.title }}
+      />
     </CourseShell>
   );
 }

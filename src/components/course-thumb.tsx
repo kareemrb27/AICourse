@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { DiagramPreview } from "@/components/diagram-preview";
 
 type IconName = "layers" | "chat" | "code" | "table" | "model" | "search" | "document" | "check" | "shield" | "tools" | "browser" | "graph" | "memory" | "trace" | "folder" | "workflow";
 type Artwork = {
@@ -98,11 +99,11 @@ function Scene({ slug, color: c, arrow: a }: { slug: string; color: string; arro
     case "evaluate-and-use-ai-responsibly":
       return <>{["Quality", "Privacy", "Safety"].map((label, i) => <g key={label}><Panel x={28} y={59 + i * 53} w={144} h={41} /><Icon name={i === 0 ? "trace" : "shield"} x={41} y={70 + i * 53} scale={0.6} color={c} /><Text x={72} y={85 + i * 53}>{label}</Text></g>)}{arrow("M180 81H201V133H224")}{arrow("M180 186H201V133")}{arrow("M180 133H224")}<Panel x={232} y={65} w={140} h={142} color={c} tint /><Icon name="check" x={286} y={82} color={c} /><Text x={302} y={141} center>Human review</Text><Text x={302} y={178} center size={13} color={c}>Ship / Hold</Text></>;
     case "agents-fundamentals":
-      return <><Node x={38} y={65} icon="model" label="Model" color={c} w={120} /><Node x={242} y={65} icon="tools" label="Tool" color={c} w={120} />{arrow("M160 104H233")}<Text x={199} y={85} center size={11} color="#a7bac9">Action</Text><Panel x={151} y={178} w={98} h={38} /><Text x={200} y={203} center>Result</Text>{arrow("M302 151V197H257")}{arrow("M149 197H98V157")}<Text x={61} y={183} size={11} color="#a7bac9">Observe</Text></>;
+      return <><Node x={38} y={65} icon="model" label="Model" color={c} w={120} /><Node x={242} y={65} icon="tools" label="Tool" color={c} w={120} />{arrow("M160 104H233")}<Text x={199} y={85} center size={11} color="#a7bac9">Action</Text><Panel x={151} y={178} w={98} h={38} /><Text x={200} y={203} center>Result</Text>{arrow("M302 151V197H257")}{arrow("M149 197H98V157")}<Text x={35} y={183} size={11} color="#a7bac9">Observe</Text></>;
     case "browser-automation":
       return <><Panel x={45} y={55} w={310} h={136} /><path d="M45 82H355" stroke="#334350" />{[61, 73, 85].map((x) => <circle key={x} cx={x} cy="69" r="2.5" fill={c} />)}<rect x="111" y="63" width="222" height="12" rx="4" fill="#233442" /><Lines x={65} y={99} widths={[118, 99, 110]} /><rect x="65" y="150" width="110" height="24" rx="5" fill={c} fillOpacity="0.12" stroke={c} /><Text x={120} y={166} center size={11} color={c}>Open result</Text><Panel x={224} y={99} w={107} h={75} /><path d="m151 160 24 12-13 3-4 13Z" fill="#e8f3f9" stroke="#101822" strokeWidth="2" /><Text x={200} y={218} center size={13}>Observe → Act → Verify</Text></>;
     case "graphrag":
-      return <><path d="M105 88 293 88 293 182 105 182Z" fill="none" stroke="#3a4b5c" strokeWidth="1.5" /><path d="M105 88 200 135 293 182M293 88 200 135 105 182" fill="none" stroke={c} strokeWidth="2" />{[{x:105,y:88,l:"Team"},{x:293,y:88,l:"Owner"},{x:105,y:182,l:"Project"},{x:293,y:182,l:"Service"}].map((n) => <g key={n.l}><Panel x={n.x-48} y={n.y-20} w={96} h={40} color={c} tint /><Text x={n.x} y={n.y+5} center>{n.l}</Text></g>)}<circle cx="200" cy="135" r="8" fill={c} /><Text x={200} y={75} center size={10} color="#a7bac9">leads</Text><Text x={200} y={217} center size={10} color="#a7bac9">depends on</Text></>;
+      return <><path d="M153 88H245M293 108V162M245 182H153M105 162V108" fill="none" stroke="#3a4b5c" strokeWidth="1.5" /><path d="M142 107 200 135 256 163M256 107 200 135 142 163" fill="none" stroke={c} strokeWidth="2" />{[{x:105,y:88,l:"Team"},{x:293,y:88,l:"Owner"},{x:105,y:182,l:"Project"},{x:293,y:182,l:"Service"}].map((n) => <g key={n.l}><Panel x={n.x-48} y={n.y-20} w={96} h={40} color={c} tint /><Text x={n.x} y={n.y+5} center>{n.l}</Text></g>)}<circle cx="200" cy="135" r="8" fill={c} /><Text x={200} y={75} center size={10} color="#a7bac9">leads</Text><Text x={200} y={217} center size={10} color="#a7bac9">depends on</Text></>;
     case "agent-memory":
       return <><Panel x={65} y={58} w={270} h={56} /><Icon name="chat" x={83} y={70} scale={0.9} color={c} /><Text x={131} y={91}>Working context</Text>{arrow("M132 116V157")}{arrow("M268 163V122")}<Text x={97} y={144} center size={11} color="#a7bac9">Store</Text><Text x={309} y={144} center size={11} color="#a7bac9">Retrieve</Text><Panel x={65} y={164} w={270} h={56} color={c} tint /><Icon name="memory" x={83} y={176} scale={0.9} color={c} /><Text x={131} y={197}>Persistent memory</Text></>;
     case "production-agents":
@@ -110,7 +111,7 @@ function Scene({ slug, color: c, arrow: a }: { slug: string; color: string; arro
     case "repo-context":
       return <><Panel x={25} y={58} w={158} h={159} /><Icon name="folder" x={40} y={71} scale={0.7} color={c} /><Text x={73} y={87} size={13}>Repository</Text>{["AGENTS.md", "src/", "tests/"].map((label,i)=><g key={label}><path d={`M47 ${111+i*31}v12h10`} stroke="#526778" fill="none" /><Text x={66} y={123+i*31} size={13}>{label}</Text></g>)}{arrow("M187 114H225")}<Node x={235} y={65} icon="code" label="Coding agent" color={c} w={140} /><Text x={305} y={192} center size={13}>Run checks</Text>{arrow("M305 153V165")}{arrow("M248 189H192", true)}</>;
     case "synthetic-data":
-      return <><Node x={24} y={58} icon="table" label="Examples" color={c} /><Node x={152} y={58} icon="model" label="Generate" color={c} /><Node x={280} y={58} icon="check" label="Filter" color={c} />{arrow("M122 99H144")}{arrow("M250 99H272")}{arrow("M329 144V170H216V179")}<Panel x={162} y={187} w={100} h={33} color={c} tint /><Text x={212} y={209} center size={12}>Train & test</Text><Text x={36} y={201} size={12}>Held-out set</Text>{arrow("M119 205H153", true)}</>;
+      return <><Node x={24} y={54} icon="table" label="Examples" color={c} /><Node x={152} y={54} icon="model" label="Generate" color={c} /><Node x={280} y={54} icon="check" label="Filter" color={c} />{arrow("M122 95H144")}{arrow("M250 95H272")}{arrow("M329 140V158H174V174")}<Panel x={132} y={181} w={80} h={34} color={c} tint /><Text x={172} y={203} center size={12}>Train</Text><Panel x={280} y={181} w={96} h={34} color={c} tint /><Text x={328} y={203} center size={12}>Test</Text>{arrow("M214 198H272")}<Text x={245} y={186} center size={10} color="#a7bac9">Model</Text><Text x={25} y={200} size={11}>Held-out set</Text>{arrow("M91 204V226H328V217", true)}</>;
     case "meta-harness":
       return <><Panel x={40} y={56} w={320} h={131} color={c} tint /><Text x={58} y={81} size={13} color={c}>Harness</Text>{[{i:"model",l:"Model"},{i:"tools",l:"Tools"},{i:"memory",l:"Memory"}].map((item,i)=><g key={item.l}><Icon name={item.i as IconName} x={78+i*105} y={101} color={c} /><Text x={94+i*105} y={160} center size={13}>{item.l}</Text></g>)}<Text x={200} y={217} center size={13}>Evaluate → Improve</Text>{arrow("M362 122H380V213H290")}{arrow("M108 213H20V122H33")}</>;
     case "financial-workflows":
@@ -130,7 +131,7 @@ export function CourseThumb({ slug, className = "", variant = "diagram" }: { slu
   const compact = variant === "thumbnail";
   const arrowId = `art-${uid}-arrow`;
   return (
-    <svg viewBox="0 0 400 260" role={compact ? "presentation" : "img"} aria-hidden={compact ? true : undefined} aria-labelledby={compact ? undefined : `art-${uid}-title art-${uid}-desc`} focusable="false" className={className} preserveAspectRatio="xMidYMid meet" style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif", background: "#101822" }}>
+    <svg viewBox="0 0 400 260" role={compact ? "presentation" : "img"} aria-hidden={compact ? true : undefined} aria-labelledby={compact ? undefined : `art-${uid}-title`} aria-describedby={compact ? undefined : `art-${uid}-desc`} focusable="false" className={className} preserveAspectRatio="xMidYMid meet" style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif", background: "#101822" }}>
       {!compact && <><title id={`art-${uid}-title`}>{art.label}</title><desc id={`art-${uid}-desc`}>{art.description}</desc></>}
       <defs>
         <pattern id={`art-${uid}-grid`} width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.65" fill="#557080" fillOpacity="0.2" /></pattern>
@@ -153,5 +154,19 @@ export function CourseThumb({ slug, className = "", variant = "diagram" }: { slu
         <Text x={200} y={246} size={11} color="#a7bac9" center>{art.caption}</Text>
       </>}
     </svg>
+  );
+}
+
+
+export function CourseArtwork({ slug, className = "" }: { slug: string; className?: string }) {
+  const art = ARTWORK[slug] ?? ARTWORK["ai-foundations"];
+  return (
+    <DiagramPreview
+      className={className}
+      title={art.label}
+      description={art.description}
+      preview={<CourseThumb slug={slug} className="aspect-[400/260] w-full rounded-xl border border-line" />}
+      detail={<CourseThumb slug={slug} className="aspect-[400/260] w-full rounded-xl border border-line" />}
+    />
   );
 }

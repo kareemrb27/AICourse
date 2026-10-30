@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CourseCatalog } from "@/components/course-catalog";
+import { ResumeBanner } from "@/components/resume-banner";
 import { courses } from "@/content/courses";
 import { pathStages } from "@/content/path";
 
@@ -82,6 +83,14 @@ export default function Home() {
           <Link href="/about" className="inline-flex min-h-8 items-center gap-2 underline decoration-line underline-offset-4 hover:text-foreground">How we curate resources <span aria-hidden="true">→</span></Link>
         </div>
       </section>
+
+      <ResumeBanner
+        catalog={courses.map((c) => ({
+          slug: c.slug,
+          title: c.title,
+          lessons: c.lessons.map((l) => ({ slug: l.slug, title: l.title })),
+        }))}
+      />
 
       <section className="border-x border-t border-line px-6 py-12 sm:px-12">
         <div className="flex flex-wrap items-end justify-between gap-4">

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CourseThumb } from "@/components/course-thumb";
+import { CourseNextStep, CourseStart, SyllabusDone, SyllabusNumber } from "@/components/course-progress";
+import { CourseArtwork } from "@/components/course-thumb";
 import { pathStages, pathFinal } from "@/content/path";
 import {
   courses,
@@ -36,7 +37,6 @@ export default async function CoursePage({
   const course = getCourse(slug);
   if (!course) notFound();
 
-  const firstLesson = course.lessons[0];
   const project = course.lessons.find((lesson) => lesson.slug === "capstone");
   const stage = pathStages.find((item) => item.items.some((item) => item.course === course.slug));
   const isFinalCourse = pathFinal.course === course.slug;
@@ -44,7 +44,7 @@ export default async function CoursePage({
   const pathHref = stage ? `/path#stage-${stage.id}` : isFinalCourse ? "/path#final-course" : "/path#electives";
   const projectName = project?.title.replace(/^Capstone(?: project)?:?\s*/i, "");
   const projectTitle = projectName ? projectName.charAt(0).toUpperCase() + projectName.slice(1) : "Put your skills into practice";
-  const startHref = firstLesson ? `/courses/${course.slug}/${firstLesson.slug}` : undefined;
+  const lessonStops = course.lessons.map(({ slug, title, minutes }) => ({ slug, title, minutes }));
 
   return (
     <main id="main" className="mx-auto max-w-6xl px-6 pb-16">
@@ -69,11 +69,9 @@ export default async function CoursePage({
             <div><dt className="text-xs text-muted">Course access</dt><dd className="mt-1 text-sm font-semibold text-emerald-300">Free · No signup</dd></div>
           </dl>
 
-          <div className="mt-7 flex flex-col gap-3 min-[420px]:flex-row">
-            {startHref && <Link href={startHref} className="inline-flex min-h-12 items-center justify-center gap-4 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-emerald-300">Start lesson 1 <span aria-hidden="true">→</span></Link>}
+          <CourseStart course={course.slug} lessons={lessonStops}>
             <a href="#syllabus" className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg border border-line px-5 py-3 text-sm font-medium transition-colors hover:border-accent">Explore the syllabus <span aria-hidden="true">↓</span></a>
-          </div>
-          {firstLesson && <p className="mt-4 text-sm leading-6 text-muted">Begin with <span className="text-[#c1c1cf]">{firstLesson.title}</span> · {formatDuration(firstLesson.minutes)}</p>}
+          </CourseStart>
         </div>
 
         {project && (
@@ -84,7 +82,7 @@ export default async function CoursePage({
                 <span className="font-mono text-xs tracking-wide text-emerald-300 uppercase">The final project</span>
                 <span className="text-xs text-muted">Included</span>
               </div>
-              <CourseThumb slug={course.slug} className="mt-6 aspect-[400/260] w-full rounded-xl border border-line" />
+              <CourseArtwork slug={course.slug} className="mt-6" />
               <h2 id="project-title" className="mt-6 text-2xl font-semibold leading-8 tracking-tight">{projectTitle}</h2>
               <p className="mt-3 text-sm leading-6 text-[#b9b9c6]">{project.summary}</p>
               <Link href={`/courses/${course.slug}/${project.slug}`} className="mt-5 inline-flex min-h-11 items-center gap-3 text-sm font-medium text-emerald-300 hover:text-foreground">Preview the project <span aria-hidden="true">→</span></Link>
@@ -133,9 +131,9 @@ export default async function CoursePage({
               return (
                 <li key={lesson.slug}>
                   <Link href={`/courses/${course.slug}/${lesson.slug}`} aria-labelledby={`lesson-title-${lesson.slug}`} className={`group flex items-start gap-3 rounded-xl border p-4 transition-colors hover:border-accent/60 sm:gap-4 sm:p-5 ${isProject ? "border-accent/30 bg-accent/[0.05]" : "border-line bg-surface"}`}>
-                    <span aria-hidden="true" className={`flex size-8 shrink-0 items-center justify-center rounded-lg font-mono text-xs sm:size-9 ${isProject ? "bg-accent text-black" : "border border-line text-muted"}`}>{String(index + 1).padStart(2, "0")}</span>
+                    <SyllabusNumber course={course.slug} lesson={lesson.slug} number={String(index + 1).padStart(2, "0")} project={isProject} />
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted"><span>{isProject ? "Final project" : `Lesson ${index + 1}`}</span><span>{formatDuration(lesson.minutes)}</span></div>
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted"><span>{isProject ? "Final project" : `Lesson ${index + 1}`}</span><span>{formatDuration(lesson.minutes)} <SyllabusDone course={course.slug} lesson={lesson.slug} /></span></div>
                       <h3 id={`lesson-title-${lesson.slug}`} className="mt-2 font-semibold leading-6 group-hover:text-emerald-300">{lesson.title}</h3>
                       <p className="mt-1.5 text-sm leading-6 text-muted">{lesson.summary}</p>
                     </div>
@@ -167,10 +165,7 @@ export default async function CoursePage({
         </aside>
       </div>
 
-      {startHref && <section aria-labelledby="start-title" className="mt-12 flex flex-col gap-5 rounded-xl border border-accent/25 bg-accent/[0.05] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-        <div><h2 id="start-title" className="text-xl font-semibold">Your next step starts here.</h2><p className="mt-2 text-sm leading-6 text-muted">{firstLesson.title} · {formatDuration(firstLesson.minutes)} · Free to start</p></div>
-        <Link href={startHref} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-4 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-black hover:bg-emerald-300">Start lesson 1 <span aria-hidden="true">→</span></Link>
-      </section>}
+      <CourseNextStep course={course.slug} lessons={lessonStops} />
     </main>
   );
 }
