@@ -1,8 +1,11 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { CourseCatalog } from "@/components/course-catalog";
 import { ResumeBanner } from "@/components/resume-banner";
 import { courses } from "@/content/courses";
 import { pathStages } from "@/content/path";
+
+const stageColors = ["#10b981", "#38bdf8", "#a78bfa", "#fbbf24"];
 
 const steps = [
   ...pathStages.map((stage) => ({
@@ -18,7 +21,8 @@ export default function Home() {
   return (
     <main id="main" className="mx-auto max-w-6xl px-6">
       <section aria-labelledby="hero-title" className="relative overflow-hidden border-x border-line px-6 py-14 sm:px-12 sm:py-20">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 size-[520px] rounded-full bg-accent/[0.06] blur-3xl" />
+        <div aria-hidden="true" className="hero-glow pointer-events-none absolute -right-32 -top-32 size-[520px] rounded-full bg-accent/[0.12] blur-3xl" />
+        <div aria-hidden="true" className="hero-glow hero-glow-alt pointer-events-none absolute -bottom-40 left-1/4 size-[420px] rounded-full bg-violet-500/[0.10] blur-3xl" />
         <div className="relative grid items-center gap-12 lg:grid-cols-[1.25fr_1fr] lg:gap-14">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-dim px-3 py-1.5 font-mono text-xs text-emerald-300">
@@ -119,12 +123,13 @@ export default function Home() {
             <li key={step.key} className="relative px-1 text-center">
               <Link
                 href={`/path#${step.key}`}
-                className="group block rounded py-1 focus-visible:outline-2 focus-visible:outline-accent"
+                style={{ "--c": stageColors[index] } as CSSProperties}
+                className="stage-step group block rounded py-1 focus-visible:outline-2 focus-visible:outline-accent"
               >
-                <span className="relative mx-auto mb-2 flex size-9 items-center justify-center rounded-full border-2 border-accent bg-surface font-mono text-sm font-semibold text-accent transition-colors group-hover:bg-accent group-hover:text-[#04231a]">
+                <span className="stage-dot relative mx-auto mb-2 flex size-9 items-center justify-center rounded-full border-2 bg-surface font-mono text-sm font-semibold">
                   {index + 1}
                 </span>
-                <span className="block text-xs font-semibold group-hover:text-accent sm:text-[15px]">
+                <span className="block text-xs font-semibold sm:text-[15px]">
                   {step.level}
                 </span>
                 <span className="label mt-0.5 hidden !text-[11px] sm:block">

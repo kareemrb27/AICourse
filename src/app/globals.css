@@ -205,3 +205,72 @@ body {
   .prose-lesson { font-size: 17px; }
   .prose-lesson h2 { font-size: 28px; }
 }
+
+/* Cards that lift and glow in the course's own color (--c). */
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card-lift .card-art svg {
+  transition: transform 0.5s ease;
+}
+.card-lift:hover,
+.card-lift:focus-visible {
+  border-color: var(--c);
+  box-shadow: 0 20px 44px -20px color-mix(in srgb, var(--c) 60%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift:hover {
+    transform: translateY(-4px);
+  }
+  .card-lift:hover .card-art svg {
+    transform: scale(1.05);
+  }
+}
+
+/* Diagrams inside lessons: undo the prose list and paragraph rules. */
+.prose-lesson .lesson-diagram {
+  line-height: 1.5;
+  overflow-wrap: normal;
+}
+.prose-lesson .lesson-diagram ol,
+.prose-lesson .lesson-diagram ul {
+  padding-left: 0;
+  list-style: none;
+}
+.prose-lesson .lesson-diagram li + li {
+  margin-top: 0;
+}
+.prose-lesson .lesson-diagram ul li + li {
+  margin-top: 0.5rem;
+}
+.prose-lesson .lesson-diagram p {
+  margin-top: 0;
+}
+.prose-lesson .lesson-diagram p + p {
+  margin-top: 0.25rem;
+}
+
+/* Hero glow drifts slowly; stage steps take the color of their stage. */
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-30px, 24px, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-glow { animation: drift 16s ease-in-out infinite; }
+  .hero-glow-alt { animation-duration: 21s; animation-direction: reverse; }
+}
+.stage-dot {
+  border-color: var(--c);
+  color: var(--c);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 14%, transparent);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.stage-step:hover .stage-dot,
+.stage-step:focus-visible .stage-dot {
+  background: var(--c);
+  color: #0b0b12;
+}
+.stage-step:hover span:nth-child(2),
+.stage-step:focus-visible span:nth-child(2) {
+  color: var(--c);
+}

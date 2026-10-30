@@ -14,6 +14,17 @@ Every AI system you will meet, from a spam filter to a chat assistant, learns th
 4. **Evaluate**: measure how it performs on examples it has never seen.
 5. **Use it (inference)**: give it new inputs and get predictions.
 
+<Flow
+  title="The learning loop"
+  steps={[
+    { label: "Collect data" },
+    { label: "Choose a model" },
+    { label: "Train", note: "slow and expensive" },
+    { label: "Evaluate", note: "on unseen examples" },
+    { label: "Use it", note: "inference, every time" },
+  ]}
+/>
+
 Training is the slow, expensive part, done once or occasionally. Inference is what happens every time someone uses the system, and it is where most of your operational cost lives.
 
 ## The vocabulary
@@ -55,6 +66,15 @@ Nobody wrote a rule about the word "free". The model found the pattern, includin
 ## Train, validate, test
 
 Treat data like environments. You never test in the same place you build.
+
+<Flow
+  title="Three sets of data, three jobs"
+  steps={[
+    { label: "Training set", note: "the model learns from this" },
+    { label: "Validation set", note: "you tune settings against this" },
+    { label: "Test set", note: "held back until the end, for an honest score" },
+  ]}
+/>
 
 - **Training set**: the model learns from this.
 - **Validation set**: you tune settings against this.

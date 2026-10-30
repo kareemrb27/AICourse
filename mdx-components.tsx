@@ -1,12 +1,16 @@
 import type { MDXComponents } from "mdx/types";
 import type { ComponentPropsWithoutRef } from "react";
 import { Callout, CodeBlock, LessonHeading, Resource } from "@/components/lesson";
+import { Compare, Flow, Layers } from "@/components/diagrams";
 import { Video } from "@/components/video";
 
 const components = {
   Resource,
   Callout,
   Video,
+  Flow,
+  Layers,
+  Compare,
   h2: LessonHeading,
   pre: CodeBlock,
   // Wide tables scroll inside their own region instead of the whole page.

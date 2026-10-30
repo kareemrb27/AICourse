@@ -25,6 +25,24 @@ code decides the path                      the model decides the path
 
 Neither is better in general. Workflows are **predictable, cheaper, faster and easier to test**. Agents handle **open-ended problems** where you cannot know the steps in advance, at the price of more cost, more latency, more ways to fail and more risk.
 
+<Compare
+  title="Who decides the path?"
+  left={{
+    title: "Workflow",
+    subtitle: "Your code decides the path",
+    items: ["Predictable", "Cheaper and faster", "Easier to test"],
+  }}
+  right={{
+    title: "Agent",
+    subtitle: "The model decides the path",
+    items: [
+      "Handles open-ended problems",
+      "More cost and latency",
+      "More ways to fail, more risk",
+    ],
+  }}
+/>
+
 > Start with the simplest thing that could work. Many "agent" problems are solved by one well-written call with good context. Add structure only when measurements show you need it.
 
 ## Five workflow patterns

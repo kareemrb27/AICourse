@@ -24,6 +24,28 @@ RAG attacks all three. The model gets the right text at question time, is told t
 
 RAG has an **ingestion** phase you run once (and again when documents change), and a **query** phase that runs on every question:
 
+<Flow
+  title="Ingestion (offline)"
+  steps={[
+    { label: "Documents" },
+    { label: "Clean text" },
+    { label: "Split into chunks" },
+    { label: "Turn each chunk into a vector" },
+    { label: "Store" },
+  ]}
+/>
+
+<Flow
+  title="Query (every question)"
+  steps={[
+    { label: "Question" },
+    { label: "Find the most relevant chunks" },
+    { label: "Build a prompt" },
+    { label: "Model answers" },
+    { label: "Show answer and sources" },
+  ]}
+/>
+
 ```text
 INGESTION (offline)
   documents -> clean text -> split into chunks -> turn each chunk into a vector -> store

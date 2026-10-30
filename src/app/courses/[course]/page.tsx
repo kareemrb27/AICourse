@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CourseNextStep, CourseStart, SyllabusDone, SyllabusNumber } from "@/components/course-progress";
+import { CourseCover } from "@/components/course-cover";
 import { CourseArtwork } from "@/components/course-thumb";
 import { pathStages, pathFinal } from "@/content/path";
 import {
@@ -53,6 +54,14 @@ export default async function CoursePage({
         <span aria-hidden="true" className="text-line">/</span>
         <span aria-current="page">Course overview</span>
       </nav>
+
+      <div className="mb-8 lg:mb-10">
+        <CourseCover slug={course.slug} eyebrow={pathLabel}>
+          <p className="mt-2 max-w-md text-sm leading-6 text-[#b9b9c6] sm:text-base">
+            {course.lessons.length} lessons, {formatDuration(totalMinutes(course))} of guided study, free.
+          </p>
+        </CourseCover>
+      </div>
 
       <section aria-labelledby="course-title" className="grid items-start gap-8 border-b border-line pb-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:gap-12 lg:pb-12">
         <div>

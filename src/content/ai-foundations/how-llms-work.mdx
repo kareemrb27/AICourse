@@ -14,6 +14,16 @@ Large language models are the part of AI most people actually touch. This lesson
 
 An LLM does one thing: given some text, it predicts what text is likely to come next. Then it appends that and predicts again. A whole answer is produced one small piece at a time.
 
+<Flow
+  title="How an answer is produced"
+  steps={[
+    { label: "Your text", note: "the prompt so far" },
+    { label: "Predict", note: "what text is likely to come next" },
+    { label: "Append", note: "add that piece to the text" },
+  ]}
+  loop="Repeat, one small piece at a time, until the answer is complete"
+/>
+
 It sounds too simple to produce reasoning, code and essays, but predicting text well across a huge range of subjects requires picking up a great deal about how language, facts, logic and people work. That is the surprising finding of the last few years.
 
 A useful mental model: **a very capable autocomplete, trained on a large share of the written internet, then taught to be a helpful assistant.**

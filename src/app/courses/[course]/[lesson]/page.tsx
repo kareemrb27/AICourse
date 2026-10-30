@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CourseCover } from "@/components/course-cover";
 import { CourseShell } from "@/components/course-shell";
 import { LessonDoneBadge, LessonFooter } from "@/components/lesson-footer";
 import { courses, formatDuration, getCourse } from "@/content/courses";
@@ -46,7 +47,13 @@ export default async function LessonPage({
 
   return (
     <CourseShell course={course} active={lesson.slug}>
-      <header className="border-b border-line pb-8 sm:pb-10">
+      <CourseCover
+        compact
+        slug={course.slug}
+        eyebrow={`Lesson ${index + 1} of ${course.lessons.length}`}
+        title={course.title}
+      />
+      <header className="mt-6 border-b border-line pb-8 sm:pb-10">
         <Link
           href={`/courses/${course.slug}`}
           className="inline-flex min-h-11 items-center gap-2 text-sm text-muted hover:text-foreground"

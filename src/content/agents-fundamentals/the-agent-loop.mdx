@@ -20,6 +20,16 @@ An agent is a loop. The model looks at the situation, asks for a tool, your code
 5. Go back to step 1
 ```
 
+<Flow
+  title="The agent loop"
+  steps={[
+    { label: "Send", note: "the task, the tool list and the history" },
+    { label: "The model replies", note: "with text, or asks to use tools" },
+    { label: "Run the tools", note: "add the results to the history" },
+  ]}
+  loop="Go back to step 1, until the model replies without asking for a tool. Then return its answer."
+/>
+
 You saw this loop in the API course. An agent is that loop with **good tools**, **good limits** and **good records**. This lesson covers the loop and the limits, and the next lessons cover the rest.
 
 ## Build it

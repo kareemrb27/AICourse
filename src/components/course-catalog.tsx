@@ -1,7 +1,8 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { courses, formatDuration, totalMinutes } from "@/content/courses";
 import { pathStages, pathFinal, pathElectives } from "@/content/path";
-import { CourseThumb } from "@/components/course-thumb";
+import { CourseIllustration, coursePalette } from "@/components/course-illustration";
 import { CourseBrowser, type CatalogItem } from "@/components/course-browser";
 
 const topics: Record<string, string> = {
@@ -58,22 +59,28 @@ export function CourseCatalog() {
         <Link
           href={`/courses/${course.slug}`}
           aria-labelledby={`course-title-${course.slug}`}
-          className="group flex h-full flex-col rounded-xl border border-line bg-surface p-5 transition-colors hover:border-accent/60 hover:bg-[#171c23] sm:p-6"
+          style={{ "--c": coursePalette(course.slug)[0], "--c2": coursePalette(course.slug)[1] } as CSSProperties}
+          className="card-lift group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
         >
-          <div className="flex items-center justify-between gap-2">
-            <CourseThumb slug={course.slug} variant="thumbnail" className="h-16 w-24 shrink-0 rounded-lg border border-white/5 sm:h-[72px] sm:w-[112px]" />
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${course.level === "Beginner" ? "border-accent/20 bg-accent-dim text-emerald-300" : "border-line text-[#c1c1cf]"}`}>
+          <div className="card-art relative overflow-hidden">
+            <CourseIllustration slug={course.slug} className="aspect-[3/2] w-full" />
+            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 font-mono text-[11px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
+              <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--c)" }} />
+              {label}
+            </span>
+            <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-xs font-medium text-[#e5e5ec] backdrop-blur">
               {course.level}
             </span>
           </div>
-          <p className="mt-5 font-mono text-[11px] tracking-wide text-muted uppercase">{label}</p>
-          <h4 id={`course-title-${course.slug}`} className="mt-2 text-xl font-semibold leading-7 tracking-tight transition-colors group-hover:text-emerald-300">{course.title}</h4>
-          <p className="mt-3 text-sm leading-6 text-[#b9b9c6]">{outcome}</p>
-          <div className="mt-auto pt-5">
-            <p className="text-xs text-muted">{topic}</p>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-xs text-[#b9b9c6]">
-              <span>{course.lessons.length} lessons <span aria-hidden="true" className="px-1 text-muted">·</span> {formatDuration(totalMinutes(course))}</span>
-              <span className="inline-flex items-center gap-2 font-medium text-emerald-300">View course <span aria-hidden="true">→</span></span>
+          <div className="flex flex-1 flex-col p-5 sm:p-6">
+            <h4 id={`course-title-${course.slug}`} className="text-xl font-semibold leading-7 tracking-tight">{course.title}</h4>
+            <p className="mt-3 text-sm leading-6 text-[#b9b9c6]">{outcome}</p>
+            <div className="mt-auto pt-5">
+              <p className="text-xs text-muted">{topic}</p>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-xs text-[#b9b9c6]">
+                <span>{course.lessons.length} lessons <span aria-hidden="true" className="px-1 text-muted">·</span> {formatDuration(totalMinutes(course))}</span>
+                <span className="inline-flex items-center gap-2 font-medium" style={{ color: "var(--c)" }}>View course <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span></span>
+              </div>
             </div>
           </div>
         </Link>
