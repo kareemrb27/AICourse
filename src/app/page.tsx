@@ -1,11 +1,30 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { CourseCatalog } from "@/components/course-catalog";
+import { FeaturedVideos } from "@/components/featured-videos";
 import { ResumeBanner } from "@/components/resume-banner";
 import { courses } from "@/content/courses";
+import { featuredVideos } from "@/content/featured";
 import { pathStages } from "@/content/path";
 
 const stageColors = ["#10b981", "#38bdf8", "#a78bfa", "#fbbf24"];
+
+const featuredCards = featuredVideos.map((video) => {
+  const course = courses.find((item) => item.slug === video.course);
+  const lesson = course?.lessons.find((item) => item.slug === video.lesson);
+  if (!course || !lesson) throw new Error(`Featured video points at a missing lesson: ${video.course}/${video.lesson}`);
+  return {
+    href: `/courses/${course.slug}/${lesson.slug}`,
+    videoId: video.videoId,
+    videoTitle: video.videoTitle,
+    channel: video.channel,
+    minutes: video.minutes,
+    lessonTitle: lesson.title,
+    courseTitle: course.title,
+    stageName: `${pathStages[video.stage].level} · ${pathStages[video.stage].name}`,
+    color: stageColors[video.stage],
+  };
+});
 
 const steps = [
   ...pathStages.map((stage) => ({
@@ -140,6 +159,8 @@ export default function Home() {
           ))}
         </ol>
       </section>
+
+      <FeaturedVideos cards={featuredCards} />
 
       <CourseCatalog />
     </main>
