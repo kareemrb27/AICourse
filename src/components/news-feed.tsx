@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
+import { NewsArt } from "@/components/news-art";
 import { newsCategories, type NewsCategory } from "@/content/news";
 import { formatNewsDate } from "@/lib/format";
 import type { NewsEntry } from "@/lib/news";
@@ -51,8 +52,14 @@ export function NewsFeed({ items }: { items: NewsEntry[] }) {
           <li
             key={item.url + item.title}
             style={{ "--c": newsCategories[item.category].color } as CSSProperties}
-            className="rounded-xl border border-line bg-surface p-5 sm:p-6"
+            className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:p-5"
           >
+            <NewsArt
+              category={item.category}
+              seed={item.title}
+              className="aspect-[16/9] w-full shrink-0 rounded-lg border border-white/10 sm:aspect-[3/2] sm:w-56 lg:w-64"
+            />
+            <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <CategoryPill category={item.category} />
               <time dateTime={item.date} className="label">
@@ -76,6 +83,7 @@ export function NewsFeed({ items }: { items: NewsEntry[] }) {
                   Learn the idea: <span className="text-[#c1c1cf]">{item.learn.label}</span> <span aria-hidden="true">→</span>
                 </Link>
               ) : null}
+            </div>
             </div>
           </li>
         ))}
