@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CourseNextStep, CourseStart, SyllabusDone, SyllabusNumber } from "@/components/course-progress";
 import { CourseCover } from "@/components/course-cover";
+import { CoursePreview } from "@/components/course-preview";
 import { CourseArtwork } from "@/components/course-thumb";
+import { firstCourseVideo } from "@/content/course-video";
 import { pathStages, pathFinal } from "@/content/path";
 import {
   courses,
@@ -46,6 +48,7 @@ export default async function CoursePage({
   const projectName = project?.title.replace(/^Capstone(?: project)?:?\s*/i, "");
   const projectTitle = projectName ? projectName.charAt(0).toUpperCase() + projectName.slice(1) : "Put your skills into practice";
   const lessonStops = course.lessons.map(({ slug, title, minutes }) => ({ slug, title, minutes }));
+  const preview = firstCourseVideo(course);
 
   return (
     <main id="main" className="mx-auto max-w-6xl px-6 pb-16">
@@ -83,8 +86,10 @@ export default async function CoursePage({
           </CourseStart>
         </div>
 
+        <div className="space-y-6 lg:mt-1 empty:hidden">
+        {preview && <CoursePreview slug={course.slug} video={preview} />}
         {project && (
-          <aside aria-labelledby="project-title" className="relative overflow-hidden rounded-2xl border border-accent/25 bg-surface p-6 sm:p-7 lg:mt-1">
+          <aside aria-labelledby="project-title" className="relative overflow-hidden rounded-2xl border border-accent/25 bg-surface p-6 sm:p-7">
             <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 size-64 rounded-full bg-accent/[0.07] blur-3xl" />
             <div className="relative">
               <div className="flex items-center justify-between gap-4">
@@ -99,6 +104,7 @@ export default async function CoursePage({
             </div>
           </aside>
         )}
+        </div>
       </section>
 
       <div className="grid items-start gap-10 pt-10 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:gap-12 lg:pt-12">
