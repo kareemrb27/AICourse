@@ -2,6 +2,9 @@
 // A weekly job drafts new entries here for review. Keep every entry factual,
 // written in our own words, dated by when the source published, and linked to
 // the original. Prefer the lab's own page over press coverage.
+// image is the article's own preview image (the og:image its page declares),
+// shown as the thumbnail. Copy it from the page, never invent one; leave it out
+// when the page has none and the site draws an illustration instead.
 export type NewsCategory = "models" | "open" | "ideas" | "business" | "policy";
 
 export type NewsItem = {
@@ -11,6 +14,7 @@ export type NewsItem = {
   summary: string;
   source: string; // who published it, shown next to the link
   url: string;
+  image?: string;
   learn?: { course: string; lesson: string }; // the lesson that explains the idea
 };
 
@@ -44,6 +48,7 @@ export const news: NewsItem[] = [
       "Google Research says its Project Suncatcher prototype satellite sent back the first AI response from a data-center-class TPU in space, which the team calls its “Hello World” milestone. It is an early test of running AI compute off the ground.",
     source: "Google",
     url: "https://blog.google/innovation-and-ai/models-and-research/google-research/project-suncatcher-satellite-response/",
+    image: "https://i.ytimg.com/vi_webp/epqzfAi16us/maxresdefault.webp",
   },
   {
     date: "2026-10-30",
@@ -73,6 +78,7 @@ export const news: NewsItem[] = [
       "Google calls Gemini 4 Carbon its strongest model, with state-of-the-art cybersecurity and long-horizon capabilities. Long-horizon means staying on task over many steps, which is what agents depend on.",
     source: "Google",
     url: "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/",
+    image: "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini_carbon_102726_social_share.width-1300.png",
     learn: { course: "agents-fundamentals", lesson: "the-agent-loop" },
   },
   {
@@ -92,6 +98,7 @@ export const news: NewsItem[] = [
       "Anthropic filed an S-1 with the US SEC for a proposed initial public offering, planning to list on Nasdaq under the symbol ANT. The registration is not yet effective, and the number of shares and price range have not been set.",
     source: "Anthropic",
     url: "https://www.anthropic.com/news/s1-sec",
+    image: "https://www-cdn.anthropic.com/images/4zrzovbb/website/6d4a0d28992ade92d6fa63646fd9c9d318245c6c-2400x1260.jpg",
   },
   {
     date: "2026-10-17",
@@ -101,6 +108,7 @@ export const news: NewsItem[] = [
       "DeepSeek added a dated update to its open V4.1-Flash model on Hugging Face. Dated checkpoints like this are how many labs ship small improvements to open models between big releases.",
     source: "Hugging Face",
     url: "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    image: "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/deepseek-ai/DeepSeek-V4.1-Flash-1017.png",
   },
   {
     date: "2026-10-15",
@@ -110,6 +118,7 @@ export const news: NewsItem[] = [
       "Press reports say Meta released Muse Spark Open, an open-weight model of about 816 billion parameters with a 1 million token context window. It uses Meta’s own Muse Model License rather than a standard open-source one, so read the terms before building on it.",
     source: "The Batch",
     url: "https://www.deeplearning.ai/the-batch/meta-releases-wonder-opens-spark/",
+    image: "https://charonhub.deeplearning.ai/content/images/2026/10/WONDER.png",
   },
   {
     date: "2026-10-12",
@@ -119,6 +128,7 @@ export const news: NewsItem[] = [
       "Meta’s Superintelligence Lab released Muse Wonder through its API and Muse Wonder Full for Muse Code subscribers. By Meta’s own testing they roughly match the top models from OpenAI and Anthropic, though those results are not independent.",
     source: "TechCrunch",
     url: "https://techcrunch.com/2026/10/12/meta-releases-its-first-frontier-model-muse-wonder/",
+    image: "https://techcrunch.com/wp-content/uploads/2026/10/Screenshot-2026-10-12-at-1.09.43-PM.jpg?resize=1200,676",
   },
   {
     date: "2026-10-07",
@@ -128,6 +138,7 @@ export const news: NewsItem[] = [
       "Anthropic released Claude Haiku 5.5, the newest model in its small, fast Haiku line.",
     source: "Anthropic",
     url: "https://www.anthropic.com/claude-haiku-5-5",
+    image: "https://www-cdn.anthropic.com/images/4zrzovbb/website/89e9b0fbfe0181f6ca565d913686ce8e49b5e9c2-1200x630.jpg",
   },
   {
     date: "2026-10-06",
@@ -137,5 +148,6 @@ export const news: NewsItem[] = [
       "Mistral previewed Large 4, a natively multimodal mixture-of-experts model, on October 6 and promised the weights by the end of the month. Its Hugging Face page now lists them. Check the model card for the license before you use it.",
     source: "Mistral",
     url: "https://mistral.ai/news/mistral-large-4/",
+    image: "https://mistral.ai/cms-media/api/media/file/cover-mistral-sovereign%20copie.webp",
   },
 ];

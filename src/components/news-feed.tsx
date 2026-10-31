@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
-import { NewsArt } from "@/components/news-art";
+import { NewsThumb } from "@/components/news-thumb";
 import { newsCategories, type NewsCategory } from "@/content/news";
 import { formatNewsDate } from "@/lib/format";
 import type { NewsEntry } from "@/lib/news";
@@ -54,9 +54,10 @@ export function NewsFeed({ items }: { items: NewsEntry[] }) {
             style={{ "--c": newsCategories[item.category].color } as CSSProperties}
             className="flex flex-col gap-5 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:p-5"
           >
-            <NewsArt
+            <NewsThumb
               category={item.category}
               seed={item.title}
+              image={item.image}
               className="aspect-[16/9] w-full shrink-0 rounded-lg border border-white/10 sm:aspect-[3/2] sm:w-56 lg:w-64"
             />
             <div className="min-w-0 flex-1">

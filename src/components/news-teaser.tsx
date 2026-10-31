@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { NewsArt } from "@/components/news-art";
+import { NewsThumb } from "@/components/news-thumb";
 import { newsCategories } from "@/content/news";
 import { formatNewsDate } from "@/lib/format";
 import type { NewsEntry } from "@/lib/news";
@@ -33,7 +33,7 @@ export function NewsTeaser({ items }: { items: NewsEntry[] }) {
                 style={{ "--c": color } as CSSProperties}
                 className="card-lift flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface focus-visible:outline-2 focus-visible:outline-accent"
               >
-                <NewsArt category={item.category} seed={item.title} className="card-art aspect-[16/9] w-full" />
+                <NewsThumb category={item.category} seed={item.title} image={item.image} className="card-art aspect-[16/9] w-full" />
                 <div className="flex flex-1 flex-col p-5">
                 <p className="label flex items-center gap-2" style={{ color: "var(--c)" }}>
                   <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--c)" }} />
