@@ -70,6 +70,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Courses
               </Link>
               <Link
+                href="/news"
+                className="inline-flex min-h-11 items-center px-2 hover:text-foreground"
+              >
+                <span className="sm:hidden">News</span>
+                <span className="hidden sm:inline">AI news</span>
+              </Link>
+              <Link
                 href="/about"
                 className="inline-flex min-h-11 items-center px-2 hover:text-foreground"
               >

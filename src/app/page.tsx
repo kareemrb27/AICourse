@@ -2,10 +2,12 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { CourseCatalog } from "@/components/course-catalog";
 import { FeaturedVideos } from "@/components/featured-videos";
+import { NewsTeaser } from "@/components/news-teaser";
 import { ResumeBanner } from "@/components/resume-banner";
 import { courses } from "@/content/courses";
 import { featuredVideos } from "@/content/featured";
 import { pathStages } from "@/content/path";
+import { getNews, getNewsTeaser } from "@/lib/news";
 
 const stageColors = ["#10b981", "#38bdf8", "#a78bfa", "#fbbf24"];
 
@@ -163,6 +165,8 @@ export default function Home() {
       <FeaturedVideos cards={featuredCards} />
 
       <CourseCatalog />
+
+      <NewsTeaser items={getNewsTeaser(getNews())} />
     </main>
   );
 }
