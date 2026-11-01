@@ -314,3 +314,42 @@ body {
   color: #047857;
 }
 
+/* Lesson text on the pale band. */
+.light-page .prose-lesson {
+  color: #2a2f3a;
+}
+.light-page .prose-lesson > p:first-child {
+  color: #14141b;
+}
+.light-page .prose-lesson a:not(.lesson-resource),
+.light-page .prose-lesson li::marker,
+.light-page .prose-lesson h2[data-self-check],
+.light-page .text-\[\#6ee7b7\],
+.light-page .group:hover .group-hover\:text-\[\#6ee7b7\] {
+  color: #047857;
+}
+.light-page .prose-lesson code {
+  color: #065f46;
+}
+.light-page .prose-lesson pre code {
+  color: #1f2430;
+}
+.light-page .prose-lesson blockquote {
+  color: #444a58;
+}
+.light-page .prose-lesson tbody tr:nth-child(even) {
+  background: rgba(20, 20, 27, 0.03);
+}
+/* Tailwind's "!" utilities live in a layer, and for important rules an earlier
+   layer wins, so this one sits in base. */
+@layer base {
+  .light-page .\!text-accent {
+    color: #047857 !important;
+  }
+}
+/* Labels tinted with a course color (--c) need a darker shade on the pale band. */
+.light-page [style*="color:var(--c)"],
+.light-page [style*="color: var(--c)"] {
+  color: color-mix(in srgb, var(--c) 62%, #000) !important;
+}
+

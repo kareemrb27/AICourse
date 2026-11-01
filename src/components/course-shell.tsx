@@ -14,6 +14,7 @@ export function CourseShell({
   children: ReactNode;
 }) {
   return (
+    <div className="light-band light-page">
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-14 lg:py-12">
       <CourseNav
         slug={course.slug}
@@ -24,6 +25,7 @@ export function CourseShell({
       <main id="main" className="mx-auto mt-8 w-full min-w-0 max-w-[46rem] lg:mt-0">
         {children}
       </main>
+    </div>
     </div>
   );
 }
