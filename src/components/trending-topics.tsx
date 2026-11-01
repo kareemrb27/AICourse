@@ -1,57 +1,61 @@
 import Link from "next/link";
-import { Video } from "@/components/video";
+import type { CSSProperties } from "react";
+import { TrendingPlayer } from "@/components/trending-player";
+import { formatNewsDate } from "@/lib/format";
 import type { TrendingEntry } from "@/lib/trending";
 
-// "Trending to learn": a topic, a video worth watching, and the lessons here
-// that teach the idea. The video is the same click-to-play embed the lessons
-// use, so nothing from YouTube loads until someone presses play.
+const colors = ["#10b981", "#38bdf8", "#a78bfa", "#fbbf24"];
+
+// "Trending to learn": four topics in the same card format as the course
+// library, each with a video that plays in the card and the lessons that teach
+// the idea behind it.
 export function TrendingTopics({ topics }: { topics: TrendingEntry[] }) {
   if (!topics.length) return null;
   return (
-    <section aria-labelledby="trending-title" className="border-x border-t border-line px-6 py-12 sm:px-12">
+    <section aria-labelledby="trending-title" className="border-x border-t border-line px-6 py-14 sm:px-12 sm:py-16">
       <p className="label">Trending to learn</p>
-      <h2 id="trending-title" className="mt-2 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
+      <h2 id="trending-title" className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
         What people are talking about. <span className="text-accent">Learn the idea.</span>
       </h2>
-      <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-        Hand-picked talks on topics moving fast, each paired with the lessons that explain the concepts behind it.
+      <p className="mt-3 max-w-xl text-base leading-7 text-muted">
+        Hand-picked talks on topics moving fast. Press play in the card, then follow the lessons that explain the concepts behind it.
       </p>
 
-      <ul className={`mt-8 grid gap-4 ${topics.length > 1 ? "lg:grid-cols-2" : ""}`}>
-        {topics.map((item) => (
-          <li key={item.video.id} className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface sm:flex-row">
-            <div className="shrink-0 p-4 sm:w-80 sm:p-5 lg:w-[27rem] [&>figure]:border-0 [&>figure]:bg-transparent [&>figure]:p-0">
-              <Video id={item.video.id} title={item.video.title} channel={item.video.channel} minutes={item.video.minutes} />
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col p-4 pt-1 sm:p-6">
-              <ul aria-label="Topics" className="flex flex-wrap gap-2">
-                {item.tags.map((tag) => (
-                  <li key={tag} className="rounded-full border border-line px-2.5 py-0.5 font-mono text-[11px] tracking-wide text-[#c1c1cf] uppercase">
-                    {tag}
-                  </li>
-                ))}
-              </ul>
-              <h3 className="mt-3 text-xl font-semibold leading-snug tracking-tight">{item.topic}</h3>
-              <p className="mt-2 text-[15px] leading-7 text-[#c1c1cf]">{item.summary}</p>
-              {item.note ? <p className="mt-2 text-xs leading-5 text-muted">{item.note}</p> : null}
-              <p className="mt-3 text-xs leading-5 text-muted">
-                {item.video.channel} · {item.video.minutes} min
-              </p>
-
-              <div className="mt-auto pt-5">
-                <p className="label">Learn the ideas</p>
-                <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-                  {item.learn.map((lesson) => (
-                    <li key={lesson.href}>
-                      <Link href={lesson.href} className="inline-flex min-h-11 items-center gap-2 text-emerald-300 underline underline-offset-4 hover:text-foreground">
-                        {lesson.label} <span aria-hidden="true">→</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+      <ul className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {topics.map((item, index) => (
+          <li key={item.video.id} className="min-w-0">
+            <article
+              style={{ "--c": colors[index % colors.length] } as CSSProperties}
+              className="card-lift flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface text-foreground"
+            >
+              <TrendingPlayer id={item.video.id} title={item.video.title} minutes={item.video.minutes} tag={item.tag} />
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <h3 className="text-lg font-semibold leading-6 tracking-tight">{item.topic}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#b9b9c6]">{item.summary}</p>
+                {item.note ? <p className="mt-2 text-xs leading-5 text-muted">{item.note}</p> : null}
+                <div className="mt-auto pt-4">
+                  <p className="text-xs text-muted">
+                    {item.video.channel} · {formatNewsDate(item.video.published)}
+                  </p>
+                  <div className="mt-3 border-t border-line pt-3">
+                    <p className="label">Learn the ideas</p>
+                    <ul className="mt-1.5 space-y-0.5 text-xs">
+                      {item.learn.map((lesson) => (
+                        <li key={lesson.href}>
+                          <Link
+                            href={lesson.href}
+                            className="block py-1.5 font-medium hover:underline"
+                            style={{ color: "var(--c)" }}
+                          >
+                            {lesson.label}{" "}<span aria-hidden="true">→</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
-            </div>
+            </article>
           </li>
         ))}
       </ul>

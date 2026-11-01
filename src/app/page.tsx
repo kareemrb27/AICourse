@@ -192,8 +192,9 @@ export default function Home() {
 
       <CourseCatalog />
 
-      <NewsTeaser items={getNewsTeaser(getNews())} />
       <TrendingTopics topics={getTrending()} />
+
+      <NewsTeaser items={getNewsTeaser(getNews())} />
     </main>
   );
 }
