@@ -63,7 +63,7 @@ export function CourseCatalog() {
           className="card-lift group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
         >
           <div className="card-art relative overflow-hidden">
-            <CourseIllustration slug={course.slug} className="aspect-[3/2] w-full" />
+            <CourseIllustration slug={course.slug} className="aspect-[16/9] w-full" />
             <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#14141b]/85 px-2.5 py-1 font-mono text-[11px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
               <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--c)" }} />
               {label}
