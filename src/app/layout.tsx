@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { REPO_URL, SITE_NAME, SITE_URL } from "@/lib/site";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -110,9 +111,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Source on GitHub
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
+              <Link
+                href="/privacy"
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground"
+              >
+                Privacy
+              </Link>
             </div>
           </div>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

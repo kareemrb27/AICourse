@@ -4,7 +4,7 @@ import { courses } from "@/content/courses";
 import { SITE_URL } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const paths = ["/", "/path", "/library", ...catalogGroups.map((g) => `/library/${g.id}`), "/news", "/about"];
+  const paths = ["/", "/path", "/library", ...catalogGroups.map((g) => `/library/${g.id}`), "/news", "/about", "/privacy"];
   for (const course of courses) {
     paths.push(`/courses/${course.slug}`);
     for (const lesson of course.lessons) {
