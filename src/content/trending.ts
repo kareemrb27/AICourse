@@ -72,20 +72,21 @@ export const trendingTopics: TrendingTopic[] = [
     ],
   },
   {
-    topic: "Hidden prompt injection in agents",
-    tag: "Security",
+    topic: "Loops: agents that keep working",
+    tag: "Loops",
     summary:
-      "IBM’s Jeff Crume and Martin Keen use an agent that bought the wrong book to show how prompt injection can mislead a browser agent, then cover practical ways to secure agents.",
+      "Dan Vega explains the Ralph loop: a simple script that reruns a coding agent with fresh context each round, keeping its state in files like a task list and a progress log. He builds a small Java app with it.",
+    note: "The demo is in Java; the pattern works in any language.",
     video: {
-      id: "5ZA1lTxTH3c",
-      title: "Securing AI Agents: How to Prevent Hidden Prompt Injection Attacks",
-      channel: "IBM Technology",
-      minutes: 10,
-      published: "2026-01-10",
+      id: "CV97l0GkPHo",
+      title: "The Ralph Loop Explained: Automate AI Coding Tasks in Java",
+      channel: "Dan Vega",
+      minutes: 18,
+      published: "2026-02-05",
     },
     learn: [
-      { course: "production-agents", lesson: "security" },
-      { course: "build-with-llm-apis", lesson: "testing-and-safety" },
+      { course: "agents-fundamentals", lesson: "the-agent-loop" },
+      { course: "meta-harness", lesson: "long-running-harnesses" },
     ],
   },
 ];
