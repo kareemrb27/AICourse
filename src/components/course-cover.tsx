@@ -25,7 +25,7 @@ export function CourseCover({
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-10"
-        style={{ background: "color-mix(in srgb, var(--c) 14%, #14141b)" }}
+        style={{ background: "color-mix(in srgb, var(--c) var(--cover-mix, 14%), var(--cover-base, #14141b))" }}
       />
       <div
         className={`flex items-center justify-between gap-5 ${

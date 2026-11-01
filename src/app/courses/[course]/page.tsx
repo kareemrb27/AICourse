@@ -51,7 +51,8 @@ export default async function CoursePage({
   const preview = firstCourseVideo(course);
 
   return (
-    <main id="main" className="mx-auto max-w-6xl px-6 pb-16">
+    <main id="main" className="light-band light-page pb-16">
+      <div className="mx-auto max-w-6xl px-6">
       <nav aria-label="Breadcrumb" className="flex min-h-20 flex-wrap items-center gap-3 text-sm text-muted sm:min-h-24">
         <Link href="/#courses" className="inline-flex min-h-11 items-center gap-2 hover:text-foreground"><span aria-hidden="true">←</span> Course library</Link>
         <span aria-hidden="true" className="text-line">/</span>
@@ -181,6 +182,7 @@ export default async function CoursePage({
       </div>
 
       <CourseNextStep course={course.slug} lessons={lessonStops} />
+      </div>
     </main>
   );
 }

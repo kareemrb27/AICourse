@@ -286,3 +286,31 @@ body {
 .light-band :focus-visible {
   outline-color: #047857;
 }
+
+/* Pages that sit on the pale band: swap the theme variables, plus the few
+   dark-theme text colors that components hard-code. Lesson pages do not use
+   this, so they stay dark. */
+.light-page {
+  --background: #eceee8;
+  --surface: #ffffff;
+  --foreground: #14141b;
+  --muted: #565c6a;
+  --line: #cbd0c4;
+  --accent-dim: rgba(4, 120, 87, 0.1);
+  --cover-base: #ffffff;
+  --cover-mix: 24%;
+}
+.light-page .text-emerald-300,
+.light-page .text-accent,
+.light-page .hover\:text-emerald-300:hover {
+  color: #047857;
+}
+.light-page .text-\[\#b9b9c6\],
+.light-page .text-\[\#c1c1cf\],
+.light-page .text-\[\#d6d6de\] {
+  color: #444a58;
+}
+.light-page .group:hover .group-hover\:text-emerald-300 {
+  color: #047857;
+}
+
