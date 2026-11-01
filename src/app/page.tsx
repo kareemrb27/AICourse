@@ -49,6 +49,14 @@ export default function Home() {
   return (
     <main id="main" className="mx-auto max-w-6xl px-6">
       <section aria-labelledby="hero-title" className="relative overflow-hidden border-x border-line px-6 py-14 sm:px-12 sm:py-20">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/hero-terrain.svg"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-80 [mask-image:linear-gradient(to_right,transparent_5%,black_55%)] max-lg:opacity-40 max-lg:[mask-image:linear-gradient(to_bottom,transparent_30%,black_90%)]"
+        />
         <div aria-hidden="true" className="hero-glow pointer-events-none absolute -right-32 -top-32 size-[520px] rounded-full bg-accent/[0.12] blur-3xl" />
         <div aria-hidden="true" className="hero-glow hero-glow-alt pointer-events-none absolute -bottom-40 left-1/4 size-[420px] rounded-full bg-violet-500/[0.10] blur-3xl" />
         <div className="relative grid items-center gap-12 lg:grid-cols-[1.25fr_1fr] lg:gap-14">
