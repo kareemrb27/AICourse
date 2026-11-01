@@ -47,7 +47,7 @@ export function CourseCover({
         <CourseIllustration
           slug={slug}
           className={`shrink-0 rounded-xl border border-white/10 ${
-            compact ? "hidden aspect-[3/2] w-28 sm:block" : "aspect-[3/2] w-32 sm:w-72"
+            compact ? "hidden aspect-[16/9] w-28 sm:block" : "aspect-[16/9] w-32 sm:w-72"
           }`}
         />
       </div>
