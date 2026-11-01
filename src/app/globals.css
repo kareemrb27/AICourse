@@ -273,3 +273,16 @@ body {
 .stage-step:focus-visible span:nth-child(2) {
   color: var(--c);
 }
+
+/* A pale full-width band to break up the dark page. Text inside defaults to
+   dark; the cards in it keep their own dark surface. */
+.light-band {
+  position: relative;
+  background: #eceee8;
+  color: #14141b;
+  box-shadow: 0 0 0 100vmax #eceee8;
+  clip-path: inset(0 -100vmax);
+}
+.light-band :focus-visible {
+  outline-color: #047857;
+}

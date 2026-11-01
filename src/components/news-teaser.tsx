@@ -12,7 +12,7 @@ export function NewsTeaser({ items }: { items: NewsEntry[] }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label">What’s new in AI</p>
-          <h2 id="news-title" className="mt-2 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
+          <h2 id="news-title" className="mt-2 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
             The field moves weekly. <span className="text-accent">Stay current.</span>
           </h2>
         </div>

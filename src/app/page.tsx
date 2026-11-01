@@ -4,7 +4,7 @@ import { CourseCatalog } from "@/components/course-catalog";
 import { FeaturedVideos } from "@/components/featured-videos";
 import { NewsTeaser } from "@/components/news-teaser";
 import { ResumeBanner } from "@/components/resume-banner";
-import { courses } from "@/content/courses";
+import { courses, totalMinutes } from "@/content/courses";
 import { featuredVideos } from "@/content/featured";
 import { pathStages } from "@/content/path";
 import { getNews, getNewsTeaser } from "@/lib/news";
@@ -38,6 +38,13 @@ const steps = [
   { key: "final-course", level: "Solution designer", name: "Final course", count: 1 },
 ];
 
+const stats = [
+  { value: String(courses.length), label: "Courses, start to capstone" },
+  { value: String(courses.reduce((n, c) => n + c.lessons.length, 0)), label: "Guided lessons" },
+  { value: String(Math.round(courses.reduce((n, c) => n + totalMinutes(c), 0) / 60)), label: "Hours of guided study" },
+  { value: "Free", label: "No signup, no cost" },
+];
+
 export default function Home() {
   return (
     <main id="main" className="mx-auto max-w-6xl px-6">
@@ -50,7 +57,7 @@ export default function Home() {
               <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
               Free. Open. No signup.
             </p>
-            <h1 id="hero-title" className="mt-7 text-[clamp(2.75rem,5.5vw,4.5rem)] font-extrabold leading-[1.06] tracking-[-0.045em]">
+            <h1 id="hero-title" className="mt-7 text-[clamp(2.75rem,5.5vw,4.5rem)] font-semibold leading-[1.06] tracking-[-0.04em]">
               Learn to build<br />AI systems.<br />
               <span className="text-accent">Start free.</span>
             </h1>
@@ -103,10 +110,19 @@ export default function Home() {
           </div>
         </div>
         <div className="relative mt-12 flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-line pt-6 text-sm text-muted">
-          <span><strong className="font-semibold text-foreground">{courses.length} courses</strong> to explore</span>
-          <span><strong className="font-semibold text-foreground">Hands-on</strong> capstone projects</span>
           <Link href="/about" className="inline-flex min-h-8 items-center gap-2 underline decoration-line underline-offset-4 hover:text-foreground">How we curate resources <span aria-hidden="true">→</span></Link>
         </div>
+      </section>
+
+      <section aria-label="The library in numbers" className="border-x border-t border-line px-6 py-10 sm:px-12 sm:py-12">
+        <ul className="grid grid-cols-2 gap-x-6 gap-y-9 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <li key={stat.label}>
+              <p className="text-5xl font-light leading-none tracking-[-0.03em] tabular-nums sm:text-6xl">{stat.value}</p>
+              <p className="label mt-3">{stat.label}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <ResumeBanner
@@ -121,7 +137,7 @@ export default function Home() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="label">Learning path</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
               From curious to <span className="text-accent">AI solution designer</span>
             </h2>
           </div>

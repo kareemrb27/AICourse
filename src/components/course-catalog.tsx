@@ -61,7 +61,7 @@ export function getCatalogItems(): CatalogItem[] {
           href={`/courses/${course.slug}`}
           aria-labelledby={`course-title-${course.slug}`}
           style={{ "--c": coursePalette(course.slug)[0], "--c2": coursePalette(course.slug)[1] } as CSSProperties}
-          className="card-lift group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
+          className="card-lift group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface text-foreground"
         >
           <div className="card-art relative overflow-hidden">
             <CourseIllustration slug={course.slug} className="aspect-[16/9] w-full" />
@@ -105,27 +105,27 @@ const HOME_PER_GROUP = 4;
 export function CourseCatalog() {
   const items = getCatalogItems();
   return (
-    <section id="courses" aria-labelledby="catalog-title" className="scroll-mt-6 border-x border-t border-line px-6 py-14 sm:px-12 sm:py-16">
+    <section id="courses" aria-labelledby="catalog-title" className="light-band scroll-mt-6 px-6 py-14 sm:px-12 sm:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label">The course library</p>
-          <h2 id="catalog-title" className="mt-3 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">Find your next step.</h2>
-          <p className="mt-3 max-w-xl text-base leading-7 text-muted">Follow the path from the beginning, or choose the skill you need next. Every course is free and self-paced.</p>
+          <p className="label !text-[#4a5060]">The course library</p>
+          <h2 id="catalog-title" className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Find your next step.</h2>
+          <p className="mt-3 max-w-xl text-base leading-7 text-[#4a5060]">Follow the path from the beginning, or choose the skill you need next. Every course is free and self-paced.</p>
         </div>
         <Link
           href="/library"
-          className="label inline-flex min-h-11 items-center rounded border border-line px-3 text-foreground hover:border-accent"
+          className="label inline-flex min-h-11 items-center rounded border border-[#b9bfb2] px-3 !text-[#14141b] hover:border-accent hover:bg-white"
         >
           Search all {items.length} courses →
         </Link>
       </div>
 
-      <Link href="/courses/ai-foundations" className="mt-8 flex flex-col gap-4 rounded-xl border border-accent/25 bg-accent/[0.05] p-5 transition-colors hover:border-accent sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <Link href="/courses/ai-foundations" className="mt-8 flex flex-col gap-4 rounded-xl border border-emerald-700/25 bg-emerald-700/[0.06] p-5 transition-colors hover:border-emerald-700 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
-          <p className="text-sm font-semibold text-emerald-300">New to AI? Begin here.</p>
-          <p className="mt-1 text-sm leading-6 text-[#b9b9c6]">AI Foundations for IT Professionals. No coding required.</p>
+          <p className="text-sm font-semibold text-emerald-800">New to AI? Begin here.</p>
+          <p className="mt-1 text-sm leading-6 text-[#4a5060]">AI Foundations for IT Professionals. No coding required.</p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-3 text-sm font-semibold">Explore the first course <span aria-hidden="true" className="text-accent">→</span></span>
+        <span className="inline-flex shrink-0 items-center gap-3 text-sm font-semibold">Explore the first course <span aria-hidden="true" className="text-emerald-700">→</span></span>
       </Link>
 
       {catalogGroups.map((group) => {
@@ -134,16 +134,16 @@ export function CourseCatalog() {
         return (
           <section key={group.id} aria-labelledby={`catalog-${group.id}`} className="mt-12">
             <div className="mb-5">
-              <h3 id={`catalog-${group.id}`} className="text-xl font-semibold tracking-tight">{group.title}<span aria-hidden="true" className="ml-3 align-middle font-mono text-xs font-normal text-muted">{String(all.length).padStart(2, "0")}</span></h3>
-              <p className="mt-1.5 text-sm leading-6 text-muted">{group.description}</p>
+              <h3 id={`catalog-${group.id}`} className="text-xl font-semibold tracking-tight">{group.title}<span aria-hidden="true" className="ml-3 align-middle font-mono text-xs font-normal text-[#6a6f7c]">{String(all.length).padStart(2, "0")}</span></h3>
+              <p className="mt-1.5 text-sm leading-6 text-[#4a5060]">{group.description}</p>
             </div>
             <CourseList items={all.slice(0, HOME_PER_GROUP)} />
             {more > 0 && (
               <Link
                 href={`/library/${group.id}`}
-                className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:border-accent hover:bg-accent-dim"
+                className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#b9bfb2] bg-white px-4 text-sm font-medium text-[#14141b] transition-colors hover:border-emerald-700"
               >
-                More courses <span className="text-muted">· {more} more in {group.title}</span> <span aria-hidden="true" className="text-accent">→</span>
+                More courses <span className="text-[#6a6f7c]">· {more} more in {group.title}</span> <span aria-hidden="true" className="text-emerald-700">→</span>
               </Link>
             )}
           </section>

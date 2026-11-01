@@ -51,7 +51,7 @@ export function FeaturedVideos({ cards }: { cards: FeaturedCard[] }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label">Watch and start</p>
-          <h2 id="watch-title" className="mt-2 text-2xl font-bold tracking-[-0.02em] sm:text-3xl">
+          <h2 id="watch-title" className="mt-2 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">
             Not sure where to begin? <span className="text-accent">Press play.</span>
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
