@@ -3,7 +3,8 @@ import type { CSSProperties } from "react";
 import { courses, formatDuration, totalMinutes } from "@/content/courses";
 import { pathStages, pathFinal, pathElectives } from "@/content/path";
 import { CourseIllustration, coursePalette } from "@/components/course-illustration";
-import { CourseBrowser, type CatalogItem } from "@/components/course-browser";
+import type { CatalogItem } from "@/components/course-browser";
+import { catalogGroups } from "@/content/catalog-groups";
 
 const topics: Record<string, string> = {
   "ai-foundations": "AI foundations",
@@ -32,9 +33,9 @@ const pathItems = [
   ...pathElectives.map((item) => ({ ...item, stage: 5 })),
 ];
 
-export function CourseCatalog() {
-  // Keep illustrations and the full curriculum on the server; send the browser
-  // only the rendered cards and the small set of fields needed for filtering.
+// Keep illustrations and the full curriculum on the server; send the browser
+// only the rendered cards and the small set of fields needed for filtering.
+export function getCatalogItems(): CatalogItem[] {
   const orderedCourses = [...courses].sort((a, b) => {
     const rank = (slug: string) => {
       const index = pathItems.findIndex((item) => item.course === slug);
@@ -42,7 +43,7 @@ export function CourseCatalog() {
     };
     return rank(a.slug) - rank(b.slug);
   });
-  const items: CatalogItem[] = orderedCourses.map((course) => {
+  return orderedCourses.map((course) => {
     const pathItem = pathItems.find((item) => item.course === course.slug);
     const stage = pathItem?.stage ?? 5;
     const topic = topics[course.slug] ?? course.track;
@@ -88,6 +89,21 @@ export function CourseCatalog() {
     };
   });
 
+}
+
+export function CourseList({ items }: { items: CatalogItem[] }) {
+  return (
+    <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {items.map((item) => <li key={item.slug} className="min-w-0">{item.card}</li>)}
+    </ul>
+  );
+}
+
+// How many courses each group shows on the home page; the rest live on its own page.
+const HOME_PER_GROUP = 4;
+
+export function CourseCatalog() {
+  const items = getCatalogItems();
   return (
     <section id="courses" aria-labelledby="catalog-title" className="scroll-mt-6 border-x border-t border-line px-6 py-14 sm:px-12 sm:py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -96,6 +112,12 @@ export function CourseCatalog() {
           <h2 id="catalog-title" className="mt-3 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">Find your next step.</h2>
           <p className="mt-3 max-w-xl text-base leading-7 text-muted">Follow the path from the beginning, or choose the skill you need next. Every course is free and self-paced.</p>
         </div>
+        <Link
+          href="/library"
+          className="label inline-flex min-h-11 items-center rounded border border-line px-3 text-foreground hover:border-accent"
+        >
+          Search all {items.length} courses →
+        </Link>
       </div>
 
       <Link href="/courses/ai-foundations" className="mt-8 flex flex-col gap-4 rounded-xl border border-accent/25 bg-accent/[0.05] p-5 transition-colors hover:border-accent sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -106,7 +128,27 @@ export function CourseCatalog() {
         <span className="inline-flex shrink-0 items-center gap-3 text-sm font-semibold">Explore the first course <span aria-hidden="true" className="text-accent">→</span></span>
       </Link>
 
-      <CourseBrowser items={items} />
+      {catalogGroups.map((group) => {
+        const all = items.filter((item) => item.group === group.id);
+        const more = all.length - HOME_PER_GROUP;
+        return (
+          <section key={group.id} aria-labelledby={`catalog-${group.id}`} className="mt-12">
+            <div className="mb-5">
+              <h3 id={`catalog-${group.id}`} className="text-xl font-semibold tracking-tight">{group.title}<span aria-hidden="true" className="ml-3 align-middle font-mono text-xs font-normal text-muted">{String(all.length).padStart(2, "0")}</span></h3>
+              <p className="mt-1.5 text-sm leading-6 text-muted">{group.description}</p>
+            </div>
+            <CourseList items={all.slice(0, HOME_PER_GROUP)} />
+            {more > 0 && (
+              <Link
+                href={`/library/${group.id}`}
+                className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:border-accent hover:bg-accent-dim"
+              >
+                More courses <span className="text-muted">· {more} more in {group.title}</span> <span aria-hidden="true" className="text-accent">→</span>
+              </Link>
+            )}
+          </section>
+        );
+      })}
     </section>
   );
 }

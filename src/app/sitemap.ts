@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { catalogGroups } from "@/content/catalog-groups";
 import { courses } from "@/content/courses";
 import { SITE_URL } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const paths = ["/", "/path", "/news", "/about"];
+  const paths = ["/", "/path", "/library", ...catalogGroups.map((g) => `/library/${g.id}`), "/news", "/about"];
   for (const course of courses) {
     paths.push(`/courses/${course.slug}`);
     for (const lesson of course.lessons) {

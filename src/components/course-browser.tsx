@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { catalogGroups } from "@/content/catalog-groups";
 
 export type CatalogItem = {
   slug: string;
@@ -11,11 +12,7 @@ export type CatalogItem = {
   card: ReactNode;
 };
 
-const groups = [
-  { id: "start", title: "Start here", description: "Get comfortable with AI, then build your coding foundations." },
-  { id: "build", title: "Build your skills", description: "Turn the fundamentals into useful, tested AI applications." },
-  { id: "design", title: "Design & specialize", description: "Explore agent systems, production engineering, and your final capstone." },
-];
+const groups = catalogGroups;
 
 const controlClass = "min-h-12 min-w-0 w-full rounded-lg border border-line bg-surface px-3 text-sm text-foreground transition-colors hover:border-muted";
 
