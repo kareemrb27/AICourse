@@ -47,7 +47,7 @@ export function CourseCatalog() {
     const stage = pathItem?.stage ?? 5;
     const topic = topics[course.slug] ?? course.track;
     const outcome = pathItem?.after ?? course.outcomes[0] ?? course.summary;
-    const label = stage <= 3 ? `Stage ${stage} · ${pathStages[stage - 1].name}` : stage === 4 ? "Final capstone" : "Specialization";
+    const label = stage <= 3 ? `Stage ${stage}` : stage === 4 ? "Capstone" : "Specialization";
 
     return {
       slug: course.slug,
@@ -64,20 +64,20 @@ export function CourseCatalog() {
         >
           <div className="card-art relative overflow-hidden">
             <CourseIllustration slug={course.slug} className="aspect-[16/9] w-full" />
-            <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#14141b]/85 px-2.5 py-1 font-mono text-[11px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
+            <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#14141b]/85 px-2 py-0.5 font-mono text-[10px] tracking-wide text-[#e5e5ec] uppercase backdrop-blur">
               <span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--c)" }} />
               {label}
             </span>
-            <span className="absolute right-3 top-3 rounded-full border border-white/10 bg-[#14141b]/85 px-2.5 py-1 text-xs font-medium text-[#e5e5ec] backdrop-blur">
+            <span className="absolute right-2.5 top-2.5 rounded-full border border-white/10 bg-[#14141b]/85 px-2 py-0.5 text-[11px] font-medium text-[#e5e5ec] backdrop-blur">
               {course.level}
             </span>
           </div>
-          <div className="flex flex-1 flex-col p-5 sm:p-6">
-            <h4 id={`course-title-${course.slug}`} className="text-xl font-semibold leading-7 tracking-tight">{course.title}</h4>
-            <p className="mt-3 text-sm leading-6 text-[#b9b9c6]">{outcome}</p>
-            <div className="mt-auto pt-5">
+          <div className="flex flex-1 flex-col p-4 sm:p-5">
+            <h4 id={`course-title-${course.slug}`} className="text-lg font-semibold leading-6 tracking-tight">{course.title}</h4>
+            <p className="mt-2 text-sm leading-6 text-[#b9b9c6]">{outcome}</p>
+            <div className="mt-auto pt-4">
               <p className="text-xs text-muted">{topic}</p>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-xs text-[#b9b9c6]">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-line pt-3 text-xs text-[#b9b9c6] lg:flex-col lg:items-start">
                 <span>{course.lessons.length} lessons <span aria-hidden="true" className="px-1 text-muted">·</span> {formatDuration(totalMinutes(course))}</span>
                 <span className="inline-flex items-center gap-2 font-medium" style={{ color: "var(--c)" }}>View course <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span></span>
               </div>

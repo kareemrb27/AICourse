@@ -105,7 +105,7 @@ export function CourseBrowser({ items }: { items: CatalogItem[] }) {
                 <h3 id={`catalog-${section.id}`} className="text-xl font-semibold tracking-tight">{section.title}<span aria-hidden="true" className="ml-3 align-middle font-mono text-xs font-normal text-muted">{String(matches.length).padStart(2, "0")}</span></h3>
                 <p className="mt-1.5 text-sm leading-6 text-muted">{section.description}</p>
               </div>
-              <ul className="grid gap-4 md:grid-cols-2">
+              <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {matches.map((item) => <li key={item.slug} className="min-w-0">{item.card}</li>)}
               </ul>
             </section>
