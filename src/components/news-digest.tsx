@@ -16,8 +16,11 @@ const sections: { id: string; title: string; blurb: string; categories: NewsCate
 
 const RECENT_DAYS = 14;
 
+// The read link stretches over its whole card (the ::after covers the card), so
+// the image, title and text all open the article; links that must stay
+// separate, like the lesson link, sit above it with relative z-10.
 const readLink =
-  "inline-flex min-h-11 items-center gap-2 text-emerald-300 underline underline-offset-4 hover:text-foreground";
+  "inline-flex min-h-11 items-center gap-2 text-emerald-300 underline underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent";
 
 export function NewsDigest({ items }: { items: NewsEntry[] }) {
   const cutoff = new Date(Date.parse(newsReviewed) - RECENT_DAYS * 86_400_000).toISOString().slice(0, 10);
@@ -65,7 +68,7 @@ export function NewsDigest({ items }: { items: NewsEntry[] }) {
               <li key={item.url + item.title} className="min-w-0">
                 <article
                   style={{ "--c": newsCategories[item.category].color } as CSSProperties}
-                  className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface"
+                  className="relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-[var(--c)] has-[a:focus-visible]:border-[var(--c)]"
                 >
                   <NewsThumb category={item.category} seed={item.title} image={item.image} className="card-art aspect-[16/9] w-full" />
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
@@ -81,7 +84,7 @@ export function NewsDigest({ items }: { items: NewsEntry[] }) {
                         <span className="sr-only"> (opens in a new tab)</span>
                       </a>
                       {item.learn ? (
-                        <Link href={item.learn.href} className="inline-flex min-h-11 items-center gap-2 text-muted hover:text-foreground">
+                        <Link href={item.learn.href} className="relative z-10 inline-flex min-h-11 items-center gap-2 text-muted hover:text-foreground">
                           Learn the idea: <span className="text-[#c1c1cf]">{item.learn.label}</span>{" "}
                           <span aria-hidden="true">→</span>
                         </Link>
@@ -111,7 +114,7 @@ export function NewsDigest({ items }: { items: NewsEntry[] }) {
               <li
                 key={item.url + item.title}
                 style={{ "--c": newsCategories[item.category].color } as CSSProperties}
-                className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:gap-6 sm:py-5"
+                className="relative flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-white/[0.03] sm:flex-row sm:gap-6 sm:py-5"
               >
                 <span aria-hidden="true" className="font-mono text-xs text-muted sm:w-6 sm:pt-1">{String(index + 1).padStart(2, "0")}</span>
                 <div className="min-w-0 flex-1">
@@ -120,7 +123,7 @@ export function NewsDigest({ items }: { items: NewsEntry[] }) {
                     <time dateTime={item.date} className="label">{formatNewsDate(item.date)}</time>
                   </div>
                   <p className="mt-2 font-semibold leading-snug">
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 hover:underline">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="after:absolute after:inset-0 after:content-[''] hover:text-emerald-300 hover:underline">
                       {item.title}
                       <span aria-hidden="true" className="ml-1.5 text-muted">↗</span>
                       <span className="sr-only"> ({item.source}, opens in a new tab)</span>
