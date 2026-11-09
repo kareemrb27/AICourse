@@ -27,9 +27,30 @@ export const newsCategories: Record<NewsCategory, { label: string; color: string
 };
 
 // The day the list was last reviewed, shown at the top of the page.
-export const newsReviewed = "2026-10-31";
+export const newsReviewed = "2026-11-09";
 
 export const news: NewsItem[] = [
+  {
+    date: "2026-11-05",
+    category: "models",
+    title: "Google releases Gemini Omni 1.2 Flash for video generation",
+    summary:
+      "Google says Gemini Omni 1.2 Flash is now generally available in the Gemini API and Gemini for business. It generates and edits video clips up to 15 seconds (up from 10 in Omni 1.1), supports editing a clip across several conversational turns, and is priced 30% lower, at $0.07 per second for 720p video. The quality improvements are Google’s own claims.",
+    source: "Google",
+    url: "https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-omni-1-2-flash/",
+    image: "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini-omni-1.2_FZLql41.width-1300.png",
+  },
+  {
+    date: "2026-11-04",
+    category: "policy",
+    title: "Google shares how it evaluates AI for health",
+    summary:
+      "Google published a whitepaper, written with two outside health experts, on evaluating AI used for health needs across accuracy, safety and usefulness. It combines closed-question benchmarks, automated raters and expert human review, and covers both common and high-risk scenarios. A useful template for anyone who has to test an AI system in a sensitive domain.",
+    source: "Google",
+    url: "https://blog.google/innovation-and-ai/technology/health/evaluating-health-ai-at-scale/",
+    image: "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Health_AI_Evals_inline.max-1440x810.png",
+    learn: { course: "evaluate-and-use-ai-responsibly", lesson: "evals-you-can-trust" },
+  },
   {
     date: "2026-10-30",
     category: "ideas",
