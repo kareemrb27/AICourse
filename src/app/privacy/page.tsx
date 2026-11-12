@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { REPO_URL } from "@/lib/site";
+import { CONTACT_EMAIL, REPO_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "What AICourse stores, what it counts, and which outside services your browser contacts. No accounts, no cookies set by us.",
 };
 
-const updated = "November 1, 2026";
+const updated = "November 12, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -96,6 +96,14 @@ export default function PrivacyPage() {
               </a>
               . Issues there are public and need a GitHub account, so don’t put anything private in
               one.
+            </p>
+            <p className="mt-3">
+              To write privately instead, email{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-emerald-300 underline underline-offset-4 hover:text-foreground">
+                {CONTACT_EMAIL}
+              </a>
+              . Our domain provider forwards that mail to the site owner’s inbox. We use your
+              message and address only to reply, and don’t add you to any list.
             </p>
           </section>
 

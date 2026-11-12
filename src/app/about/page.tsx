@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
@@ -44,6 +45,12 @@ export default function About() {
           This is an independent project. It is not affiliated with, endorsed
           by, or a replacement for any conference or company whose topics
           inspired the course list.
+        </p>
+        <h2>Contact</h2>
+        <p>
+          Questions, corrections or a resource to credit? Write to{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Security
+          problems can go to the same address.
         </p>
       </div>
     </main>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import { REPO_URL, SITE_NAME, SITE_URL } from "@/lib/site";
+import { CONTACT_EMAIL, REPO_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -110,6 +110,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               >
                 Source on GitHub
                 <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground"
+              >
+                Contact
               </a>
               <Link
                 href="/privacy"

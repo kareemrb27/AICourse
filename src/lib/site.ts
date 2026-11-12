@@ -6,6 +6,8 @@ export const SITE_URL =
 
 export const REPO_URL = "https://github.com/kareemrb27/AICourse";
 
+export const CONTACT_EMAIL = "support@iaicourses.com";
+
 export function reportIssueUrl(title: string) {
   return `${REPO_URL}/issues/new?title=${encodeURIComponent(title)}`;
 }
