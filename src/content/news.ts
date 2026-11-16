@@ -27,9 +27,39 @@ export const newsCategories: Record<NewsCategory, { label: string; color: string
 };
 
 // The day the list was last reviewed, shown at the top of the page.
-export const newsReviewed = "2026-11-09";
+export const newsReviewed = "2026-11-16";
 
 export const news: NewsItem[] = [
+  {
+    date: "2026-11-12",
+    category: "models",
+    title: "Google introduces Gemini 4 Hydrogen",
+    summary:
+      "Google released Gemini 4 Hydrogen, a faster model aimed at everyday coding and agentic workflows, alongside its larger Carbon and Argon models. It has a 1 million-token context window and is priced at $1.50 per million input tokens and $7.50 per million output tokens. The speed and benchmark comparisons are Google’s own claims.",
+    source: "Google",
+    url: "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/",
+    image: "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini-4-hydrogen__key-art__lockup__16-9.width-1300.jpg",
+    learn: { course: "agents-fundamentals", lesson: "workflows-vs-agents" },
+  },
+  {
+    date: "2026-11-10",
+    category: "business",
+    title: "Anthropic launches the roadshow for its IPO",
+    summary:
+      "Anthropic said it has launched the roadshow for its proposed IPO of 825,000,000 Class A shares, with an expected price of $70 to $78 per share and a Nasdaq listing under “ANT”. The registration statement has been filed but is not yet effective, so no shares can be sold yet.",
+    source: "Anthropic",
+    url: "https://www.anthropic.com/news/roadshow-launch",
+  },
+  {
+    date: "2026-11-09",
+    category: "models",
+    title: "Anthropic releases Claude Fable 5.2 and Mythos 5.2",
+    summary:
+      "Anthropic says Fable 5.2 and Mythos 5.2 are the same underlying model, with Fable carrying stronger cybersecurity and biology safeguards so it can be offered to all users, while Mythos access is by application. It lists the price at $8 per million input tokens and $40 per million output tokens, and says output is up to 30% faster than version 5.1. Benchmark and safety results are Anthropic’s own; a system card is published.",
+    source: "Anthropic",
+    url: "https://www.anthropic.com/claude-fable-and-mythos-5-2",
+    image: "https://assets.claude.com/21b3240f9264f8e4c8ab1390e2702cf1401b2367.jpg",
+  },
   {
     date: "2026-11-05",
     category: "models",
