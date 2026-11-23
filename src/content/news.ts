@@ -27,9 +27,51 @@ export const newsCategories: Record<NewsCategory, { label: string; color: string
 };
 
 // The day the list was last reviewed, shown at the top of the page.
-export const newsReviewed = "2026-11-09";
+export const newsReviewed = "2026-11-23";
 
 export const news: NewsItem[] = [
+  {
+    date: "2026-11-20",
+    category: "business",
+    title: "Anthropic closes its IPO at $83 a share",
+    summary:
+      "Anthropic says it closed its initial public offering of 1.127 billion Class A shares at $83.00, with gross proceeds of about $93.5 billion, and that the stock began trading on Nasdaq on November 19 as “ANT”. It also closed a concurrent $26.0 billion private placement of Class N shares to AMD, Broadcom, Google, Micron, Microsoft, NVIDIA and TSMC Partners. TechCrunch also reported the pricing.",
+    source: "Anthropic",
+    url: "https://www.anthropic.com/news/ipo-close",
+    image: "https://assets.claude.com/6d4a0d28992ade92d6fa63646fd9c9d318245c6c.jpg",
+  },
+  {
+    date: "2026-11-20",
+    category: "policy",
+    title: "OpenAI describes its defenses against adversarial distillation",
+    summary:
+      "OpenAI explains why it treats copying a model’s capabilities through its outputs, especially its reasoning traces, as a safety issue as well as an IP one: a student model can inherit risky skills without the original safeguards. By its own internal testing, the success rate of attacks that recover protected reasoning fell from 54.0% against GPT-6 Astra to 0.2% against GPT-6.2 Astra.",
+    source: "OpenAI",
+    url: "https://openai.com/index/combatting-adversarial-distillation",
+    learn: { course: "evaluate-and-use-ai-responsibly", lesson: "safety-and-red-teaming" },
+  },
+  {
+    date: "2026-11-18",
+    category: "models",
+    title: "Google releases Gemini 4 Neon",
+    summary:
+      "Google says Gemini 4 Neon targets long-running software, knowledge-work and science tasks, with a 1 million-token context window and API pricing of $3 per million input and $15 per million output tokens. Rankings such as #3 on the Artificial Analysis Intelligence Index are as cited by Google. It is rolling out in the Gemini API, Gemini for business and, for paid subscribers, the Gemini app.",
+    source: "Google",
+    url: "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-neon/",
+    image: "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/gemini-4-neon__blog-header__sm.width-1300.png",
+    learn: { course: "ai-foundations", lesson: "the-ai-landscape" },
+  },
+  {
+    date: "2026-11-17",
+    category: "models",
+    title: "OpenAI introduces GPT-6.2 Astra and Sol",
+    summary:
+      "OpenAI released GPT-6.2 Astra, a frontier model for hard professional work, and GPT-6.2 Sol, a cheaper model for everyday tasks. It says both use fewer output tokens than their predecessors, and that Astra’s API prices are 20% lower than GPT-6 Astra’s ($8 per million input and $40 per million output tokens). The benchmark results are OpenAI’s own claims.",
+    source: "OpenAI",
+    url: "https://openai.com/index/introducing-gpt-6-2-astra-sol",
+    image: "https://cdn.openai.com/mdx-assets/e193aefe-5e58-431c-8cd2-adadac0c1496/44573edd-9653-49b3-ba07-7b3643545ef9.d3072be3.png",
+    learn: { course: "evaluate-and-use-ai-responsibly", lesson: "evals-you-can-trust" },
+  },
   {
     date: "2026-11-05",
     category: "models",
